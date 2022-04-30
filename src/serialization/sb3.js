@@ -411,7 +411,7 @@ const serializeVariables = function (variables) {
         if (v.type === Variable.LIST_TYPE) {
             // CCW: validate variable value not null
             // make sure no null in json
-            const nonNullvalue = v.value.map(item => item || '');
+            const nonNullvalue = v.value.map(item => item ?? '');
             obj.lists[varId] = [v.name, nonNullvalue];
             // powered by xigua start
             if (v.isCloud) obj.lists[varId].push(true);
@@ -420,7 +420,7 @@ const serializeVariables = function (variables) {
         }
 
         // otherwise should be a scalar type
-        obj.variables[varId] = [v.name, v.value || '']; // CCW: make sure no null in json
+        obj.variables[varId] = [v.name, v.value ?? '']; // CCW: make sure no null in json
         // only scalar vars have the potential to be cloud vars
         if (v.isCloud) obj.variables[varId].push(true);
     }
