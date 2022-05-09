@@ -326,6 +326,13 @@ class Runtime extends EventEmitter {
          */
         this.turboMode = false;
 
+
+        /**
+         * The id of the editor's current operator.
+         * @type {!string}
+         */
+        this.editorId = null;
+
         /**
          * A reference to the current runtime stepping interval, set
          * by a `setInterval`.
@@ -649,6 +656,63 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for report that a change was made that can be saved
+     * @const {string}
+     */
+    static get REORDER_TARGET () {
+        return 'REORDER_TARGET';
+    }
+
+    /**
+     * Event name for editing target's blocks was changed.
+     * @const {string}
+     */
+    static get TARGET_BLOCKS_CHANGED () {
+        return 'TARGET_BLOCKS_CHANGED';
+    }
+
+    /**
+     * Event name for editing target's simple property(name, size, x, y, etc) was changed.
+     * @const {string}
+     */
+    static get TARGET_SIMPLE_PROPERTY_CHANGED () {
+        return 'TARGET_SIMPLE_PROPERTY_CHANGED';
+    }
+
+    /**
+     * Event name for editing target's comments was changed.
+     * @const {string}
+     */
+    static get TARGET_COMMENTS_CHANGED () {
+        return 'TARGET_COMMENTS_CHANGED';
+    }
+
+    /**
+     * Event name for editing target's costome was changed.
+     * @const {string}
+     */
+    static get TARGET_COSTOME_CHANGED () {
+        return 'TARGET_COSTOME_CHANGED';
+    }
+
+    /**
+     * Event name for editing target's variables was changed.
+     * @const {string}
+     */
+    static get TARGET_VARIABLES_CHANGED () {
+        return 'TARGET_VARIABLES_CHANGED';
+    }
+
+    /**
+     * Event name for user manipulated monitor and caused it to change.
+     * @const {string}
+     */
+    static get MONITORS_CHANGED () {
+        return 'MONITORS_CHANGED';
+    }
+    
+
+    /**
      * Event name for report that a change was made to an extension in the toolbox.
      * @const {string}
      */
@@ -665,11 +729,27 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for target update report.
+     * @const {string}
+     */
+    static get TARGET_UPDATE () {
+        return 'TARGET_UPDATE';
+    }
+
+    /**
      * Event name for monitors update.
      * @const {string}
      */
     static get MONITORS_UPDATE () {
         return 'MONITORS_UPDATE';
+    }
+
+    /**
+     * Event name for monitors changed.
+     * @const {string}
+     */
+    static get SOUNDS_CHANGED () {
+        return 'SOUNDS_CHANGED';
     }
 
     /**
@@ -2455,6 +2535,14 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * ccw: Update the id of the editor's current operator
+     * @param {*} compilerOptions New options
+     */
+    setEditorId (id) {
+        this.editorId = id;
+    }
+
+    /**
      * tw: Update compiler options
      * @param {*} compilerOptions New options
      */
@@ -2775,6 +2863,7 @@ class Runtime extends EventEmitter {
         if (!this.requestUpdateMonitor(monitor)) { // update monitor if it exists in the state
             // if the monitor did not exist in the state, add it
             this._monitorState = this._monitorState.set(id, monitor);
+            this.emitMonitorsChanged(['add', id]);
         }
     }
 
@@ -2808,6 +2897,7 @@ class Runtime extends EventEmitter {
      */
     requestRemoveMonitor (monitorId) {
         this._monitorState = this._monitorState.delete(monitorId);
+        this.emitMonitorsChanged(['delete', monitorId]);
     }
 
     /**
@@ -2816,6 +2906,7 @@ class Runtime extends EventEmitter {
      * @return {boolean} true if monitor exists and was updated, false otherwise
      */
     requestHideMonitor (monitorId) {
+        this.emitMonitorsChanged(['update', monitorId, {visible: false}]);
         return this.requestUpdateMonitor(new Map([
             ['id', monitorId],
             ['visible', false]
@@ -2829,6 +2920,7 @@ class Runtime extends EventEmitter {
      * @return {boolean} true if monitor exists and was updated, false otherwise
      */
     requestShowMonitor (monitorId) {
+        this.emitMonitorsChanged(['update', monitorId, {visible: true}]);
         return this.requestUpdateMonitor(new Map([
             ['id', monitorId],
             ['visible', true]
@@ -2841,6 +2933,8 @@ class Runtime extends EventEmitter {
      * @param {!string} targetId Remove all monitors with given target ID.
      */
     requestRemoveMonitorByTargetId (targetId) {
+        const monitor = this._monitorState.find(value => value.targetId === targetId);
+        this.emitMonitorsChanged(['delete', monitor.id]);
         this._monitorState = this._monitorState.filterNot(value => value.targetId === targetId);
     }
 
@@ -2915,6 +3009,56 @@ class Runtime extends EventEmitter {
      */
     emitProjectChanged () {
         this.emit(Runtime.PROJECT_CHANGED);
+    }
+
+    /**
+     * Report that the target has changed in a way that would affect serialization
+     */
+    emitTargetBlocksChanged (targeId, blocks, ext) {
+        this.emit(Runtime.TARGET_BLOCKS_CHANGED, targeId, blocks, ext);
+    }
+
+    emitReorderTarget (targetIndex, newIndex) {
+        this.emit(Runtime.REORDER_TARGET, targetIndex, newIndex);
+    }
+
+    /**
+     * Report that the target has changed in a way that would affect serialization
+     */
+    emitTargetSimplePropertyChanged (order, data) {
+        this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, order, data);
+    }
+
+    /**
+     * Report that the target has changed in a way that would affect serialization
+     */
+    emitTargetCommentsChanged (targeId, commentId, data) {
+        this.emit(Runtime.TARGET_COMMENTS_CHANGED, targeId, commentId, data);
+    }
+
+    /**
+     * Report that the target has changed in a way that would affect serialization
+     */
+    emitTargetCostomeChanged (id, data) {
+        this.emit(Runtime.TARGET_COSTOME_CHANGED, id, data);
+    }
+
+    /**
+     * Report that the target has changed in a way that would affect serialization
+     */
+    emitTargetVariablesChanged (id, data) {
+        this.emit(Runtime.TARGET_VARIABLES_CHANGED, id, data);
+    }
+
+    emitMonitorsChanged (data) {
+        this.emit(Runtime.MONITORS_CHANGED, data);
+    }
+
+    /**
+     * Report that the monitors has changed
+     */
+    emitTargetSoundsChanged (data, key, targeId) {
+        this.emit(Runtime.SOUNDS_CHANGED, data, key, targeId);
     }
 
     /**

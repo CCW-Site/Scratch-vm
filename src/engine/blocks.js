@@ -395,8 +395,9 @@ class Blocks {
      * serves as a generic adapter between the blocks, variables, and the
      * runtime interface.
      * @param {object} e Blockly "block" or "variable" event
+     * @param {string} source Who triggered this function
      */
-    blocklyListen (e) {
+    blocklyListen (e, source) {
         // Validate event
         if (typeof e !== 'object') return;
         if (typeof e.blockId !== 'string' && typeof e.varId !== 'string' &&
@@ -405,6 +406,13 @@ class Blocks {
         }
         const stage = this.runtime.getTargetForStage();
         const editingTarget = this.runtime.getEditingTarget();
+
+        if (source === 'default' && e.blockId) {
+            this.runtime.emitTargetBlocksChanged(editingTarget.id, this._blocks, {
+                blockId: e.blockId,
+                type: e.type
+            });
+        }
 
         // UI event: clicked scripts toggle in the runtime.
         if (e.element === 'stackclick') {
@@ -478,6 +486,9 @@ class Blocks {
                 if (!editingTarget.lookupVariableById(e.varId)) {
                     editingTarget.createVariable(e.varId, e.varName, e.varType);
                     this.emitProjectChanged();
+                    this.runtime.emitTargetVariablesChanged(editingTarget.id,
+                        [e.varId, e.varType, 'add', [e.varName, 0]]
+                    );
                 }
             } else {
                 if (stage.lookupVariableById(e.varId)) {
@@ -493,6 +504,15 @@ class Blocks {
                 }
                 stage.createVariable(e.varId, e.varName, e.varType, e.isCloud);
                 this.emitProjectChanged();
+                if (e.isCloud) {
+                    this.runtime.emitTargetVariablesChanged(stage.id,
+                        [e.varId, e.varType, 'add', [e.varName, 0, true]]
+                    );
+                } else {
+                    this.runtime.emitTargetVariablesChanged(stage.id,
+                        [e.varId, e.varType, 'add', [e.varName, 0]]
+                    );
+                }
             }
             break;
         case 'var_rename':
@@ -501,18 +521,35 @@ class Blocks {
                 editingTarget.renameVariable(e.varId, e.newName);
                 // Update all the blocks on the current target that use
                 // this variable
-                editingTarget.blocks.updateBlocksAfterVarRename(e.varId, e.newName);
+                const affectedBlocks = editingTarget.blocks.updateBlocksAfterVarRename(e.varId, e.newName);
+                if (affectedBlocks.length) {
+                    this.runtime.affectedBlocksAfterVarRename = {[editingTarget.id]: affectedBlocks};
+                }
+                this.emitProjectChanged();
+                this.runtime.emitTargetVariablesChanged(editingTarget.id,
+                    [e.varId, e.varType, 'update', 0, e.newName]
+                );
             } else {
                 // This is a global variable
                 stage.renameVariable(e.varId, e.newName);
+
                 // Update all blocks on all targets that use the renamed variable
                 const targets = this.runtime.targets;
+                const teampMap = {};
                 for (let i = 0; i < targets.length; i++) {
                     const currTarget = targets[i];
-                    currTarget.blocks.updateBlocksAfterVarRename(e.varId, e.newName);
+                    const affectedBlocks = currTarget.blocks.updateBlocksAfterVarRename(e.varId, e.newName);
+                    if (affectedBlocks.length) {
+                        teampMap[currTarget.id] = affectedBlocks;
+                    }
                 }
+                this.runtime.affectedBlocksAfterVarRename = teampMap;
+                this.emitProjectChanged();
+                this.runtime.emitTargetVariablesChanged(stage.id,
+                    [e.varId, e.varType, 'update', 0, e.newName]
+                );
+                this.emitMonitorsChanged(['update', e.varId, {name: e.newName}]);
             }
-            this.emitProjectChanged();
             break;
         case 'var_delete': {
             this.resetCache(); // tw: more aggressive cache resetting
@@ -520,6 +557,9 @@ class Blocks {
                 editingTarget : stage;
             target.deleteVariable(e.varId);
             this.emitProjectChanged();
+            this.runtime.emitTargetVariablesChanged(target.id,
+                [e.varId, e.varType, 'delete']
+            );
             break;
         }
         case 'comment_create':
@@ -540,12 +580,14 @@ class Blocks {
                     currTarget.comments[e.commentId].x = e.xy.x;
                     currTarget.comments[e.commentId].y = e.xy.y;
                 }
+                this.runtime.emitTargetCommentsChanged(currTarget.id, e.commentId, currTarget.comments[e.commentId]);
             }
             this.emitProjectChanged();
             break;
         case 'comment_change':
             this.resetCache(); // tw: comments can affect compilation
             if (this.runtime.getEditingTarget()) {
+
                 const currTarget = this.runtime.getEditingTarget();
                 if (!currTarget.comments.hasOwnProperty(e.commentId)) {
                     log.warn(`Cannot change comment with id ${e.commentId} because it does not exist.`);
@@ -553,16 +595,22 @@ class Blocks {
                 }
                 const comment = currTarget.comments[e.commentId];
                 const change = e.newContents_;
+                const changedData = {};
                 if (change.hasOwnProperty('minimized')) {
                     comment.minimized = change.minimized;
+                    changedData.minimized = comment.minimized;
                 }
                 if (change.hasOwnProperty('width') && change.hasOwnProperty('height')){
                     comment.width = change.width;
                     comment.height = change.height;
+                    changedData.width = comment.width;
+                    changedData.height = comment.height;
                 }
                 if (change.hasOwnProperty('text')) {
                     comment.text = change.text;
+                    changedData.text = comment.text;
                 }
+                this.runtime.emitTargetCommentsChanged(currTarget.id, comment.id, changedData);
                 this.emitProjectChanged();
             }
             break;
@@ -577,6 +625,7 @@ class Blocks {
                 const newCoord = e.newCoordinate_;
                 comment.x = newCoord.x;
                 comment.y = newCoord.y;
+                this.runtime.emitTargetCommentsChanged(currTarget.id, comment.id, {x: comment.x, y: comment.y});
 
                 this.emitProjectChanged();
             }
@@ -601,7 +650,7 @@ class Blocks {
                     }
                     delete block.comment;
                 }
-
+                this.runtime.emitTargetCommentsChanged(currTarget.id, e.commentId);
                 this.emitProjectChanged();
             }
             break;
@@ -644,6 +693,27 @@ class Blocks {
         if (!this.forceNoGlow) {
             this.runtime.emitProjectChanged();
         }
+    }
+
+    /**
+     * Block management: create/delete/change/move block;
+     * @param {!object} e Blockly move event to be processed
+     */
+    updateBlock (block) {
+        // Maybe the block already exists, but we need to update it anyway
+        this._blocks[block.id] = block;
+
+        // Is this block a top-level block?
+        if (block.topLevel) {
+            this._addScript(block.id);
+        } else {
+            this._deleteScript(block.id);
+        }
+        // A new block was actually added to the block container or updated
+        // emit a project changed event
+        this.emitProjectChanged();
+
+        this.resetCache();
     }
 
     /**
@@ -1003,6 +1073,7 @@ class Blocks {
      */
     updateBlocksAfterVarRename (varId, newName) {
         const blocks = this._blocks;
+        const changedBlocks = [];
         for (const blockId in blocks) {
             let varOrListField = null;
             if (blocks[blockId].fields.VARIABLE) {
@@ -1013,10 +1084,14 @@ class Blocks {
             if (varOrListField) {
                 const currFieldId = varOrListField.id;
                 if (varId === currFieldId) {
+                    if (blocks[blockId].parent) {
+                        changedBlocks.push([blockId, blocks[blockId].parent]);
+                    }
                     varOrListField.value = newName;
                 }
             }
         }
+        return changedBlocks;
     }
 
     /**

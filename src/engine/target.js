@@ -298,6 +298,7 @@ class Target extends EventEmitter {
                 const blockWithComment = this.blocks.getBlock(blockId);
                 if (blockWithComment) {
                     blockWithComment.comment = id;
+                    this.blocks._blocks[blockId] = blockWithComment;
                 } else {
                     log.warn(`Could not find block with id ${blockId
                     } associated with commentId: ${id}`);

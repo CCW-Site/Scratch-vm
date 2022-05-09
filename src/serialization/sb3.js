@@ -119,6 +119,7 @@ const serializePrimitiveBlock = function (block) {
                 primitiveDesc.push(block.x ? Math.round(block.x) : 0);
                 primitiveDesc.push(block.y ? Math.round(block.y) : 0);
             }
+            primitiveDesc.push(block.id);
         }
         return primitiveDesc;
     }
@@ -600,10 +601,10 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
  * @param {object} blocks The entire blocks object currently in the process of getting serialized.
  * @return {object} The deserialized input descriptor.
  */
-const deserializeInputDesc = function (inputDescOrId, parentId, isShadow, blocks) {
+const deserializeInputDesc = function (inputDescOrId, parentId, isShadow, blocks, blockId) {
     if (!Array.isArray(inputDescOrId)) return inputDescOrId;
     const primitiveObj = Object.create(null);
-    const newId = uid();
+    const newId = blockId || uid();
     primitiveObj.id = newId;
     primitiveObj.next = null;
     primitiveObj.parent = parentId;
@@ -711,10 +712,13 @@ const deserializeInputDesc = function (inputDescOrId, parentId, isShadow, blocks
                 variableType: Variable.SCALAR_TYPE
             }
         };
-        if (inputDescOrId.length > 3) {
+        if (inputDescOrId.length > 4) {
             primitiveObj.topLevel = true;
             primitiveObj.x = inputDescOrId[3];
             primitiveObj.y = inputDescOrId[4];
+            primitiveObj.id = inputDescOrId[5] || newId;
+        } else {
+            primitiveObj.id = inputDescOrId[3] || newId;
         }
         break;
     }
@@ -728,10 +732,13 @@ const deserializeInputDesc = function (inputDescOrId, parentId, isShadow, blocks
                 variableType: Variable.LIST_TYPE
             }
         };
-        if (inputDescOrId.length > 3) {
+        if (inputDescOrId.length > 4) {
             primitiveObj.topLevel = true;
             primitiveObj.x = inputDescOrId[3];
             primitiveObj.y = inputDescOrId[4];
+            primitiveObj.id = inputDescOrId[5] || newId;
+        } else {
+            primitiveObj.id = inputDescOrId[3] || newId;
         }
         break;
     }
@@ -740,8 +747,10 @@ const deserializeInputDesc = function (inputDescOrId, parentId, isShadow, blocks
         return null;
     }
     }
+    
     blocks[newId] = primitiveObj;
-    return newId;
+
+    return primitiveObj.id;
 };
 
 /**
@@ -834,7 +843,7 @@ const deserializeBlocks = function (blocks) {
             // delete the old entry in object.blocks and replace it w/the
             // deserialized object
             delete blocks[blockId];
-            deserializeInputDesc(block, null, false, blocks);
+            deserializeInputDesc(block, null, false, blocks, blockId);
             continue;
         }
         block.id = blockId; // add id back to block since it wasn't serialized
@@ -948,7 +957,7 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
         return Promise.resolve(null);
     }
     // Blocks container for this object.
-    const blocks = new Blocks(runtime);
+    const blocks = new Blocks(runtime, false, object.id);
 
     // @todo: For now, load all Scratch objects (stage/sprites) as a Sprite.
     const sprite = new Sprite(blocks, runtime);
@@ -1328,6 +1337,15 @@ module.exports = {
     serialize: serialize,
     deserialize: deserialize,
     deserializeBlocks: deserializeBlocks,
+    deserializeInputs: deserializeInputs,
+    deserializeFields: deserializeFields,
     serializeBlocks: serializeBlocks,
+    serializeTarget: serializeTarget,
+    serializeMonitors: serializeMonitors,
+    deserializeMonitor: deserializeMonitor,
+    serializeSound: serializeSound,
+    deserializeSound: deserializeSound,
+    serializeComments: serializeComments,
+    serializeVariables: serializeVariables,
     getExtensionIdForOpcode: getExtensionIdForOpcode
 };

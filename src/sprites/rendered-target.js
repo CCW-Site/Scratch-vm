@@ -465,12 +465,35 @@ class RenderedTarget extends Target {
      * Add a costume, taking care to avoid duplicate names.
      * @param {!object} costumeObject Object representing the costume.
      * @param {?int} index Index at which to add costume
+     * @param {?boolean} isRemoteOperation Whether this is a remote operation
      */
-    addCostume (costumeObject, index) {
-        if (typeof index === 'number' && !isNaN(index)) {
-            this.sprite.addCostumeAt(costumeObject, index);
-        } else {
-            this.sprite.addCostumeAt(costumeObject, this.sprite.costumes.length);
+    addCostume (costumeObject, index, isRemoteOperation) {
+        const {assetId,
+            bitmapResolution,
+            dataFormat,
+            md5,
+            name,
+            rotationCenterX,
+            rotationCenterY} = costumeObject;
+        
+        if (!(typeof index === 'number' && !isNaN(index))) {
+            index = this.sprite.costumes.length;
+        }
+        
+        this.sprite.addCostumeAt(costumeObject, index);
+
+        if (!isRemoteOperation) {
+            this.runtime.emitTargetCostomeChanged(this.id, ['costomers', index, 'add',
+                {
+                    assetId,
+                    bitmapResolution,
+                    dataFormat,
+                    md5ext: md5 ? md5 : `${assetId}.${dataFormat}`,
+                    name,
+                    rotationCenterX,
+                    rotationCenterY
+                }
+            ]);
         }
     }
 
@@ -478,8 +501,12 @@ class RenderedTarget extends Target {
      * Rename a costume, taking care to avoid duplicate names.
      * @param {int} costumeIndex - the index of the costume to be renamed.
      * @param {string} newName - the desired new name of the costume (will be modified if already in use).
+     * @param {?boolean} isRemoteOperation Whether this is a remote operation
      */
-    renameCostume (costumeIndex, newName) {
+    renameCostume (costumeIndex, newName, isRemoteOperation) {
+        if (!isRemoteOperation) {
+            this.runtime.emitTargetCostomeChanged(this.id, ['costomers', costumeIndex, 'update', {name: newName}]);
+        }
         const usedNames = this.sprite.costumes
             .filter((costume, index) => costumeIndex !== index)
             .map(costume => costume.name);
@@ -504,11 +531,15 @@ class RenderedTarget extends Target {
     /**
      * Delete a costume by index.
      * @param {number} index Costume index to be deleted
+     * @param {?boolean} isRemoteOperation Whether this is a remote operation
      * @return {?object} The costume that was deleted or null
      * if the index was out of bounds of the costumes list or
      * this target only has one costume.
      */
-    deleteCostume (index) {
+    deleteCostume (index, isRemoteOperation) {
+        if (!isRemoteOperation) {
+            this.runtime.emitTargetCostomeChanged(this.id, ['costomers', index, 'delete']);
+        }
         const originalCostumeCount = this.sprite.costumes.length;
         if (originalCostumeCount === 1) return null;
 
@@ -647,9 +678,11 @@ class RenderedTarget extends Target {
 
         // Use the sprite method for deleting costumes because setCostume is handled manually
         this.sprite.deleteCostumeAt(costumeIndex);
-
-        this.addCostume(costume, newIndex);
+        this.addCostume(costume, newIndex, true);
         this.currentCostume = this.getCostumeIndexByName(currentCostume.name);
+        this.runtime.emitTargetCostomeChanged(this.id,
+            ['costomers', costumeIndex, 'reorder', [costumeIndex, newIndex]]
+        );
         return true;
     }
 
