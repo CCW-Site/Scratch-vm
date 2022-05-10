@@ -483,7 +483,7 @@ class RenderedTarget extends Target {
         this.sprite.addCostumeAt(costumeObject, index);
 
         if (!isRemoteOperation) {
-            this.runtime.emitTargetCostomeChanged(this.id, ['costomers', index, 'add',
+            this.runtime.emitTargetCostumeChanged(this.id, ['costumes', index, 'add',
                 {
                     assetId,
                     bitmapResolution,
@@ -505,7 +505,7 @@ class RenderedTarget extends Target {
      */
     renameCostume (costumeIndex, newName, isRemoteOperation) {
         if (!isRemoteOperation) {
-            this.runtime.emitTargetCostomeChanged(this.id, ['costomers', costumeIndex, 'update', {name: newName}]);
+            this.runtime.emitTargetCostumeChanged(this.id, ['costumes', costumeIndex, 'update', {name: newName}]);
         }
         const usedNames = this.sprite.costumes
             .filter((costume, index) => costumeIndex !== index)
@@ -538,7 +538,9 @@ class RenderedTarget extends Target {
      */
     deleteCostume (index, isRemoteOperation) {
         if (!isRemoteOperation) {
-            this.runtime.emitTargetCostomeChanged(this.id, ['costomers', index, 'delete']);
+            console.log('deleteCostume');
+            
+            this.runtime.emitTargetCostumeChanged(this.id, ['costumes', index, 'delete']);
         }
         const originalCostumeCount = this.sprite.costumes.length;
         if (originalCostumeCount === 1) return null;
@@ -682,8 +684,8 @@ class RenderedTarget extends Target {
         this.currentCostume = this.getCostumeIndexByName(currentCostume.name);
         const order = this.runtime.targets.findIndex(t => t.id === this.id);
         this.runtime.emitTargetSimplePropertyChanged(order, {currentCostume: this.currentCostume});
-        this.runtime.emitTargetCostomeChanged(this.id,
-            ['costomers', costumeIndex, 'reorder', [costumeIndex, newIndex]]
+        this.runtime.emitTargetCostumeChanged(this.id,
+            ['costumes', costumeIndex, 'reorder', [costumeIndex, newIndex]]
         );
         return true;
     }

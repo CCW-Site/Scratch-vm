@@ -131,8 +131,8 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.TARGET_COMMENTS_CHANGED, (targetId, commentId, data) => {
             this.emit(Runtime.TARGET_COMMENTS_CHANGED, targetId, commentId, data);
         });
-        this.runtime.on(Runtime.TARGET_COSTOME_CHANGED, (id, data) => {
-            this.emit(Runtime.TARGET_COSTOME_CHANGED, id, data);
+        this.runtime.on(Runtime.TARGET_COSTUME_CHANGED, (id, data) => {
+            this.emit(Runtime.TARGET_COSTUME_CHANGED, id, data);
         });
         this.runtime.on(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index => {
             this.emit(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index);
@@ -1457,8 +1457,8 @@ class VirtualMachine extends EventEmitter {
                 );
                 costume.assetId = costume.asset.assetId;
                 costume.md5 = `${costume.assetId}.${costume.dataFormat}`;
-                this.runtime.emitTargetCostomeChanged(this.editingTarget.id,
-                    ['costomers', costumeIndex, 'update', {
+                this.runtime.emitTargetCostumeChanged(this.editingTarget.id,
+                    ['costumes', costumeIndex, 'update', {
                         assetId: costume.assetId,
                         bitmapResolution: costume.bitmapResolution,
                         dataFormat: costume.dataFormat,
@@ -1510,7 +1510,7 @@ class VirtualMachine extends EventEmitter {
         costume.md5 = `${costume.assetId}.${costume.dataFormat}`;
         const {assetId, bitmapResolution, dataFormat, md5, name} = costume;
         
-        this.runtime.emitTargetCostomeChanged(this.editingTarget.id, ['costomers', costumeIndex, 'update', {
+        this.runtime.emitTargetCostumeChanged(this.editingTarget.id, ['costumes', costumeIndex, 'update', {
             assetId,
             bitmapResolution,
             dataFormat,

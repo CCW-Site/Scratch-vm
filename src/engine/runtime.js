@@ -695,8 +695,8 @@ class Runtime extends EventEmitter {
      * Event name for editing target's costome was changed.
      * @const {string}
      */
-    static get TARGET_COSTOME_CHANGED () {
-        return 'TARGET_COSTOME_CHANGED';
+    static get TARGET_COSTUME_CHANGED () {
+        return 'TARGET_COSTUME_CHANGED';
     }
 
     /**
@@ -3055,8 +3055,8 @@ class Runtime extends EventEmitter {
     /**
      * Report that the target has changed in a way that would affect serialization
      */
-    emitTargetCostomeChanged (id, data) {
-        this.emit(Runtime.TARGET_COSTOME_CHANGED, id, data);
+    emitTargetCostumeChanged (id, data) {
+        this.emit(Runtime.TARGET_COSTUME_CHANGED, id, data);
     }
 
     /**
