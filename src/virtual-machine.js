@@ -134,6 +134,9 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.TARGET_COSTOME_CHANGED, (id, data) => {
             this.emit(Runtime.TARGET_COSTOME_CHANGED, id, data);
         });
+        this.runtime.on(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index => {
+            this.emit(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index);
+        });
         this.runtime.on(Runtime.TARGET_VARIABLES_CHANGED, (id, data) => {
             this.emit(Runtime.TARGET_VARIABLES_CHANGED, id, data);
         });
@@ -1052,9 +1055,10 @@ class VirtualMachine extends EventEmitter {
      * @property {number} [bitmapResolution] - the resolution scale for a bitmap costume.
      * @param {string} optTargetId - the id of the target to add to, if not the editing target.
      * @param {string} optVersion - if this is 2, load costume as sb2, otherwise load costume as sb3.
+     * * @param {boolean} isRemoteOperation Whether this is a remote operation.
      * @returns {?Promise} - a promise that resolves when the costume has been added
      */
-    addCostume (md5ext, costumeObject, optTargetId, optVersion) {
+    addCostume (md5ext, costumeObject, optTargetId, optVersion, isRemoteOperation) {
         const target = optTargetId ?
             this.runtime.getTargetById(optTargetId) :
             this.editingTarget;
@@ -1065,7 +1069,7 @@ class VirtualMachine extends EventEmitter {
                 this.runtime,
                 optVersion
             ).then(() => {
-                target.addCostume(costumeObject);
+                target.addCostume(costumeObject, null, isRemoteOperation);
                 target.setCostume(target.getCostumes().length - 1);
                 this.runtime.emitProjectChanged();
             });

@@ -655,6 +655,10 @@ class Runtime extends EventEmitter {
         return 'PROJECT_CHANGED';
     }
 
+    static get EXTENSIONS_CHANGED () {
+        return 'EXTENSIONS_CHANGED';
+    }
+
     /**
      * Event name for report that a change was made that can be saved
      * @const {string}
@@ -693,6 +697,14 @@ class Runtime extends EventEmitter {
      */
     static get TARGET_COSTOME_CHANGED () {
         return 'TARGET_COSTOME_CHANGED';
+    }
+
+    /**
+     * Event name for editing target's currentCostome was changed.
+     * @const {string}
+     */
+    static get TARGET_CURRENT_COSTOME_CHANGED () {
+        return 'TARGET_CURRENT_COSTOME_CHANGED';
     }
 
     /**
@@ -3011,6 +3023,10 @@ class Runtime extends EventEmitter {
         this.emit(Runtime.PROJECT_CHANGED);
     }
 
+    emitExtensionsChanged () {
+        this.emit(Runtime.EXTENSIONS_CHANGED);
+    }
+
     /**
      * Report that the target has changed in a way that would affect serialization
      */
@@ -3041,6 +3057,13 @@ class Runtime extends EventEmitter {
      */
     emitTargetCostomeChanged (id, data) {
         this.emit(Runtime.TARGET_COSTOME_CHANGED, id, data);
+    }
+
+    /**
+     * Report that the target has changed in a way that would affect serialization
+     */
+    emitTargetCurrentCostomeChanged (index) {
+        this.emit(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index);
     }
 
     /**

@@ -149,6 +149,10 @@ class ExtensionManager {
         return this._loadedExtensions.has(extensionID);
     }
 
+    setLoadedExtension (extensionID, value) {
+        this._loadedExtensions.set(extensionID, value);
+    }
+
     /**
      * Synchronously load an internal extension (core or non-core) by ID. This call will
      * fail if the provided id is not does not match an internal extension.
