@@ -548,7 +548,7 @@ class Blocks {
                 this.runtime.emitTargetVariablesChanged(stage.id,
                     [e.varId, e.varType, 'update', 0, e.newName]
                 );
-                this.emitMonitorsChanged(['update', e.varId, {name: e.newName}]);
+                this.runtime.emitMonitorsChanged(['update', e.varId, {name: e.newName}]);
             }
             break;
         case 'var_delete': {
