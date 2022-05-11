@@ -1254,7 +1254,7 @@ class VirtualMachine extends EventEmitter {
             ).then(() => {
                 target.addSound(soundObject);
                 const sounds = target.getSounds();
-                this.runtime.emitTargetSoundsChanged(sounds.slice(-1), sounds.length, target.id);
+                this.runtime.emitTargetSoundsChanged(sounds.slice(-1), sounds.length - 1, target.id);
                 this.emitTargetsUpdate();
             });
         }
