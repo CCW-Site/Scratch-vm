@@ -468,19 +468,19 @@ class RenderedTarget extends Target {
      * @param {?boolean} isRemoteOperation Whether this is a remote operation
      */
     addCostume (costumeObject, index, isRemoteOperation) {
-        const {assetId,
+        if (!(typeof index === 'number' && !isNaN(index))) {
+            index = this.sprite.costumes.length;
+        }
+        this.sprite.addCostumeAt(costumeObject, index);
+        const {
+            assetId,
             bitmapResolution,
             dataFormat,
             md5,
             name,
             rotationCenterX,
-            rotationCenterY} = costumeObject;
-        
-        if (!(typeof index === 'number' && !isNaN(index))) {
-            index = this.sprite.costumes.length;
-        }
-        
-        this.sprite.addCostumeAt(costumeObject, index);
+            rotationCenterY
+        } = costumeObject;
 
         if (!isRemoteOperation) {
             this.runtime.emitTargetCostumeChanged(this.id, ['costumes', index, 'add',
