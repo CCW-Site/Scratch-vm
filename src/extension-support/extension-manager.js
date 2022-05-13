@@ -150,6 +150,8 @@ class ExtensionManager {
     }
 
     setLoadedExtension (extensionID, value) {
+        log(`New extension loaded: ${extensionID} ${value}`);
+        
         this._loadedExtensions.set(extensionID, value);
     }
 
@@ -176,7 +178,7 @@ class ExtensionManager {
         const extension = builtinExtensions[extensionId]();
         const extensionInstance = new extension(this.runtime);
         const serviceName = this._registerInternalExtension(extensionInstance);
-        this._loadedExtensions.set(extensionId, serviceName);
+        this.setLoadedExtension(extensionId, serviceName);
         this.runtime.compilerRegisterExtension(extensionId, extensionInstance);
     }
 
@@ -203,7 +205,7 @@ class ExtensionManager {
             const extensionInstance = new extension(this.runtime);
             const serviceName =
                 this._registerInternalExtension(extensionInstance);
-            this._loadedExtensions.set(extensionURL, serviceName);
+            this.setLoadedExtension(extensionURL, serviceName);
             this.runtime.compilerRegisterExtension(
                 extensionURL,
                 extensionInstance
@@ -224,7 +226,7 @@ class ExtensionManager {
                         .then(({default: remoteExtension}) => {
                             const extensionInstance = new remoteExtension(this.runtime);
                             const serviceName = this._registerInternalExtension(extensionInstance);
-                            this._loadedExtensions.set(extensionURL, serviceName);
+                            this.setLoadedExtension(extensionURL, serviceName);
                             return Promise.resolve();
                         });
                 }
@@ -341,7 +343,7 @@ class ExtensionManager {
      */
     registerExtensionService (serviceName) {
         dispatch.call(serviceName, 'getInfo').then(info => {
-            this._loadedExtensions.set(info.id, serviceName);
+            this.setLoadedExtension(info.id, serviceName);
             this._registerExtensionInfo(serviceName, info);
 
             this.loadingAsyncExtensions--;

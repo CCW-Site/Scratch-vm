@@ -1128,7 +1128,9 @@ class VirtualMachine extends EventEmitter {
             this.editingTarget.sprite.soundBank
         ).then(() => {
             this.editingTarget.addSound(clone, soundIndex + 1);
-            this.runtime.emitTargetSoundsChanged(this.editingTarget.sprite.sounds, this.editingTarget.id);
+            this.runtime.emitTargetSoundsChanged(
+                this.editingTarget.sprite.sounds, soundIndex + 1, this.editingTarget.id
+            );
             this.emitTargetsUpdate();
         });
     }

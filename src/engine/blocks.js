@@ -268,6 +268,7 @@ class Blocks {
         if (typeof block === 'undefined') return null;
         while (block.parent !== null) {
             block = this._blocks[block.parent];
+            if (typeof block === 'undefined') return null;
         }
         return block.id;
     }
