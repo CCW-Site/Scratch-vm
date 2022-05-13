@@ -1665,6 +1665,7 @@ class VirtualMachine extends EventEmitter {
         }
         return target.duplicate().then(newTarget => {
             this.runtime.addTarget(newTarget);
+            this.emit('ADD_SPRITE', this.runtime.targets.length - 1, this.serializeTarget(newTarget.toJSON()));
             newTarget.goBehindOther(target);
             this.setEditingTarget(newTarget.id);
         });

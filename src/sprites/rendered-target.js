@@ -538,8 +538,6 @@ class RenderedTarget extends Target {
      */
     deleteCostume (index, isRemoteOperation) {
         if (!isRemoteOperation) {
-            console.log('deleteCostume');
-            
             this.runtime.emitTargetCostumeChanged(this.id, ['costumes', index, 'delete']);
         }
         const originalCostumeCount = this.sprite.costumes.length;
