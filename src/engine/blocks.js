@@ -547,7 +547,7 @@ class Blocks {
                 this.runtime.affectedBlocksAfterVarRename = teampMap;
                 this.emitProjectChanged();
                 this.runtime.emitTargetVariablesChanged(stage.id,
-                    [e.varId, e.varType, 'update', 0, e.newName]
+                    [e.varId, e.varType, 'update', [0, e.newName]]
                 );
                 this.runtime.emitMonitorsChanged(['update', e.varId, {name: e.newName}]);
             }
@@ -1366,6 +1366,7 @@ class Blocks {
      * @return {!object} object of param key/values.
      */
     _getBlockParams (block) {
+        console.log('_getBlockParams', block);
         const params = {};
         for (const key in block.fields) {
             params[key] = block.fields[key].value;

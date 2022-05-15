@@ -2869,13 +2869,16 @@ class Runtime extends EventEmitter {
      * Add a monitor to the state. If the monitor already exists in the state,
      * updates those properties that are defined in the given monitor record.
      * @param {!MonitorRecord} monitor Monitor to add.
+     * @param {number} isRemoteOperation - set to true if this is a remote operation
      */
-    requestAddMonitor (monitor) {
+    requestAddMonitor (monitor, isRemoteOperation) {
         const id = monitor.get('id');
         if (!this.requestUpdateMonitor(monitor)) { // update monitor if it exists in the state
             // if the monitor did not exist in the state, add it
             this._monitorState = this._monitorState.set(id, monitor);
-            this.emitMonitorsChanged(['add', id]);
+            if (!isRemoteOperation) {
+                this.emitMonitorsChanged(['add', id]);
+            }
         }
     }
 

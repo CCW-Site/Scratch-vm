@@ -380,7 +380,7 @@ class VirtualMachine extends EventEmitter {
         }
         
         this.runtime.monitorBlocks.createBlock(monitorBlock);
-        this.runtime.requestAddMonitor(MonitorRecord(newMonitor));
+        this.runtime.requestAddMonitor(MonitorRecord(newMonitor), true);
     }
 
     setCompilerOptions (compilerOptions) {
