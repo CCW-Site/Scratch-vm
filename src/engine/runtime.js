@@ -2909,10 +2909,13 @@ class Runtime extends EventEmitter {
      * Removes a monitor from the state. Does nothing if the monitor already does
      * not exist in the state.
      * @param {!string} monitorId ID of the monitor to remove.
+     * @param {number} isRemoteOperation - set to true if this is a remote operation
      */
-    requestRemoveMonitor (monitorId) {
+    requestRemoveMonitor (monitorId, isRemoteOperation) {
         this._monitorState = this._monitorState.delete(monitorId);
-        this.emitMonitorsChanged(['delete', monitorId]);
+        if (!isRemoteOperation) {
+            this.emitMonitorsChanged(['delete', monitorId]);
+        }
     }
 
     /**
