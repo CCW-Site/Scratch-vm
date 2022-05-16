@@ -181,8 +181,9 @@ class Cloud {
                     variable.value = varUpdate.value;
                 }
             } catch (error) {
-                // console.log('    >>>> parse fail', varUpdate.value);
-                variable.value = varUpdate.value;
+                log.warn('updateCloudVariable list parse fail', varUpdate);
+                variable.value = [];
+
             }
         } else {
             variable.value = varUpdate.value;
