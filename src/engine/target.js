@@ -363,8 +363,9 @@ class Target extends EventEmitter {
     /**
      * Removes the variable with the given id from the dictionary of variables.
      * @param {string} id Id of variable to delete.
+     * @param {number} isRemoteOperation - set to true if this is a remote operation
      */
-    deleteVariable (id) {
+    deleteVariable (id, isRemoteOperation) {
         if (this.variables.hasOwnProperty(id)) {
             // Get info about the variable before deleting it
             const deletedVariableName = this.variables[id].name;
@@ -376,7 +377,7 @@ class Target extends EventEmitter {
                     this.runtime.removeCloudVariable();
                 }
                 this.runtime.monitorBlocks.deleteBlock(id);
-                this.runtime.requestRemoveMonitor(id);
+                this.runtime.requestRemoveMonitor(id, isRemoteOperation);
             }
         }
     }

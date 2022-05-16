@@ -556,11 +556,12 @@ class Blocks {
             this.resetCache(); // tw: more aggressive cache resetting
             const target = (editingTarget && editingTarget.variables.hasOwnProperty(e.varId)) ?
                 editingTarget : stage;
-            target.deleteVariable(e.varId);
-            this.emitProjectChanged();
             this.runtime.emitTargetVariablesChanged(target.id,
                 [e.varId, e.varType, 'delete']
             );
+            target.deleteVariable(e.varId);
+            this.emitProjectChanged();
+
             break;
         }
         case 'comment_create':
