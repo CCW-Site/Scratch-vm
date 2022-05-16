@@ -3088,8 +3088,8 @@ class Runtime extends EventEmitter {
     /**
      * Report that the monitors has changed
      */
-    emitTargetSoundsChanged (data, key, targeId) {
-        this.emit(Runtime.SOUNDS_CHANGED, data, key, targeId);
+    emitTargetSoundsChanged (targetId, data) {
+        this.emit(Runtime.SOUNDS_CHANGED, targetId, data);
     }
 
     /**

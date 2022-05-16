@@ -158,8 +158,8 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.MONITORS_UPDATE, monitorList => {
             this.emit(Runtime.MONITORS_UPDATE, monitorList);
         });
-        this.runtime.on(Runtime.SOUNDS_CHANGED, (data, key, targeId) => {
-            this.emit(Runtime.SOUNDS_CHANGED, data, key, targeId);
+        this.runtime.on(Runtime.SOUNDS_CHANGED, (targetId, data) => {
+            this.emit(Runtime.SOUNDS_CHANGED, targetId, data);
         });
         this.runtime.on(Runtime.BLOCK_DRAG_UPDATE, areBlocksOverGui => {
             this.emit(Runtime.BLOCK_DRAG_UPDATE, areBlocksOverGui);
@@ -1127,9 +1127,12 @@ class VirtualMachine extends EventEmitter {
             this.runtime,
             this.editingTarget.sprite.soundBank
         ).then(() => {
-            this.editingTarget.addSound(clone, soundIndex + 1);
+            const target = this.editingTarget;
+            const index = soundIndex + 1;
+            target.addSound(clone, index);
+
             this.runtime.emitTargetSoundsChanged(
-                this.editingTarget.sprite.sounds, soundIndex + 1, this.editingTarget.id
+                target.id, [index, 'add', target.sprite.sounds[index]]
             );
             this.emitTargetsUpdate();
         });
@@ -1211,7 +1214,7 @@ class VirtualMachine extends EventEmitter {
      * @param {string} optTargetId - the id of the target to add to, if not the editing target.
      * @returns {?Promise} - a promise that resolves when the sound has been decoded and added
      */
-    addSoundFromServer (soundObject, optTargetId) {
+    addSoundFromServer (soundObject, optTargetId, index) {
         const sound = {
             assetId: soundObject.assetId,
             format: soundObject.format,
@@ -1232,7 +1235,7 @@ class VirtualMachine extends EventEmitter {
                 this.runtime,
                 target.sprite.soundBank
             ).then(() => {
-                target.addSound(sound);
+                target.addSound(sound, index);
                 this.emitTargetsUpdate();
             });
         }
@@ -1256,7 +1259,7 @@ class VirtualMachine extends EventEmitter {
             ).then(() => {
                 target.addSound(soundObject);
                 const sounds = target.getSounds();
-                this.runtime.emitTargetSoundsChanged(sounds.slice(-1), sounds.length - 1, target.id);
+                this.runtime.emitTargetSoundsChanged(target.id, [sounds.length - 1, 'add', sounds[sounds.length - 1]]);
                 this.emitTargetsUpdate();
             });
         }
@@ -1271,8 +1274,7 @@ class VirtualMachine extends EventEmitter {
      */
     renameSound (soundIndex, newName) {
         this.editingTarget.renameSound(soundIndex, newName);
-        const sounds = this.editingTarget.getSounds();
-        this.runtime.emitTargetSoundsChanged(sounds[soundIndex], soundIndex, this.editingTarget.id);
+        this.runtime.emitTargetSoundsChanged(this.editingTarget.id, [soundIndex, 'update', {name: newName}]);
         this.emitTargetsUpdate();
     }
 
@@ -1325,7 +1327,7 @@ class VirtualMachine extends EventEmitter {
             sound.sampleCount = newBuffer.length;
             sound.rate = newBuffer.sampleRate;
         }
-        this.runtime.emitTargetSoundsChanged(sound, soundIndex, this.editingTarget.id);
+        this.runtime.emitTargetSoundsChanged(this.editingTarget.id, [soundIndex, 'update', sound]);
         // If soundEncoding is null, it's because gui had a problem
         // encoding the updated sound. We don't want to store anything in this
         // case, and gui should have logged an error.
@@ -1343,12 +1345,13 @@ class VirtualMachine extends EventEmitter {
         const target = this.editingTarget;
         const deletedSound = this.editingTarget.deleteSound(soundIndex);
         if (deletedSound) {
-            this.runtime.emitTargetSoundsChanged(null, soundIndex, target.id);
+            this.runtime.emitTargetSoundsChanged(target.id, [soundIndex, 'delete']);
+
             this.runtime.emitProjectChanged();
             const restoreFun = () => {
                 target.addSound(deletedSound);
                 const sounds = target.getSounds();
-                this.runtime.emitTargetSoundsChanged(sounds.pop(), sounds.length - 1, target.id);
+                this.runtime.emitTargetSoundsChanged(target.id, [sounds.length - 1, 'add', sounds[sounds.length - 1]]);
                 this.emitTargetsUpdate();
             };
             return restoreFun;
@@ -2033,7 +2036,9 @@ class VirtualMachine extends EventEmitter {
                 if (target) {
                     target.addSound(clone);
                     const sounds = target.getSounds();
-                    this.runtime.emitTargetSoundsChanged(sounds.pop(), sounds.length - 1, target.id);
+                    this.runtime.emitTargetSoundsChanged(target.id,
+                        [sounds.length - 1, 'add', sounds[sounds.length - 1]]
+                    );
                     this.emitTargetsUpdate();
                 }
             }
@@ -2239,7 +2244,7 @@ class VirtualMachine extends EventEmitter {
             const reorderSuccessful = target.reorderSound(soundIndex, newIndex);
             
             if (reorderSuccessful) {
-                this.runtime.emitTargetSoundsChanged([soundIndex, newIndex], null, target.id);
+                this.runtime.emitTargetSoundsChanged(target.id, [soundIndex, 'reorder', [soundIndex, newIndex]]);
                 this.runtime.emitProjectChanged();
             }
             return reorderSuccessful;
