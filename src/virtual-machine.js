@@ -889,7 +889,7 @@ class VirtualMachine extends EventEmitter {
             if (!isRemoteOperation && !wholeProject) {
                 const sb3 = require('./serialization/sb3');
                 const sprite = sb3.serialize(this.runtime, targets[0].id);
-                return [this.runtime.targets.length, sprite];
+                return [this.runtime.targets.length - 1, sprite];
             }
         });
     }
