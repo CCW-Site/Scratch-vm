@@ -408,17 +408,17 @@ class Blocks {
         const stage = this.runtime.getTargetForStage();
         const editingTarget = this.runtime.getEditingTarget();
 
-        if (source === 'default' && e.blockId) {
-            this.runtime.emitTargetBlocksChanged(editingTarget.id, this._blocks, {
-                blockId: e.blockId,
-                type: e.type
-            });
-        }
-
         // UI event: clicked scripts toggle in the runtime.
         if (e.element === 'stackclick') {
             this.runtime.toggleScript(e.blockId, {stackClick: true});
             return;
+        }
+
+        if (source === 'default' && e.blockId && e.type !== 'delete') {
+            this.runtime.emitTargetBlocksChanged(editingTarget.id, this._blocks, {
+                blockId: e.blockId,
+                type: e.type
+            });
         }
 
         // Block create/update/destroy
@@ -471,6 +471,12 @@ class Blocks {
             // Inform any runtime to forget about glows on this script.
             if (this._blocks[e.blockId].topLevel) {
                 this.runtime.quietGlow(e.blockId);
+            }
+            if (source === 'default' && e.blockId && e.recordUndo) {
+                this.runtime.emitTargetBlocksChanged(editingTarget.id, this._blocks, {
+                    blockId: e.blockId,
+                    type: e.type
+                });
             }
             this.deleteBlock(e.blockId);
             break;

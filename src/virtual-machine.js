@@ -1973,7 +1973,9 @@ class VirtualMachine extends EventEmitter {
             copiedBlocks.forEach(block => {
                 target.blocks.createBlock(block);
             });
-            this.runtime.emitTargetBlocksChanged(target.id, target.blocks._blocks, {type: 'delete_next_create', blockId: copiedBlocks[0].id});
+            this.runtime.emitTargetBlocksChanged(target.id, target.blocks._blocks,
+                {type: 'delete_next_create', blockId: copiedBlocks[0].id}
+            );
             target.blocks.updateTargetSpecificBlocks(target.isStage);
         });
     }
