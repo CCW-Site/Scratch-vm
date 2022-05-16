@@ -1001,6 +1001,31 @@ class VirtualMachine extends EventEmitter {
      * Add a costume to the current editing target.
      * @param {string} md5ext - the MD5 and extension of the costume to be loaded.
      * @param {!object} costumeObject Object representing the costume.
+     * @param {string} target - the target to add to.
+     * @param {?int} index Index at which to add costume
+     * @returns {?Promise} - a promise that resolves when the costume has been added
+     */
+    addCostumeFromRemote (md5ext, costumeObject, target, index) {
+        if (target) {
+            return loadCostume(
+                md5ext,
+                costumeObject,
+                this.runtime,
+                3
+            ).then(() => {
+                target.addCostume(costumeObject, index, true);
+                target.setCostume(target.getCostumes().length - 1);
+                this.runtime.emitProjectChanged();
+            });
+        }
+        // If the target cannot be found by id, return a rejected promise
+        return Promise.reject();
+    }
+
+    /**
+     * Add a costume to the current editing target.
+     * @param {string} md5ext - the MD5 and extension of the costume to be loaded.
+     * @param {!object} costumeObject Object representing the costume.
      * @property {int} skinId - the ID of the costume's render skin, once installed.
      * @property {number} rotationCenterX - the X component of the costume's origin.
      * @property {number} rotationCenterY - the Y component of the costume's origin.
