@@ -1374,7 +1374,6 @@ class Blocks {
      * @return {!object} object of param key/values.
      */
     _getBlockParams (block) {
-        console.log('_getBlockParams', block);
         const params = {};
         for (const key in block.fields) {
             params[key] = block.fields[key].value;
