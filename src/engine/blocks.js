@@ -528,8 +528,9 @@ class Blocks {
                 }
                 this.emitProjectChanged();
                 this.runtime.emitTargetVariablesChanged(editingTarget.id,
-                    [e.varId, e.varType, 'update', 0, e.newName]
+                    [e.varId, e.varType, 'update', [0, e.newName]]
                 );
+                this.runtime.emitMonitorsChanged(['update', e.varId, {name: e.newName}]);
             } else {
                 // This is a global variable
                 stage.renameVariable(e.varId, e.newName);

@@ -335,54 +335,6 @@ class VirtualMachine extends EventEmitter {
         this.runtime.setEditorId(id);
     }
 
-    addMonitor (monitor) {
-        const {spriteName, id, opcode, params, value, mode} = monitor;
-        const target = spriteName ? this.runtime.targets.find(t => t.sprite.name === spriteName) : null;
-        const newMonitor = {
-            id,
-            targetId: target?.id || null,
-            spriteName,
-            opcode,
-            params,
-            value,
-            mode
-        };
-        const fields = {};
-        for (const paramKey in monitor.params) {
-            const field = {
-                name: paramKey,
-                value: monitor.params[paramKey]
-            };
-            fields[paramKey] = field;
-        }
-        const monitorBlock = {
-            id: monitor.id,
-            opcode: monitor.opcode,
-            inputs: {}, // Assuming that monitor blocks don't have droppable fields
-            fields: fields,
-            topLevel: true,
-            next: null,
-            parent: null,
-            shadow: false,
-            x: 0,
-            y: 0,
-            isMonitored: true,
-            targetId: monitor.targetId
-        };
-        if (monitor.opcode === 'data_variable') {
-            const field = monitorBlock.fields.VARIABLE;
-            field.id = monitor.id;
-            field.variableType = Variable.SCALAR_TYPE;
-        } else if (monitor.opcode === 'data_listcontents') {
-            const field = monitorBlock.fields.LIST;
-            field.id = monitor.id;
-            field.variableType = Variable.LIST_TYPE;
-        }
-        
-        this.runtime.monitorBlocks.createBlock(monitorBlock);
-        this.runtime.requestAddMonitor(MonitorRecord(newMonitor), true);
-    }
-
     setCompilerOptions (compilerOptions) {
         this.runtime.setCompilerOptions(compilerOptions);
     }
@@ -1858,7 +1810,7 @@ class VirtualMachine extends EventEmitter {
 
     deserializeMonitor (monitorData) {
         const sb3 = require('./serialization/sb3');
-        return sb3.deserializeMonitor(monitorData, this.runtime, this.runtime.targets);
+        return sb3.deserializeMonitor(monitorData, this.runtime, this.runtime.targets, {extensionIDs: new Set()});
     }
 
     serializeComments (comments) {
