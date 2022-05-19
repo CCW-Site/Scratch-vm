@@ -3158,8 +3158,22 @@ class Runtime extends EventEmitter {
                 qa: '-qa',
                 prod: ''
             }[ENV];
+
+            let defaultScriptURL = `/static/js/main.js?_=${Date.now()}`;
+            if (staticName) {
+                defaultScriptURL = `https://static${staticName}.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m/static/js/main.js?_=${Date.now()}`;
+            }
+
+            let onlineScriptUrl = defaultScriptURL;
+            if (this.ccwAPI && this.ccwAPI.getOnlineExtensionsConfig) {
+                onlineScriptUrl = this.ccwAPI.getOnlineExtensionsConfig().fileSrc ?? defaultScriptURL;
+            }
+            if (!onlineScriptUrl) {
+                log.warn('onlineScriptUrl is null');
+            }
+
             const script = document.createElement('script');
-            script.src = `${staticName === void 0 ? '' : `https://static${staticName}.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m`}/static/js/main.js?_=${Date.now()}`;
+            script.src = onlineScriptUrl;
             script.id = onlineScriptId;
             script.defer = true;
 
