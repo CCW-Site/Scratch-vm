@@ -176,7 +176,7 @@ const serializeFields = function (fields) {
         if (!hasOwnProperty.call(fields, fieldName)) continue;
         obj[fieldName] = [fields[fieldName].value];
         if (fields[fieldName].hasOwnProperty('id')) {
-            obj[fieldName].push(fields[fieldName].id);
+            obj[fieldName].push(fields[fieldName].id || null);
         }
     }
     return obj;
@@ -205,7 +205,9 @@ const serializeBlock = function (block) {
     obj.fields = serializeFields(block.fields);
     obj.shadow = block.shadow;
     // powered by xigua start
-    obj.hidden = block.hidden;
+    if (typeof block.hidden !== 'undefined') {
+        obj.hidden = block.hidden;
+    }
     // powered by xigua end
     if (block.topLevel) {
         obj.topLevel = true;

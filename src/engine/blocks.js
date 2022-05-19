@@ -1093,9 +1093,7 @@ class Blocks {
             if (varOrListField) {
                 const currFieldId = varOrListField.id;
                 if (varId === currFieldId) {
-                    if (blocks[blockId].parent) {
-                        changedBlocks.push([blockId, blocks[blockId].parent]);
-                    }
+                    changedBlocks.push([blockId, blocks[blockId].parent]);
                     varOrListField.value = newName;
                 }
             }

@@ -877,8 +877,10 @@ class VirtualMachine extends EventEmitter {
             }
 
             // Update the VM user's knowledge of targets and blocks on the workspace.
-            this.emitTargetsUpdate(false /* Don't emit project change */);
-            this.emitWorkspaceUpdate();
+            if (!isRemoteOperation) {
+                this.emitTargetsUpdate(false /* Don't emit project change */);
+                this.emitWorkspaceUpdate();
+            }
             if (!isRemoteOperation){
                 this.runtime.setEditingTarget(this.editingTarget);
             }
@@ -902,6 +904,8 @@ class VirtualMachine extends EventEmitter {
      * @return {!Promise} Promise that resolves after targets are installed.
      */
     addSprite (input, isRemoteOperation) {
+        console.log('Debug: addSprite');
+        
         const errorPrefix = 'Sprite Upload Error:';
         if (
             typeof input === 'object' &&
@@ -1899,6 +1903,11 @@ class VirtualMachine extends EventEmitter {
     deserializeInputs (inputs, parentId, blocks) {
         const sb3 = require('./serialization/sb3');
         return sb3.deserializeInputs(inputs, parentId, blocks);
+    }
+
+    getExtensionIdForOpcode (opcode) {
+        const sb3 = require('./serialization/sb3');
+        return sb3.getExtensionIdForOpcode(opcode);
     }
 
     setTargetBlocks (blocks, targetId) {
