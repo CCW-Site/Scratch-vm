@@ -22,9 +22,10 @@ class Target extends EventEmitter {
     /**
      * @param {Runtime} runtime Reference to the runtime.
      * @param {?Blocks} blocks Blocks instance for the blocks owned by this target.
+     * @param {?id} id Target id.
      * @constructor
      */
-    constructor (runtime, blocks) {
+    constructor (runtime, blocks, id) {
         super();
 
         if (!blocks) {
@@ -40,7 +41,7 @@ class Target extends EventEmitter {
          * A unique ID for this target.
          * @type {string}
          */
-        this.id = uid();
+        this.id = id || uid();
         /**
          * Blocks run as code for this target.
          * @type {!Blocks}

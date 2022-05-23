@@ -660,14 +660,6 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * Event name for report that a change was made that can be saved
-     * @const {string}
-     */
-    static get REORDER_TARGET () {
-        return 'REORDER_TARGET';
-    }
-
-    /**
      * Event name for editing target's blocks was changed.
      * @const {string}
      */
@@ -2877,7 +2869,9 @@ class Runtime extends EventEmitter {
             // if the monitor did not exist in the state, add it
             this._monitorState = this._monitorState.set(id, monitor);
             if (!isRemoteOperation) {
-                this.emitMonitorsChanged(['add', id]);
+                setTimeout(() => {
+                    this.emitMonitorsChanged(['add', id]);
+                }, 100);
             }
         }
     }
@@ -3040,10 +3034,6 @@ class Runtime extends EventEmitter {
      */
     emitTargetBlocksChanged (targeId, blocks, ext) {
         this.emit(Runtime.TARGET_BLOCKS_CHANGED, targeId, blocks, ext);
-    }
-
-    emitReorderTarget (targetIndex, newIndex) {
-        this.emit(Runtime.REORDER_TARGET, targetIndex, newIndex);
     }
 
     /**

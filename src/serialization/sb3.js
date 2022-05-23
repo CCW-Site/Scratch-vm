@@ -457,6 +457,7 @@ const serializeTarget = function (target, extensions) {
     let targetExtensions = [];
     obj.isStage = target.isStage;
     obj.name = obj.isStage ? 'Stage' : target.name;
+    obj.id = target.id;
     const vars = serializeVariables(target.variables);
     obj.variables = vars.variables;
     obj.lists = vars.lists;
@@ -556,8 +557,19 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
             t.layerOrder = layerOrdering[index];
         });
     }
-
-    const serializedTargets = flattenedOriginalTargets.map(t => serializeTarget(t, extensions));
+    let serializedTargets;
+    if (runtime.isTeamworkMode) {
+        serializedTargets = flattenedOriginalTargets.reduce(
+            (a, t, i) => {
+                const target = serializeTarget(t, extensions);
+                target.order = i;
+                target.id = t.id;
+                return {...a, [t.id]: target};
+            }, {}
+        );
+    } else {
+        serializedTargets = flattenedOriginalTargets.map(t => serializeTarget(t, extensions));
+    }
 
     if (targetId) {
         return serializedTargets[0];
@@ -565,7 +577,13 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
 
     obj.targets = serializedTargets;
 
-    obj.monitors = serializeMonitors(runtime.getMonitorState(), runtime);
+    if (runtime.isTeamworkMode) {
+        obj.monitors = serializeMonitors(runtime.getMonitorState(), runtime).reduce(
+            (a, m, i) => ({...a, [m.id]: {...m, order: i}}), {}
+        );
+    } else {
+        obj.monitors = serializeMonitors(runtime.getMonitorState(), runtime);
+    }
 
     // Assemble extension list
     obj.extensions = Array.from(extensions);
@@ -968,6 +986,11 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
     if (object.hasOwnProperty('name')) {
         sprite.name = object.name;
     }
+
+    if (object.hasOwnProperty('id')) {
+        sprite.id = object.id;
+    }
+
     if (object.hasOwnProperty('blocks')) {
         deserializeBlocks(object.blocks);
         // Take a second pass to create objects and add extensions
@@ -989,6 +1012,11 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
     const {soundBank, soundPromises} = assets;
     // Create the first clone, and load its run-state from JSON.
     const target = sprite.createClone(object.isStage ? StageLayering.BACKGROUND_LAYER : StageLayering.SPRITE_LAYER);
+
+    // The target id is only set for original sprites, not clones.
+    if (object.hasOwnProperty('id')) {
+        delete sprite.id;
+    }
     // Load target properties from JSON.
     if (object.hasOwnProperty('tempo')) {
         target.tempo = object.tempo;

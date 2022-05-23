@@ -17,7 +17,6 @@ const MathUtil = require('./util/math-util');
 const Runtime = require('./engine/runtime');
 const StringUtil = require('./util/string-util');
 const formatMessage = require('format-message');
-const MonitorRecord = require('./engine/monitor-record');
 
 const Variable = require('./engine/variable');
 const newBlockIds = require('./util/new-block-ids');
@@ -145,9 +144,6 @@ class VirtualMachine extends EventEmitter {
         });
         this.runtime.on(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, (order, data) => {
             this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, order, data);
-        });
-        this.runtime.on(Runtime.REORDER_TARGET, (targetIndex, newIndex) => {
-            this.emit(Runtime.REORDER_TARGET, targetIndex, newIndex);
         });
         this.runtime.on(Runtime.VISUAL_REPORT, visualReport => {
             this.emit(Runtime.VISUAL_REPORT, visualReport);
@@ -890,8 +886,7 @@ class VirtualMachine extends EventEmitter {
 
             if (!isRemoteOperation && !wholeProject) {
                 const sb3 = require('./serialization/sb3');
-                const sprite = sb3.serialize(this.runtime, targets[0].id);
-                return [this.runtime.targets.length - 1, sprite];
+                return sb3.serialize(this.runtime, targets[0].id);
             }
         });
     }
@@ -904,8 +899,6 @@ class VirtualMachine extends EventEmitter {
      * @return {!Promise} Promise that resolves after targets are installed.
      */
     addSprite (input, isRemoteOperation) {
-        console.log('Debug: addSprite');
-        
         const errorPrefix = 'Sprite Upload Error:';
         if (
             typeof input === 'object' &&
@@ -952,9 +945,9 @@ class VirtualMachine extends EventEmitter {
                     `${errorPrefix} Unable to verify sprite version.`
                 );
             })
-            .then(spriteInfo => {
-                if (spriteInfo && !isRemoteOperation) {
-                    this.emit('ADD_SPRITE', ...spriteInfo);
+            .then(sprite => {
+                if (sprite && !isRemoteOperation) {
+                    this.emit('ADD_SPRITE', sprite);
                 }
                 this.runtime.emitProjectChanged();
             })
@@ -2177,9 +2170,10 @@ class VirtualMachine extends EventEmitter {
      * Reorder target by index. Return whether a change was made.
      * @param {!string} targetIndex Index of the target.
      * @param {!number} newIndex index that the target should be moved to.
+     * @param {!number} isRemoteOperation - set to true if this is a remote operation
      * @returns {boolean} Whether a target was reordered.
      */
-    reorderTarget (targetIndex, newIndex, isLocalChange = true) {
+    reorderTarget (targetIndex, newIndex, isRemoteOperation) {
         let targets = this.runtime.targets;
         targetIndex = MathUtil.clamp(targetIndex, 0, targets.length - 1);
         newIndex = MathUtil.clamp(newIndex, 0, targets.length - 1);
@@ -2190,8 +2184,15 @@ class VirtualMachine extends EventEmitter {
             .concat(targets.slice(targetIndex + 1));
         targets.splice(newIndex, 0, target);
         this.runtime.targets = targets;
-        if (isLocalChange) {
-            this.runtime.emitReorderTarget(targetIndex, newIndex);
+        if (!isRemoteOperation) {
+            const max = Math.max(targetIndex, newIndex) + 1;
+            const min = Math.min(targetIndex, newIndex);
+            const list = [];
+            for (let index = min; index < max; index++) {
+                const _target = targets[index];
+                list.push([_target.id, {order: index}]);
+            }
+            this.runtime.emitTargetSimplePropertyChanged(list);
         }
         this.emitTargetsUpdate();
         return true;
