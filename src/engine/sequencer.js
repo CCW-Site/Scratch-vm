@@ -277,6 +277,15 @@ class Sequencer {
                     // This means a reporter has just returned - so don't go
                     // to the next block for this level of the stack.
                     return;
+                } else if (stackFrame.reporting) {
+                    // CCW:
+                    // in original scratch
+                    // stackFrame.reporting only used in isPromiseReporter in execute.js
+                    // but promise waiting is depends on thread.status
+                    // so we use it for procedures_call_with_return
+                    // procedures_return is not a promise, dont need thread waiting
+                    // just continue to next stack of reporting
+                    continue;
                 }
                 // Get next block of existing block on the stack.
                 thread.goToNextBlock();
@@ -295,14 +304,15 @@ class Sequencer {
             branchNum = 1;
         }
         const currentBlockId = thread.peekStack();
-        const branchId = thread.target.blocks.getBranch(
+        const branchTarget = thread.getCurrentGlobalTarget() || thread.target;
+        const branchId = branchTarget.blocks.getBranch(
             currentBlockId,
             branchNum
         );
         thread.peekStackFrame().isLoop = isLoop;
         if (branchId) {
             // Push branch ID to the thread's stack.
-            thread.pushStack(branchId);
+            thread.pushStack(branchId, branchTarget);
         } else {
             thread.pushStack(null);
         }
@@ -312,9 +322,16 @@ class Sequencer {
      * Step a procedure.
      * @param {!Thread} thread Thread object to step to procedure.
      * @param {!string} procedureCode Procedure code of procedure to step to.
+     * @param {!Target} Target CCW: for globalProcedure.
      */
-    stepToProcedure (thread, procedureCode) {
-        const definition = thread.target.blocks.getProcedureDefinition(procedureCode);
+    stepToProcedure (thread, procedureCode, globalTarget) {
+        let target = thread.target;
+        if (globalTarget) {
+            target = globalTarget;
+        }
+
+        const definition = target.blocks.getProcedureDefinition(procedureCode);
+
         if (!definition) {
             return;
         }
@@ -326,7 +343,9 @@ class Sequencer {
         // and on to the main definition of the procedure.
         // When that set of blocks finishes executing, it will be popped
         // from the stack by the sequencer, returning control to the caller.
-        thread.pushStack(definition);
+        // CCW: pass target of procedure definition when procedure is global
+        // target will maintain in stackframe to make sure get definition to execute
+        thread.pushStack(definition, target);
         // In known warp-mode threads, only yield when time is up.
         if (thread.peekStackFrame().warpMode &&
             thread.warpTimer.timeElapsed() > Sequencer.WARP_TIME) {
@@ -334,8 +353,8 @@ class Sequencer {
         } else {
             // Look for warp-mode flag on definition, and set the thread
             // to warp-mode if needed.
-            const definitionBlock = thread.target.blocks.getBlock(definition);
-            const innerBlock = thread.target.blocks.getBlock(
+            const definitionBlock = target.blocks.getBlock(definition);
+            const innerBlock = target.blocks.getBlock(
                 definitionBlock.inputs.custom_block.block);
             let doWarp = false;
             if (innerBlock && innerBlock.mutation) {

@@ -408,7 +408,15 @@ const execute = function (sequencer, thread) {
     const currentBlockId = thread.peekStack();
     const currentStackFrame = thread.peekStackFrame();
 
-    let blockContainer = thread.blockContainer;
+    // CCW: for global procedure
+    const globalTarget = thread.getCurrentGlobalTarget();
+    let blockContainer;
+    if (globalTarget) {
+        blockContainer = globalTarget.blocks;
+    } else {
+        blockContainer = thread.blockContainer;
+    }
+
     let blockCached = BlocksExecuteCache.getCached(blockContainer, currentBlockId, BlockCached);
     if (blockCached === null) {
         blockContainer = runtime.flyoutBlocks;
@@ -462,9 +470,10 @@ const execute = function (sequencer, thread) {
         }
 
         // The reporting block must exist and must be the next one in the sequence of operations.
-        if (thread.justReported !== null && ops[i] && ops[i].id === currentStackFrame.reporting) {
+        // CCW: return '' thread.justReported === null
+        if (ops[i] && ops[i].id === currentStackFrame.reporting) {
             const opCached = ops[i];
-            const inputValue = thread.justReported;
+            const inputValue = thread.justReported === null ? '' : thread.justReported;
 
             thread.justReported = null;
 
@@ -476,11 +485,17 @@ const execute = function (sequencer, thread) {
                 // Cast it to a string. We don't need an id here.
                 argValues.BROADCAST_OPTION.id = null;
                 argValues.BROADCAST_OPTION.name = cast.toString(inputValue);
-            } else {
+            } else if (argValues && inputName) {
+                // pass value to parent argument if has parent
                 argValues[inputName] = inputValue;
             }
 
             i += 1;
+            if (i >= length) {
+                // there no more operations to execute meaning click procedures_call_with_return block separately
+                // show value bubble
+                handleReport(inputValue, sequencer, thread, opCached, true);
+            }
         }
 
         currentStackFrame.reporting = null;
@@ -512,9 +527,13 @@ const execute = function (sequencer, thread) {
 
         const primitiveReportedValue = blockFunction(argValues, blockUtility);
 
+        const isPromiseReportedValue = isPromise(primitiveReportedValue);
         // If it's a promise, wait until promise resolves.
-        if (isPromise(primitiveReportedValue)) {
-            handlePromise(primitiveReportedValue, sequencer, thread, opCached, lastOperation);
+        // CCW: procedures_call_with_return make stack frame waiting report like promise
+        if (isPromiseReportedValue || opCached.opcode === 'procedures_call_with_return') {
+            if (isPromiseReportedValue) {
+                handlePromise(primitiveReportedValue, sequencer, thread, opCached, lastOperation);
+            }
 
             // Store the already reported values. They will be thawed into the
             // future versions of the same operations by block id. The reporting
@@ -559,6 +578,12 @@ const execute = function (sequencer, thread) {
                     parentValues[inputName] = primitiveReportedValue;
                 }
             }
+        }
+        if (opCached.opcode === 'procedures_return') {
+            // CCW: when a procedure returns, we need to stop op chain execution
+            // pop stack until we find the procedures_call_with_return block
+            thread.stopThisScript();
+            break;
         }
     }
 

@@ -9,6 +9,7 @@ const BlocksRuntimeCache = require('./blocks-runtime-cache');
 const log = require('../util/log');
 const Variable = require('./variable');
 const getMonitorIdForBlockWithArgs = require('../util/get-monitor-id');
+const uid = require('../util/uid');
 
 /**
  * @fileoverview
@@ -88,7 +89,7 @@ class Blocks {
              * @type {object.<string, object>}
              */
             compiledScripts: {},
-            
+
             /**
              * tw: A cache of procedure code opcodes to a parsed intermediate representation
              * @type {object.<string, object>}
@@ -273,6 +274,23 @@ class Blocks {
         return block.id;
     }
 
+    // CCW: get all Global Procedures mutation
+    getGlobalProceduresXML () {
+        const globalProcedures = [];
+        for (const id in this._blocks) {
+            if (!this._blocks.hasOwnProperty(id)) continue;
+            const block = this._blocks[id];
+            if (block.opcode === 'procedures_definition') {
+                const internal = this._getCustomBlockInternal(block);
+                if (internal && internal.mutation.isglobal === 'true') {
+                    this._cache.procedureDefinitions[internal.mutation.proccode] = id; // The outer define block id
+                    globalProcedures.push(this.mutationToXML(internal.mutation));
+                }
+            }
+        }
+        return globalProcedures;
+    }
+
     /**
      * Get the procedure definition for a given name.
      * @param {?string} name Name of procedure to query.
@@ -301,13 +319,25 @@ class Blocks {
         return null;
     }
 
+    // CCW: global procedures
+    getGlobalProcedureAndTarget (name) {
+        for (let index = 0; index < this.runtime.targets.length; index++) {
+            const target = this.runtime.targets[index];
+            const definition = target.blocks.getProcedureDefinition(name);
+            if (definition) {
+                return [definition, target];
+            }
+        }
+        return [null, null];
+    }
+
     /**
      * Get names and ids of parameters for the given procedure.
      * @param {?string} name Name of procedure to query.
      * @return {?Array.<string>} List of param names for a procedure.
      */
     getProcedureParamNamesAndIds (name) {
-        return this.getProcedureParamNamesIdsAndDefaults(name).slice(0, 2);
+        return this._getProcedureParamNamesIdsAndDefaults(name).slice(0, 2);
     }
 
     /**
@@ -315,7 +345,7 @@ class Blocks {
      * @param {?string} name Name of procedure to query.
      * @return {?Array.<string>} List of param names for a procedure.
      */
-    getProcedureParamNamesIdsAndDefaults (name) {
+    _getProcedureParamNamesIdsAndDefaults (name) {
         const cachedNames = this._cache.procedureParamNames[name];
         if (typeof cachedNames !== 'undefined') {
             return cachedNames;
@@ -344,6 +374,30 @@ class Blocks {
 
         this._cache.procedureParamNames[name] = null;
         return null;
+    }
+
+    /** CCW: for global procedure
+     * Get names, ids, and defaults of parameters for the given procedure.
+     * @param {?string} name Name of procedure to query.
+     * @param {?boolean} isGlobal need look up procedures from all runtime targets
+     * @return {?Array.<any>} List of param names for a procedure.
+     */
+    getProcedureParamNamesIdsAndDefaults (name, isGlobal) {
+        if (isGlobal) {
+            // CCW find global procedure from runtime targets
+            // TODO: cache target id in mutation can improve efficiency
+            for (let index = 0; index < this.runtime.targets.length; index++) {
+                const target = this.runtime.targets[index];
+                const paramNamesIdsAndDefaults = target.blocks._getProcedureParamNamesIdsAndDefaults(name);
+                if (paramNamesIdsAndDefaults) {
+                    return [paramNamesIdsAndDefaults, target];
+                }
+            }
+        } else {
+            const paramNamesIdsAndDefaults = this._getProcedureParamNamesIdsAndDefaults(name);
+            return [paramNamesIdsAndDefaults, null];
+        }
+        return [null, null];
     }
 
     /**
@@ -381,6 +435,61 @@ class Blocks {
             }
         }
         this._cache.proceduresPopulated = true;
+    }
+
+    // CCW: update global procedure caller when editing
+    updateGlobalProcedure (oldProccode, newMutation) {
+        Object.values(this._blocks).forEach(block => {
+            if (block.opcode.startsWith('procedures_call') &&
+                    block.mutation.isglobal === 'true' &&
+                    block.mutation.proccode === oldProccode) {
+                // only proccode/warp/argumentIds_ can editing
+                // isglobal and isreporter does not allow editing
+                block.mutation.proccode = newMutation.getProcCode();
+                block.mutation.warp = newMutation.getWarp();
+                const newArgIds = newMutation.argumentIds_;
+                const oldArgIds = JSON.parse(block.mutation.argumentids); // store old argument to compare
+                block.mutation.argumentids = JSON.stringify(newMutation.argumentIds_);
+
+                for (const inputId in block.inputs) {
+                    if (!newArgIds.includes(inputId)) { // delete inputs that are no longer exist in definition
+                        delete block.inputs[inputId];
+                    }
+                }
+
+                const newArgTypes = newMutation.getProcCode().split(' %')
+                    .filter(s => s === 'b' || s === 's');
+                let i = 0;
+                for (const argId of newArgIds) {
+                    if (!oldArgIds.includes(argId) && newArgTypes[i] !== 'b') { // add new input block except boolean
+                        const id = uid();
+                        this._blocks[id] = {
+                            id: id,
+                            opcode: 'text',
+                            inputs: {},
+                            fields: {
+                                TEXT: {
+                                    name: 'TEXT',
+                                    value: ''
+                                }
+                            },
+                            next: null,
+                            topLevel: false,
+                            parent: block.id,
+                            shadow: true,
+                            x: 0,
+                            y: 0
+                        };
+                        block.inputs[argId] = {
+                            name: argId,
+                            block: id,
+                            shadow: id
+                        };
+                    }
+                    i += 1;
+                }
+            }
+        });
     }
 
     duplicate () {

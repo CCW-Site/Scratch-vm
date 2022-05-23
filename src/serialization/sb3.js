@@ -405,12 +405,17 @@ const serializeVariables = function (variables) {
     obj.broadcasts = Object.create(null);
     for (const varId in variables) {
         const v = variables[varId];
+
+
         if (v.type === Variable.BROADCAST_MESSAGE_TYPE) {
             obj.broadcasts[varId] = v.value; // name and value is the same for broadcast msgs
             continue;
         }
         if (v.type === Variable.LIST_TYPE) {
-            obj.lists[varId] = [v.name, v.value];
+            // CCW: validate variable value not null
+            // make sure no null in json
+            const nonNullvalue = v.value.map(item => item ?? '');
+            obj.lists[varId] = [v.name, nonNullvalue];
             // powered by xigua start
             if (v.isCloud) obj.lists[varId].push(true);
             // powered by xigua end
@@ -418,7 +423,7 @@ const serializeVariables = function (variables) {
         }
 
         // otherwise should be a scalar type
-        obj.variables[varId] = [v.name, v.value];
+        obj.variables[varId] = [v.name, v.value ?? '']; // CCW: make sure no null in json
         // only scalar vars have the potential to be cloud vars
         if (v.isCloud) obj.variables[varId].push(true);
     }

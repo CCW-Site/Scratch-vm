@@ -614,6 +614,25 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for pause.
+     * Used by the UI to indicate pause status.
+     * @const {string}
+     */
+    static get PROJECT_RUN_PAUSE () {
+        return 'PROJECT_RUN_PAUSE';
+    }
+
+
+    /**
+     * Event name for resume
+     * Used by the UI to indicate resume status.
+     * @const {string}
+     */
+    static get PROJECT_RUN_RESUME () {
+        return 'PROJECT_RUN_RESUME';
+    }
+
+    /**
      * Event name for project being stopped or restarted by the user.
      * Used by blocks that need to reset state.
      * @const {string}
@@ -3304,8 +3323,22 @@ class Runtime extends EventEmitter {
                 qa: '-qa',
                 prod: ''
             }[ENV];
+
+            let defaultScriptURL = `/static/js/main.js?_=${Date.now()}`;
+            if (staticName) {
+                defaultScriptURL = `https://static${staticName}.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m/static/js/main.js?_=${Date.now()}`;
+            }
+
+            let onlineScriptUrl = defaultScriptURL;
+            if (this.ccwAPI && this.ccwAPI.getOnlineExtensionsConfig) {
+                onlineScriptUrl = this.ccwAPI.getOnlineExtensionsConfig().fileSrc ?? defaultScriptURL;
+            }
+            if (!onlineScriptUrl) {
+                log.warn('onlineScriptUrl is null');
+            }
+
             const script = document.createElement('script');
-            script.src = `${staticName === void 0 ? '' : `https://static${staticName}.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m`}/static/js/main.js?_=${Date.now()}`;
+            script.src = onlineScriptUrl;
             script.id = onlineScriptId;
             script.defer = true;
 

@@ -121,6 +121,12 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.PROJECT_RUN_STOP, () => {
             this.emit(Runtime.PROJECT_RUN_STOP);
         });
+        this.runtime.on(Runtime.PROJECT_RUN_PAUSE, () => {
+            this.emit(Runtime.PROJECT_RUN_PAUSE);
+        });
+        this.runtime.on(Runtime.PROJECT_RUN_RESUME, () => {
+            this.emit(Runtime.PROJECT_RUN_RESUME);
+        });
         this.runtime.on(Runtime.PROJECT_CHANGED, () => {
             this.emit(Runtime.PROJECT_CHANGED);
         });
@@ -1546,7 +1552,7 @@ class VirtualMachine extends EventEmitter {
                 const oldName = sprite.name;
                 const newUnusedName = StringUtil.unusedName(newName, names);
                 sprite.name = newUnusedName;
-                if (oldName === newUnusedName) {
+                if (oldName === newUnusedName || newUnusedName.startsWith('#modules/')) {
                     return;
                 }
                 const allTargets = this.runtime.targets;
@@ -2128,6 +2134,18 @@ class VirtualMachine extends EventEmitter {
         const localVariables = Object.keys(localVarMap).map(
             k => localVarMap[k]
         );
+
+        // CCW: globalProcedures
+        // get all global procedures and pass to target
+        let globalProcedures = [];
+        for (let i = 0; i < this.runtime.targets.length; i++) {
+            const target = this.runtime.targets[i];
+            if (target === this.editingTarget) {
+                // skip self avoid duplicate procedure
+                continue;
+            }
+            globalProcedures = globalProcedures.concat(target.blocks.getGlobalProceduresXML());
+        }
         const workspaceComments = Object.keys(this.editingTarget.comments)
             .map(k => this.editingTarget.comments[k])
             .filter(c => c.blockId === null);
@@ -2135,10 +2153,11 @@ class VirtualMachine extends EventEmitter {
         const xmlString = `<xml xmlns="http://www.w3.org/1999/xhtml">
                             <variables>
                                 ${globalVariables.map(v => v.toXML()).join()}
-                                ${localVariables
-        .map(v => v.toXML(true))
-        .join()}
+                                ${localVariables.map(v => v.toXML(true)).join()}
                             </variables>
+                            <procedures>
+                            ${globalProcedures.join()}
+                            </procedures>
                             ${workspaceComments.map(c => c.toXML()).join()}
                             ${this.editingTarget.blocks.toXML(
         this.editingTarget.comments

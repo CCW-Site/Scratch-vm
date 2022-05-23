@@ -145,15 +145,18 @@ class Cloud {
 
         // powered by xigua start
         // 添加查找云列表
+        let isList = false;
         let variable = this.stage.lookupVariableByNameAndType(varName, Variable.SCALAR_TYPE);
         if (variable && varUpdate.value === null) {
             varUpdate.value = 0;
         }
+
         if (!variable) {
             variable = this.stage.lookupVariableByNameAndType(varName, Variable.LIST_TYPE);
             if (variable && varUpdate.value === null) {
                 varUpdate.value = [];
             }
+            isList = true;
         }
 
         // powered by xigua end
@@ -162,7 +165,29 @@ class Cloud {
             return;
         }
 
-        variable.value = varUpdate.value;
+        // fix: server cloud var service is messed up with other services, it store Array as String in MangoDB sometimes, here is a temp fix.
+        // hope server will fix it soon.
+
+        // console.log('updateCloudVariable', varUpdate);
+        if (isList && typeof varUpdate.value === 'string') {
+            try {
+                // console.log(' >>>>> is list string,need to parse', varUpdate.value);
+                const value = JSON.parse(varUpdate.value);
+                if (Array.isArray(value)) {
+                    // console.log('    >>>> parse suc', value);
+                    variable.value = value;
+                } else {
+                    // console.log('    >>>> parse suc but not array', value);
+                    variable.value = varUpdate.value;
+                }
+            } catch (error) {
+                log.warn('updateCloudVariable list parse fail', varUpdate);
+                variable.value = [];
+
+            }
+        } else {
+            variable.value = varUpdate.value;
+        }
     }
 
     /**

@@ -79,7 +79,7 @@ class _StackFrame {
         this.waitingReporter = null;
         this.params = null;
         this.executionContext = null;
-
+        this.reporting = ''; // CCW: use reporting for custom procedure_return
         return this;
     }
 
@@ -272,17 +272,33 @@ class Thread {
         return Thread.getIdFromTargetAndBlock(this.target, this.topBlock);
     }
 
+    // CCW: return current stack global target for global procedure
+    getCurrentGlobalTarget () {
+        let target;
+        const stackframe = this.peekStackFrame();
+        if (stackframe && stackframe.executionContext) {
+            target = stackframe.executionContext.globalTarget;
+        }
+        return target;
+    }
+
     /**
      * Push stack and update stack frames appropriately.
      * @param {string} blockId Block ID to push to stack.
+     * @param {Target} target CCW: the target execute in this stackframe, for global procedure.
      */
-    pushStack (blockId) {
+    pushStack (blockId, target) {
         this.stack.push(blockId);
         // Push an empty stack frame, if we need one.
         // Might not, if we just popped the stack.
         if (this.stack.length > this.stackFrames.length) {
             const parent = this.stackFrames[this.stackFrames.length - 1];
-            this.stackFrames.push(_StackFrame.create(typeof parent !== 'undefined' && parent.warpMode));
+            // CCW: maintain global target in stack frame
+            const stackFrame = _StackFrame.create(typeof parent !== 'undefined' && parent.warpMode);
+            if (target) {
+                stackFrame.executionContext = {globalTarget: target};
+            }
+            this.stackFrames.push(stackFrame);
         }
     }
 
@@ -293,7 +309,12 @@ class Thread {
      */
     reuseStackForNextBlock (blockId) {
         this.stack[this.stack.length - 1] = blockId;
+        // CCW: maintain globalTarget when in global procedure execution stack
+        const globalTarget = this.getCurrentGlobalTarget();
         this.stackFrames[this.stackFrames.length - 1].reuse();
+        if (globalTarget) {
+            this.stackFrames[this.stackFrames.length - 1].executionContext = {globalTarget};
+        }
     }
 
     /**
@@ -312,7 +333,17 @@ class Thread {
         let blockID = this.peekStack();
         while (blockID !== null) {
             const block = this.target.blocks.getBlock(blockID);
-            if (typeof block !== 'undefined' && block.opcode === 'procedures_call') {
+
+            // CCW: when stack is or waiting procedures_call_with_return, dont pop
+            let isWaitingProceduresReturn = false;
+            const stackFrame = this.peekStackFrame();
+            if (stackFrame.reporting) {
+                const reportBlock = this.target.blocks.getBlock(stackFrame.reporting);
+                isWaitingProceduresReturn = reportBlock.opcode === 'procedures_call_with_return';
+            }
+
+            if (typeof block !== 'undefined' &&
+                (block.opcode === 'procedures_call' || isWaitingProceduresReturn)) {
                 break;
             }
             this.popStack();
@@ -419,7 +450,13 @@ class Thread {
      * where execution proceeds from one block to the next.
      */
     goToNextBlock () {
-        const nextBlockId = this.target.blocks.getNextBlock(this.peekStack());
+        const globalTarget = this.getCurrentGlobalTarget();
+        let nextBlockId;
+        if (globalTarget) {
+            nextBlockId = globalTarget.blocks.getNextBlock(this.peekStack());
+        } else {
+            nextBlockId = this.target.blocks.getNextBlock(this.peekStack());
+        }
         this.reuseStackForNextBlock(nextBlockId);
     }
 
