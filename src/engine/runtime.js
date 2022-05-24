@@ -2888,9 +2888,7 @@ class Runtime extends EventEmitter {
             // if the monitor did not exist in the state, add it
             this._monitorState = this._monitorState.set(id, monitor);
             if (!isRemoteOperation) {
-                setTimeout(() => {
-                    this.emitMonitorsChanged(['add', id]);
-                }, 100);
+                this.emitMonitorsChanged(['add', id]);
             }
         }
     }
