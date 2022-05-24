@@ -99,10 +99,11 @@ const primitiveOpcodeInfoMap = {
 /**
  * Serializes primitives described above into a more compact format
  * @param {object} block the block to serialize
+ * @param {?Boolean} saveVarId Whether to save the variable ID or not
  * @return {array} An array representing the information in the block,
  * or null if the given block is not one of the primitives described above.
  */
-const serializePrimitiveBlock = function (block) {
+const serializePrimitiveBlock = function (block, saveVarId) {
     // Returns an array represeting a primitive block or null if not one of
     // the primitive types above
     if (hasOwnProperty.call(primitiveOpcodeInfoMap, block.opcode)) {
@@ -119,7 +120,9 @@ const serializePrimitiveBlock = function (block) {
                 primitiveDesc.push(block.x ? Math.round(block.x) : 0);
                 primitiveDesc.push(block.y ? Math.round(block.y) : 0);
             }
-            primitiveDesc.push(block.id);
+            if (saveVarId) {
+                primitiveDesc.push(block.id);
+            }
         }
         return primitiveDesc;
     }
@@ -186,12 +189,13 @@ const serializeFields = function (fields) {
  * Serialize the given block in the SB3 format with some compression of inputs,
  * fields, and primitives.
  * @param {object} block The block to serialize
+ * @param {?Boolean} saveVarId Whether to save the variable ID or not
  * @return {object | array} A serialized representation of the block. This is an
  * array if the block is one of the primitive types described above or an object,
  * if not.
  */
-const serializeBlock = function (block) {
-    const serializedPrimitive = serializePrimitiveBlock(block);
+const serializeBlock = function (block, saveVarId) {
+    const serializedPrimitive = serializePrimitiveBlock(block, saveVarId);
     if (serializedPrimitive) return serializedPrimitive;
     // If serializedPrimitive is null, proceed with serializing a non-primitive block
     const obj = Object.create(null);
@@ -300,16 +304,17 @@ const getExtensionIdForOpcode = function (opcode) {
  * Serialize the given blocks object (representing all the blocks for the target
  * currently being serialized.)
  * @param {object} blocks The blocks to be serialized
+ * @param {?Boolean} saveVarId Whether to save the variable ID or not
  * @return {Array} An array of the serialized blocks with compressed inputs and
  * compressed primitives and the list of all extension IDs present
  * in the serialized blocks.
  */
-const serializeBlocks = function (blocks) {
+const serializeBlocks = function (blocks, saveVarId) {
     const obj = Object.create(null);
     const extensionIDs = new Set();
     for (const blockID in blocks) {
         if (!blocks.hasOwnProperty(blockID)) continue;
-        obj[blockID] = serializeBlock(blocks[blockID], blocks);
+        obj[blockID] = serializeBlock(blocks[blockID], blocks, saveVarId);
         const extensionID = getExtensionIdForOpcode(blocks[blockID].opcode);
         if (extensionID) {
             extensionIDs.add(extensionID);
@@ -455,9 +460,10 @@ const serializeComments = function (comments) {
  * for saving and loading this target.
  * @param {object} target The target to be serialized.
  * @param {Set} extensions A set of extensions to add extension IDs to
+ * @param {?Boolean} saveVarId Whether to save the variable ID or not
  * @return {object} A serialized representation of the given target.
  */
-const serializeTarget = function (target, extensions) {
+const serializeTarget = function (target, extensions, saveVarId) {
     const obj = Object.create(null);
     let targetExtensions = [];
     obj.isStage = target.isStage;
@@ -467,7 +473,7 @@ const serializeTarget = function (target, extensions) {
     obj.variables = vars.variables;
     obj.lists = vars.lists;
     obj.broadcasts = vars.broadcasts;
-    [obj.blocks, targetExtensions] = serializeBlocks(target.blocks);
+    [obj.blocks, targetExtensions] = serializeBlocks(target.blocks, saveVarId);
     obj.comments = serializeComments(target.comments);
 
     // TODO remove this check/patch when (#1901) is fixed
@@ -566,7 +572,7 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
     if (runtime.isTeamworkMode) {
         serializedTargets = flattenedOriginalTargets.reduce(
             (a, t, i) => {
-                const target = serializeTarget(t, extensions);
+                const target = serializeTarget(t, extensions, true);
                 target.order = i;
                 target.id = t.id;
                 return {...a, [t.id]: target};

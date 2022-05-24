@@ -1803,13 +1803,14 @@ class VirtualMachine extends EventEmitter {
      * Serialize the given blocks object (representing all the blocks for the target
      * currently being serialized.)
      * @param {object} blocks The blocks to be serialized
+     * @param {?Boolean} saveVarId Whether to save the variable ID or not
      * @return {Array} An array of the serialized blocks with compressed inputs and
      * compressed primitives and the list of all extension IDs present
      * in the serialized blocks.
      */
-    serializeBlocks (blocks) {
+    serializeBlocks (blocks, saveVarId) {
         const sb3 = require('./serialization/sb3');
-        return sb3.serializeBlocks(blocks);
+        return sb3.serializeBlocks(blocks, saveVarId);
     }
 
     /**
