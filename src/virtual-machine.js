@@ -1648,7 +1648,10 @@ class VirtualMachine extends EventEmitter {
         }
         return target.duplicate().then(newTarget => {
             this.runtime.addTarget(newTarget);
-            this.emit('ADD_SPRITE', this.serializeTarget(newTarget.toJSON()));
+            const newTargetId = newTarget.id;
+            const newSerializedTarget = this.serializeTarget(newTarget.toJSON());
+            newSerializedTarget.id = newTargetId;
+            this.emit('ADD_SPRITE', newSerializedTarget);
             newTarget.goBehindOther(target);
             this.setEditingTarget(newTarget.id);
         });
@@ -1785,18 +1788,6 @@ class VirtualMachine extends EventEmitter {
             this.emitWorkspaceUpdate();
             this.runtime.setEditingTarget(target);
         }
-    }
-
-    /**
-     * Serialize the given target. Only serialize properties that are necessary
-     * for saving and loading this target.
-     * @param {object} target The target to be serialized.
-     * @param {Set} extensions A set of extensions to add extension IDs to
-     * @return {object} A serialized representation of the given target.
-     */
-    serializeTarget (target, extensions) {
-        const sb3 = require('./serialization/sb3');
-        return sb3.serializeTarget(target, extensions);
     }
 
     /**
