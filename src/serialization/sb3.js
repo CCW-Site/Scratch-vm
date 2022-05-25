@@ -468,7 +468,6 @@ const serializeTarget = function (target, extensions, saveVarId) {
     let targetExtensions = [];
     obj.isStage = target.isStage;
     obj.name = obj.isStage ? 'Stage' : target.name;
-    obj.id = target.id;
     const vars = serializeVariables(target.variables);
     obj.variables = vars.variables;
     obj.lists = vars.lists;
