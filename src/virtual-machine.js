@@ -1649,9 +1649,10 @@ class VirtualMachine extends EventEmitter {
             throw new Error('No sprite associated with this target.');
         }
         return target.duplicate().then(newTarget => {
+            const sb3 = require('./serialization/sb3');
             this.runtime.addTarget(newTarget);
             const newTargetId = newTarget.id;
-            const newSerializedTarget = this.serializeTarget(newTarget.toJSON());
+            const newSerializedTarget = sb3.serializeTarget(newTarget.toJSON());
             newSerializedTarget.id = newTargetId;
             this.emit('ADD_SPRITE', newSerializedTarget);
             newTarget.goBehindOther(target);
