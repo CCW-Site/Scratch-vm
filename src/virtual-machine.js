@@ -892,7 +892,7 @@ class VirtualMachine extends EventEmitter {
 
             if (!isRemoteOperation && !wholeProject) {
                 const sb3 = require('./serialization/sb3');
-                const serializedTarget = sb3.serialize(this.runtime, targets[0].id);
+                const serializedTarget = sb3.serializeTarget(targets[0].toJSON(), new Set());
                 serializedTarget.id = targets[0].id;
                 return serializedTarget;
             }
@@ -1652,7 +1652,7 @@ class VirtualMachine extends EventEmitter {
             const sb3 = require('./serialization/sb3');
             this.runtime.addTarget(newTarget);
             const newTargetId = newTarget.id;
-            const newSerializedTarget = sb3.serializeTarget(newTarget.toJSON());
+            const newSerializedTarget = sb3.serializeTarget(newTarget.toJSON(), new Set());
             newSerializedTarget.id = newTargetId;
             this.emit('ADD_SPRITE', newSerializedTarget);
             newTarget.goBehindOther(target);
