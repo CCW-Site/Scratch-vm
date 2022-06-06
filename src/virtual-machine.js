@@ -1821,6 +1821,21 @@ class VirtualMachine extends EventEmitter {
         return sb3.deserializeBlocks(blocks);
     }
     
+    /**
+     * Deserialize a block input descriptors. This is either a
+     * block id or a serialized primitive, e.g. an array
+     * (see serializePrimitiveBlock function).
+     * @param {string | array} inputDescOrId The block input descriptor to be serialized.
+     * @param {string} parentId The id of the parent block for this input block.
+     * @param {boolean} isShadow Whether or not this input block is a shadow.
+     * @param {object} blocks The entire blocks object currently in the process of getting serialized.
+     * @return {object} The deserialized input descriptor.
+     */
+    deserializeInputDesc (inputDescOrId, parentId, isShadow, blocks, blockId) {
+        const sb3 = require('./serialization/sb3');
+        return sb3.deserializeInputDesc(inputDescOrId, parentId, isShadow, blocks, blockId);
+    }
+    
     serializeVariables (variables) {
         const sb3 = require('./serialization/sb3');
         return sb3.serializeVariables(variables);

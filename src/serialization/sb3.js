@@ -721,6 +721,7 @@ const deserializeInputDesc = function (inputDescOrId, parentId, isShadow, blocks
     }
     case BROADCAST_PRIMITIVE: {
         primitiveObj.opcode = 'event_broadcast_menu';
+        primitiveObj.id = inputDescOrId[2] || primitiveObj.id;
         primitiveObj.fields = {
             BROADCAST_OPTION: {
                 name: 'BROADCAST_OPTION',
@@ -1387,5 +1388,6 @@ module.exports = {
     deserializeSound: deserializeSound,
     serializeComments: serializeComments,
     serializeVariables: serializeVariables,
-    getExtensionIdForOpcode: getExtensionIdForOpcode
+    getExtensionIdForOpcode: getExtensionIdForOpcode,
+    deserializeInputDesc: deserializeInputDesc
 };
