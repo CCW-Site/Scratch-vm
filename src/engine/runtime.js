@@ -733,7 +733,7 @@ class Runtime extends EventEmitter {
     static get MONITORS_CHANGED () {
         return 'MONITORS_CHANGED';
     }
-    
+
 
     /**
      * Event name for report that a change was made to an extension in the toolbox.
@@ -3323,7 +3323,7 @@ class Runtime extends EventEmitter {
             }[ENV];
 
             let defaultScriptURL = `/static/js/main.js?_=${Date.now()}`;
-            if (staticName) {
+            if (staticName !== void 0) {
                 defaultScriptURL = `https://static${staticName}.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m/static/js/main.js?_=${Date.now()}`;
             }
 
