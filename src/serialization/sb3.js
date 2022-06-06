@@ -314,7 +314,7 @@ const serializeBlocks = function (blocks, saveVarId) {
     const extensionIDs = new Set();
     for (const blockID in blocks) {
         if (!blocks.hasOwnProperty(blockID)) continue;
-        obj[blockID] = serializeBlock(blocks[blockID], blocks, saveVarId);
+        obj[blockID] = serializeBlock(blocks[blockID], saveVarId);
         const extensionID = getExtensionIdForOpcode(blocks[blockID].opcode);
         if (extensionID) {
             extensionIDs.add(extensionID);
