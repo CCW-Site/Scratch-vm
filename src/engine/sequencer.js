@@ -40,7 +40,7 @@ let stepThreadsInnerProfilerId = -1;
 let executeProfilerId = -1;
 
 class Sequencer {
-    constructor (runtime) {
+    constructor(runtime) {
         /**
          * A utility timer for timing thread sequencing.
          * @type {!Timer}
@@ -87,9 +87,9 @@ class Sequencer {
         // 2. Time elapsed must be less than WORK_TIME.
         // 3. Either turbo mode, or no redraw has been requested by a primitive.
         while (this.runtime.threads.length > 0 &&
-               numActiveThreads > 0 &&
-               this.timer.timeElapsed() < WORK_TIME &&
-               (this.runtime.turboMode || !this.runtime.redrawRequested)) {
+            numActiveThreads > 0 &&
+            this.timer.timeElapsed() < WORK_TIME &&
+            (this.runtime.turboMode || !this.runtime.redrawRequested)) {
             if (this.runtime.profiler !== null) {
                 if (stepThreadsInnerProfilerId === -1) {
                     stepThreadsInnerProfilerId = this.runtime.profiler.idByName(stepThreadsInnerProfilerFrame);
@@ -304,7 +304,8 @@ class Sequencer {
             branchNum = 1;
         }
         const currentBlockId = thread.peekStack();
-        const branchTarget = thread.getCurrentGlobalTarget() || thread.target;
+        const globalTarget = thread.getCurrentGlobalTarget();
+        const branchTarget = globalTarget || thread.target;
         const branchId = branchTarget.blocks.getBranch(
             currentBlockId,
             branchNum
@@ -312,7 +313,12 @@ class Sequencer {
         thread.peekStackFrame().isLoop = isLoop;
         if (branchId) {
             // Push branch ID to the thread's stack.
-            thread.pushStack(branchId, branchTarget);
+            if (globalTarget) {
+                thread.pushStack(branchId, globalTarget);
+            } else {
+                thread.pushStack(branchId);
+            }
+
         } else {
             thread.pushStack(null);
         }
@@ -345,7 +351,12 @@ class Sequencer {
         // from the stack by the sequencer, returning control to the caller.
         // CCW: pass target of procedure definition when procedure is global
         // target will maintain in stackframe to make sure get definition to execute
-        thread.pushStack(definition, target);
+        if (globalTarget) {
+            thread.pushStack(definition, target);
+        } else {
+            thread.pushStack(definition);
+        }
+
         // In known warp-mode threads, only yield when time is up.
         if (thread.peekStackFrame().warpMode &&
             thread.warpTimer.timeElapsed() > Sequencer.WARP_TIME) {

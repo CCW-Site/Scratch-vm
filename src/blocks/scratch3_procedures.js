@@ -31,7 +31,7 @@ class Scratch3ProcedureBlocks {
     }
     call (args, util) {
         const procedureCode = args.mutation.proccode;
-        const isGlobal = args.mutation.isglobal;
+        const isGlobal = args.mutation.isglobal && args.mutation.isglobal !== 'null';
         const [paramNamesIdsAndDefaults, globalTarget] = util.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
         // If null, procedure could not be found, which can happen if custom
         // block is dragged between sprites without the definition.
