@@ -340,6 +340,16 @@ class Thread {
             if (stackFrame.reporting) {
                 const reportBlock = this.target.blocks.getBlock(stackFrame.reporting);
                 isWaitingProceduresReturn = reportBlock.opcode === 'procedures_call_with_return';
+                if (isWaitingProceduresReturn) {
+                    // CCW:
+                    // when call [procedures_call_with_return] in a [procedure] which has input params.
+                    // after call [procedures_call_with_return], it will init its own params (params are {} now) in stackframe.
+                    // when in [procedure] follow-up block try to find params like [argumentReporterStringNumber].
+                    // thread.getParams() will return value when any stackframe's params !== null.
+                    // so when call [procedures_call_with_return] is done,
+                    // set its stackframe params to null to make sure [procedure]'s params can be find
+                    stackFrame.params = null;
+                }
             }
 
             if (typeof block !== 'undefined' &&
@@ -510,7 +520,10 @@ class Thread {
                 result = compile(this);
                 blocks.cacheCompileResult(topBlock, result);
             } catch (error) {
-                log.error('cannot compile script', this.target.getName(), error);
+                // @ts-ignore
+                if (DEPLOY_ENV !== 'prod') {
+                    log.error('cannot compile script', this.target.getName(), error);
+                }
                 blocks.cacheCompileError(topBlock, error);
                 this.target.runtime.emitCompileError(this.target, error);
                 return;
