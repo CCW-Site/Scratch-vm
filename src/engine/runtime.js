@@ -3063,8 +3063,8 @@ class Runtime extends EventEmitter {
     /**
      * Report that the target has changed in a way that would affect serialization
      */
-    emitTargetCommentsChanged (targeId, commentId, data) {
-        this.emit(Runtime.TARGET_COMMENTS_CHANGED, targeId, commentId, data);
+    emitTargetCommentsChanged (targeId, data) {
+        this.emit(Runtime.TARGET_COMMENTS_CHANGED, targeId, data);
     }
 
     /**

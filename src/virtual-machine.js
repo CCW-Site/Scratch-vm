@@ -133,8 +133,8 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.TARGET_BLOCKS_CHANGED, (targetId, blocks, ext) => {
             this.emit(Runtime.TARGET_BLOCKS_CHANGED, targetId, blocks, ext);
         });
-        this.runtime.on(Runtime.TARGET_COMMENTS_CHANGED, (targetId, commentId, data) => {
-            this.emit(Runtime.TARGET_COMMENTS_CHANGED, targetId, commentId, data);
+        this.runtime.on(Runtime.TARGET_COMMENTS_CHANGED, (targetId, data) => {
+            this.emit(Runtime.TARGET_COMMENTS_CHANGED, targetId, data);
         });
         this.runtime.on(Runtime.TARGET_COSTUME_CHANGED, (id, data) => {
             this.emit(Runtime.TARGET_COSTUME_CHANGED, id, data);

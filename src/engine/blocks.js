@@ -698,7 +698,9 @@ class Blocks {
                     currTarget.comments[e.commentId].x = e.xy.x;
                     currTarget.comments[e.commentId].y = e.xy.y;
                 }
-                this.runtime.emitTargetCommentsChanged(currTarget.id, e.commentId, currTarget.comments[e.commentId]);
+                this.runtime.emitTargetCommentsChanged(currTarget.id,
+                    ['add', e.commentId, currTarget.comments[e.commentId]]
+                );
             }
             this.emitProjectChanged();
             break;
@@ -728,7 +730,9 @@ class Blocks {
                     comment.text = change.text;
                     changedData.text = comment.text;
                 }
-                this.runtime.emitTargetCommentsChanged(currTarget.id, comment.id, changedData);
+                this.runtime.emitTargetCommentsChanged(currTarget.id,
+                    ['update', e.commentId, changedData]
+                );
                 this.emitProjectChanged();
             }
             break;
@@ -743,8 +747,9 @@ class Blocks {
                 const newCoord = e.newCoordinate_;
                 comment.x = newCoord.x;
                 comment.y = newCoord.y;
-                this.runtime.emitTargetCommentsChanged(currTarget.id, comment.id, {x: comment.x, y: comment.y});
-
+                this.runtime.emitTargetCommentsChanged(currTarget.id,
+                    ['update', e.commentId, {x: comment.x, y: comment.y}]
+                );
                 this.emitProjectChanged();
             }
             break;
@@ -768,7 +773,7 @@ class Blocks {
                     }
                     delete block.comment;
                 }
-                this.runtime.emitTargetCommentsChanged(currTarget.id, e.commentId);
+                this.runtime.emitTargetCommentsChanged(currTarget.id, ['delete', e.commentId]);
                 this.emitProjectChanged();
             }
             break;
