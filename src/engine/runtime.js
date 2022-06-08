@@ -3316,25 +3316,22 @@ class Runtime extends EventEmitter {
             // eslint-disable-next-line no-undef
             const ENV = typeof DEPLOY_ENV === 'undefined' ? void 0 : DEPLOY_ENV;
             // https://static-dev.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m/static/js/
+
             const staticName = {
                 dev: '-dev',
                 qa: '-qa',
                 prod: ''
             }[ENV];
 
-            let defaultScriptURL = `/static/js/main.js?_=${Date.now()}`;
-            if (staticName !== void 0) {
-                defaultScriptURL = `https://static${staticName}.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m/static/js/main.js?_=${Date.now()}`;
-            }
+            const scriptHost = staticName === void 0 ? '' : `https://static${staticName}.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m`;
 
-            let onlineScriptUrl = defaultScriptURL;
+            let onlineScriptUrl = `${scriptHost}/static/js/main.js?_=${Date.now()}`;
             if (this.ccwAPI && this.ccwAPI.getOnlineExtensionsConfig) {
-                onlineScriptUrl = this.ccwAPI.getOnlineExtensionsConfig().fileSrc ?? defaultScriptURL;
+                onlineScriptUrl = this.ccwAPI.getOnlineExtensionsConfig().fileSrc || onlineScriptUrl;
             }
             if (!onlineScriptUrl) {
                 log.warn('onlineScriptUrl is null');
             }
-
             const script = document.createElement('script');
             script.src = onlineScriptUrl;
             script.id = onlineScriptId;

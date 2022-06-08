@@ -40,7 +40,7 @@ let stepThreadsInnerProfilerId = -1;
 let executeProfilerId = -1;
 
 class Sequencer {
-    constructor(runtime) {
+    constructor (runtime) {
         /**
          * A utility timer for timing thread sequencing.
          * @type {!Timer}
