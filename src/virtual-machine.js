@@ -1594,9 +1594,6 @@ class VirtualMachine extends EventEmitter {
             if (!sprite) {
                 throw new Error('No sprite associated with this target.');
             }
-            if (!isRemoteOperation) {
-                this.emit('DELETE_SPRITE', targetId);
-            }
             const spritePromise = this.exportSprite(targetId, 'uint8array');
             const restoreSprite = () =>
                 spritePromise.then(spriteBuffer =>
@@ -1624,6 +1621,9 @@ class VirtualMachine extends EventEmitter {
                         this.editingTarget = null;
                     }
                 }
+            }
+            if (!isRemoteOperation) {
+                this.emit('DELETE_SPRITE', targetId);
             }
             // Sprite object should be deleted by GC.
             this.emitTargetsUpdate();
