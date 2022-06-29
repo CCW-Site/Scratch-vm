@@ -521,7 +521,7 @@ class Thread {
                 blocks.cacheCompileResult(topBlock, result);
             } catch (error) {
                 // @ts-ignore
-                if (DEPLOY_ENV !== 'prod') {
+                if (typeof DEPLOY_ENV !== 'undefined' && DEPLOY_ENV !== 'prod') {
                     log.error('cannot compile script', this.target.getName(), error);
                 }
                 blocks.cacheCompileError(topBlock, error);
