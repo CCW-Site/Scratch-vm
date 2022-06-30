@@ -1312,7 +1312,7 @@ class Runtime extends EventEmitter {
      * @private
      */
     _convertForScratchBlocks (blockInfo, categoryInfo) {
-        if (blockInfo === '---') {
+        if (typeof blockInfo === 'string' && blockInfo.startsWith('---')) {
             return this._convertSeparatorForScratchBlocks(blockInfo);
         }
 
@@ -1482,10 +1482,18 @@ class Runtime extends EventEmitter {
      * @private
      */
     _convertSeparatorForScratchBlocks (blockInfo) {
+        if (blockInfo === '---') {
+            return {
+                info: blockInfo,
+
+                xml: '<sep gap="36"/>'
+            };
+        }
         return {
             info: blockInfo,
-            xml: '<sep gap="36"/>'
+            xml: `<sep gap="36"/><label text="${blockInfo.slice(3)}"/>`
         };
+
     }
 
     /**
