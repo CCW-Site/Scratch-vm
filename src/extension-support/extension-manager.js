@@ -151,7 +151,7 @@ class ExtensionManager {
 
     setLoadedExtension (extensionID, value) {
         log(`New extension loaded: ${extensionID} ${value}`);
-        
+
         this._loadedExtensions.set(extensionID, value);
     }
 
@@ -435,18 +435,26 @@ class ExtensionManager {
             (results, blockInfo) => {
                 try {
                     let result;
-                    switch (blockInfo) {
-                    case '---': // separator
-                        result = '---';
-                        break;
-                    default:
-                        // an ExtensionBlockMetadata object
+                    if (typeof blockInfo === 'string' && blockInfo.startsWith('---')) {
+                        result = blockInfo;
+                    } else {
                         result = this._prepareBlockInfo(
                             serviceName,
                             blockInfo
                         );
-                        break;
                     }
+                    // switch (blockInfo) {
+                    // case '---': // separator
+                    //     result = '---';
+                    //     break;
+                    // default:
+                    //     // an ExtensionBlockMetadata object
+                    //     result = this._prepareBlockInfo(
+                    //         serviceName,
+                    //         blockInfo
+                    //     );
+                    //     break;
+                    // }
                     results.push(result);
                 } catch (e) {
                     // TODO: more meaningful error reporting
