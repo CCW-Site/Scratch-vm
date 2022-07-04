@@ -18,7 +18,9 @@ class Scratch3ProcedureBlocks {
             procedures_call_with_return: this.call,
             argument_reporter_string_number: this.argumentReporterStringNumber,
             argument_reporter_boolean: this.argumentReporterBoolean,
-            procedures_return: this.proceduresReturn
+            // CCW customize
+            procedures_return: this.proceduresReturn,
+            ccw_hat_parameter: this.ccwHatParameter
         };
     }
 
@@ -87,6 +89,11 @@ class Scratch3ProcedureBlocks {
             // call, the default is always 0.
             return 0;
         }
+        return value;
+    }
+
+    ccwHatParameter (args, util) {
+        const value = util.getHatParam(args.VALUE);
         return value;
     }
 }

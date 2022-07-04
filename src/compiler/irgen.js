@@ -235,6 +235,14 @@ class ScriptTreeGenerator {
                 index: index
             };
         }
+        // CCW hat var
+        case 'ccw_hat_parameter': {
+            const name = block.fields.VALUE.value;
+            return {
+                kind: 'args.ccw_hat_parameter',
+                index: name
+            };
+        }
 
         case 'data_variable':
             return {

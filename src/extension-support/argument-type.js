@@ -50,7 +50,8 @@ const ArgumentType = {
      */
     XIGUA_MATRIX: 'xigua_matrix',
 
-    XIGUA_WHITE_BOARD_NOTE: 'xigua_white_board_note'
+    XIGUA_WHITE_BOARD_NOTE: 'xigua_white_board_note',
+    CCW_HAT_PARAMETER: 'CCW_HAT_PARAMETER'
     /**
      * powered by xigua
      */

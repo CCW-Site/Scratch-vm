@@ -211,6 +211,14 @@ class Thread {
          * @type {Object.<string, import('../compiler/compile').CompiledScript>}
          */
         this.procedures = null;
+
+        this.stackClick = false;
+        this.updateMonitor = false;
+        /**
+         * store hat param.
+         * @type {Object}
+         */
+        this.hatParam = null;
     }
 
     /**
@@ -419,6 +427,21 @@ class Thread {
     pushParam (paramName, value) {
         const stackFrame = this.peekStackFrame();
         stackFrame.params[paramName] = value;
+    }
+
+
+    // pushHatParam (paramName, value) {
+    //     if (!this.hatParam) {
+    //         this.hatParam = {};
+    //     }
+    //     this.hatParam[paramName] = value;
+    // }
+
+    getHatParam (paramName) {
+        if (this.hatParam && this.hatParam.hasOwnProperty(paramName)) {
+            return this.hatParam[paramName];
+        }
+        return null;
     }
 
     /**

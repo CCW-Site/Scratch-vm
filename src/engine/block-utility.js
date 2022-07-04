@@ -202,20 +202,25 @@ class BlockUtility {
         return this.thread.getParam(paramName);
     }
 
+    getHatParam (paramName) {
+        return this.thread.getHatParam(paramName);
+    }
+
     /**
      * Start all relevant hats.
      * @param {!string} requestedHat Opcode of hats to start.
      * @param {object=} optMatchFields Optionally, fields to match on the hat.
      * @param {Target=} optTarget Optionally, a target to restrict to.
+     * @param {boolean} hasHatParam Optionally, start hats with CCW_LOCAL when true.
      * @return {Array.<Thread>} List of threads started by this function.
      */
-    startHats (requestedHat, optMatchFields, optTarget) {
+    startHats (requestedHat, optMatchFields, optTarget, hasHatParam = false) {
         // Store thread and sequencer to ensure we can return to the calling block's context.
         // startHats may execute further blocks and dirty the BlockUtility's execution context
         // and confuse the calling block when we return to it.
         const callerThread = this.thread;
         const callerSequencer = this.sequencer;
-        const result = this.sequencer.runtime.startHats(requestedHat, optMatchFields, optTarget);
+        const result = this.sequencer.runtime.startHats(requestedHat, optMatchFields, optTarget, hasHatParam);
 
         // Restore thread and sequencer to prior values before we return to the calling block.
         this.thread = callerThread;
@@ -223,6 +228,15 @@ class BlockUtility {
 
         return result;
     }
+
+    /* CCW
+        startHatsWhitParams is only used in block utility for extension,
+        WhitExtraMsg means skip field check when start a hat block
+    */
+    startHatsWhitParams (requestedHat, optMatchFields, optTarget) {
+        return this.startHats(requestedHat, optMatchFields, optTarget, true);
+    }
+
 
     /**
      * Query a named IO device.

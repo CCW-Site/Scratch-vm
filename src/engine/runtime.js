@@ -119,6 +119,15 @@ const ArgumentTypeMap = (() => {
             fieldName: 'XIGUA_WHITE_BOARD_NOTE'
         }
     };
+    /** CCW_HAT_PARAMETER ,only use for hat or event blocks
+        makes block arguments as a temp reporter use like a event data receive
+    */
+    map[ArgumentType.CCW_HAT_PARAMETER] = {
+        shadow: {
+            type: 'ccw_hat_parameter',
+            fieldName: 'VALUE'
+        }
+    };
     //* * powered by xigua end */
     return map;
 })();
@@ -1587,9 +1596,15 @@ class Runtime extends EventEmitter {
                 name: placeholder
             };
 
-            const defaultValue =
+            let defaultValue =
                 typeof argInfo.defaultValue === 'undefined' ? '' :
                     xmlEscape(maybeFormatMessage(argInfo.defaultValue, this.makeMessageContextForTarget()).toString());
+
+            // in new ArgumentType CCW_HAT_PARAMETER
+            // use placeholder as local reporter blocks name
+            if (argInfo.type === ArgumentType.CCW_HAT_PARAMETER) {
+                defaultValue = placeholder;
+            }
 
             if (argTypeInfo.check) {
                 // Right now the only type of 'check' we have specifies that the
@@ -1885,6 +1900,7 @@ class Runtime extends EventEmitter {
      * @param {?object} opts optional arguments
      * @param {?boolean} opts.stackClick true if the script was activated by clicking on the stack
      * @param {?boolean} opts.updateMonitor true if the script should update a monitor value
+     * @param {?object} opts.hatParam store ccw_hat_parameter
      * @return {!Thread} The newly created thread.
      */
     _pushThread (id, target, opts) {
@@ -1895,6 +1911,11 @@ class Runtime extends EventEmitter {
         thread.blockContainer = thread.updateMonitor ?
             this.monitorBlocks :
             target.blocks;
+
+        // store hat param for ccw_hat_parameter
+        if (opts && opts.hatParam) {
+            thread.hatParam = opts.hatParam;
+        }
 
         thread.pushStack(id);
         this.threads.push(thread);
@@ -1934,6 +1955,11 @@ class Runtime extends EventEmitter {
         newThread.stackClick = thread.stackClick;
         newThread.updateMonitor = thread.updateMonitor;
         newThread.blockContainer = thread.blockContainer;
+
+        // ccw: store hat_parameter
+        if (thread.hatParam) {
+            newThread.hatParam = thread.hatParam;
+        }
         newThread.pushStack(thread.topBlock);
         // tw: when a thread is restarted, we have to check whether the previous script was attempted to be compiled.
         if (thread.triedToCompile && this.compilerOptions.enabled) {
@@ -2074,10 +2100,12 @@ class Runtime extends EventEmitter {
      * @param {!string} requestedHatOpcode Opcode of hats to start.
      * @param {object=} optMatchFields Optionally, fields to match on the hat.
      * @param {Target=} optTarget Optionally, a target to restrict to.
+     * @param {boolean} hasHatParam Optionally, start hats with ccw_hat_parameter if true,
+                                    will skip field check and inject ccw_hat_parameter to thread.
      * @return {Array.<Thread>} List of threads started by this function.
      */
     startHats (requestedHatOpcode,
-        optMatchFields, optTarget) {
+        optMatchFields, optTarget, hasHatParam = false) {
         if (!this._hats.hasOwnProperty(requestedHatOpcode)) {
             // No known hat with this opcode.
             return;
@@ -2087,9 +2115,11 @@ class Runtime extends EventEmitter {
         // Look up metadata for the relevant hat.
         const hatMeta = instance._hats[requestedHatOpcode];
 
-        for (const opts in optMatchFields) {
-            if (!optMatchFields.hasOwnProperty(opts)) continue;
-            optMatchFields[opts] = optMatchFields[opts].toUpperCase();
+        if (!hasHatParam) {
+            for (const opts in optMatchFields) {
+                if (!optMatchFields.hasOwnProperty(opts)) continue;
+                optMatchFields[opts] = optMatchFields[opts].toUpperCase();
+            }
         }
 
         // tw: By assuming that all new threads will not interfere with eachother, we can optimize the loops
@@ -2103,24 +2133,39 @@ class Runtime extends EventEmitter {
                 fieldsOfInputs: hatFields
             } = script;
 
-            // Match any requested fields.
-            // For example: ensures that broadcasts match.
-            // This needs to happen before the block is evaluated
-            // (i.e., before the predicate can be run) because "broadcast and wait"
-            // needs to have a precise collection of started threads.
-            for (const matchField in optMatchFields) {
-                if (hatFields[matchField].value !== optMatchFields[matchField]) {
-                    // Field mismatch.
-                    return;
+            if (!hasHatParam) {
+                // Match any requested fields.
+                // For example: ensures that broadcasts match.
+                // This needs to happen before the block is evaluated
+                // (i.e., before the predicate can be run) because "broadcast and wait"
+                // needs to have a precise collection of started threads.
+                for (const matchField in optMatchFields) {
+                    if (hatFields[matchField].value !== optMatchFields[matchField]) {
+                        // Field mismatch.
+                        return;
+                    }
                 }
             }
+
+            // const pushExtraMsgToThread = (thread, extraMsg) => {
+            //     const keys = Object.keys(extraMsg);
+            //     if (keys.length > 0) {
+            //         Object.keys(extraMsg).forEach(key => {
+            //             thread.pushHatParam(key, extraMsg[key]);
+            //         });
+            //     }
+            // };
 
             if (hatMeta.restartExistingThreads) {
                 // If `restartExistingThreads` is true, we should stop
                 // any existing threads starting with the top block.
                 const existingThread = this.threadMap.get(Thread.getIdFromTargetAndBlock(target, topBlockId));
                 if (existingThread) {
-                    newThreads.push(this._restartThread(existingThread));
+                    if (hasHatParam) {
+                        existingThread.hatParam = optMatchFields;
+                    }
+                    const thread = this._restartThread(existingThread);
+                    newThreads.push(thread);
                     return;
                 }
             } else {
@@ -2133,12 +2178,24 @@ class Runtime extends EventEmitter {
                         !this.threads[j].stackClick &&
                         this.threads[j].status !== Thread.STATUS_DONE) {
                         // Some thread is already running.
+
+                        // last event haven't done yet, don't change hat_param
+                        // if (hasHatParam) {
+                        //     pushExtraMsgToThread(this.threads[j], optMatchFields);
+                        // }
                         return;
                     }
                 }
             }
+
+
+            let opt = null;
+            if (hasHatParam) {
+                opt = {hatParam: optMatchFields};
+            }
+            const thread = this._pushThread(topBlockId, target, opt);
             // Start the thread with this top block.
-            newThreads.push(this._pushThread(topBlockId, target));
+            newThreads.push(thread);
         }, optTarget);
         // For compatibility with Scratch 2, edge triggered hats need to be processed before
         // threads are stepped. See ScratchRuntime.as for original implementation
@@ -2152,6 +2209,14 @@ class Runtime extends EventEmitter {
         return newThreads;
     }
 
+    /* CCW
+        startHatsWhitParams is only used in block utility for extension,
+        WhitExtraMsg means skip field check when start a hat block.
+        define here is only for debug
+    */
+    startHatsWhitParams (requestedHat, optMatchFields, optTarget) {
+        return this.startHats(requestedHat, optMatchFields, optTarget, true);
+    }
 
     /**
      * Dispose all targets. Return to clean state.
