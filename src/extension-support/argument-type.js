@@ -51,7 +51,11 @@ const ArgumentType = {
     XIGUA_MATRIX: 'xigua_matrix',
 
     XIGUA_WHITE_BOARD_NOTE: 'xigua_white_board_note',
-    CCW_HAT_PARAMETER: 'CCW_HAT_PARAMETER'
+
+    /**
+     * CCW_HAT_PARAMETER, use in hat block
+     */
+    CCW_HAT_PARAMETER: 'ccw_hat_parameter'
     /**
      * powered by xigua
      */
