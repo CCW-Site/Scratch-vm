@@ -17,37 +17,93 @@ class Scratch3CoreExample {
          */
         this.runtime = runtime;
     }
+    handleCCWHat (args, util) {
+        console.log('handleCCWHat', args);
+        return true;
+    }
+    triggerCCWHat (args, util) {
+        console.log('triggerCCWHat', args);
+        util.startHatsWithParams('coreExample_handleCCWHat', {parameters: {Msg: args.Msg}, fields: {Data: args.Data}});
+
+    }
+
 
     /**
      * @returns {object} metadata for this extension and its blocks.
      */
     getInfo () {
+        const handleCCWHat = {
+            opcode: 'handleCCWHat',
+            text: 'ccw hat with [Data] [Msg]',
+            blockType: BlockType.HAT,
+            isEdgeActivated: false,
+            arguments: {
+                Data: {
+                    type: ArgumentType.STRING,
+                    menu: 'hatMenu'
+                },
+                Msg: {
+                    type: 'ccw_hat_parameter'
+                }
+            }
+        };
+
+        const triggerCCWHat = {
+            opcode: 'triggerCCWHat',
+            text: 'triggerCCWHat [Data] [Msg]',
+            blockType: BlockType.COMMAND,
+            arguments: {
+                Data: {
+                    type: ArgumentType.STRING,
+                    menu: 'hatMenu'
+                },
+                Msg: {
+                    type: ArgumentType.STRING,
+                    defaultValue: 'key'
+                }
+            }
+        };
+
+        const makeVarBtn = {
+            func: 'MAKE_A_VARIABLE',
+            blockType: BlockType.BUTTON,
+            text: 'make a variable (CoreEx)'
+        };
+
+        const exampleOpcode = {
+            opcode: 'exampleOpcode',
+            blockType: BlockType.REPORTER,
+            text: 'example block'
+        };
+
+        const exampleWithInlineImage = {
+            opcode: 'exampleWithInlineImage',
+            blockType: BlockType.COMMAND,
+            text: 'block with image [CLOCKWISE] inline',
+            arguments: {
+                CLOCKWISE: {
+                    type: ArgumentType.IMAGE,
+                    dataURI: blockIconURI
+                }
+            }
+        };
         return {
             id: 'coreExample',
             name: 'CoreEx', // This string does not need to be translated as this extension is only used as an example.
             blocks: [
-                {
-                    func: 'MAKE_A_VARIABLE',
-                    blockType: BlockType.BUTTON,
-                    text: 'make a variable (CoreEx)'
-                },
-                {
-                    opcode: 'exampleOpcode',
-                    blockType: BlockType.REPORTER,
-                    text: 'example block'
-                },
-                {
-                    opcode: 'exampleWithInlineImage',
-                    blockType: BlockType.COMMAND,
-                    text: 'block with image [CLOCKWISE] inline',
-                    arguments: {
-                        CLOCKWISE: {
-                            type: ArgumentType.IMAGE,
-                            dataURI: blockIconURI
-                        }
-                    }
-                }
-            ]
+                triggerCCWHat,
+                handleCCWHat,
+                makeVarBtn,
+                exampleOpcode,
+                exampleWithInlineImage
+            ],
+            menus: {
+                hatMenu: [
+                    {text: '*', value: '*'},
+                    {text: 'a', value: 'a'},
+                    {text: 'b', value: 'b'}
+                ]
+            }
         };
     }
 
