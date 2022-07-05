@@ -2100,12 +2100,12 @@ class Runtime extends EventEmitter {
      * @param {!string} requestedHatOpcode Opcode of hats to start.
      * @param {object=} optMatchFields Optionally, fields to match on the hat.
      * @param {Target=} optTarget Optionally, a target to restrict to.
-     * @param {boolean} hasHatParam Optionally, start hats with ccw_hat_parameter if true,
+     * @param {object=} hatParam Optionally, start hats with ccw_hat_parameter if true,
                                     will skip field check and inject ccw_hat_parameter to thread.
      * @return {Array.<Thread>} List of threads started by this function.
      */
     startHats (requestedHatOpcode,
-        optMatchFields, optTarget, hasHatParam = false) {
+        optMatchFields, optTarget, hatParam) {
         if (!this._hats.hasOwnProperty(requestedHatOpcode)) {
             // No known hat with this opcode.
             return;
@@ -2115,12 +2115,12 @@ class Runtime extends EventEmitter {
         // Look up metadata for the relevant hat.
         const hatMeta = instance._hats[requestedHatOpcode];
 
-        if (!hasHatParam) {
-            for (const opts in optMatchFields) {
-                if (!optMatchFields.hasOwnProperty(opts)) continue;
-                optMatchFields[opts] = optMatchFields[opts].toUpperCase();
-            }
+
+        for (const opts in optMatchFields) {
+            if (!optMatchFields.hasOwnProperty(opts)) continue;
+            optMatchFields[opts] = optMatchFields[opts].toUpperCase();
         }
+
 
         // tw: By assuming that all new threads will not interfere with eachother, we can optimize the loops
         // inside the allScriptsByOpcodeDo callback below.
@@ -2133,17 +2133,16 @@ class Runtime extends EventEmitter {
                 fieldsOfInputs: hatFields
             } = script;
 
-            if (!hasHatParam) {
-                // Match any requested fields.
-                // For example: ensures that broadcasts match.
-                // This needs to happen before the block is evaluated
-                // (i.e., before the predicate can be run) because "broadcast and wait"
-                // needs to have a precise collection of started threads.
-                for (const matchField in optMatchFields) {
-                    if (hatFields[matchField].value !== optMatchFields[matchField]) {
-                        // Field mismatch.
-                        return;
-                    }
+
+            // Match any requested fields.
+            // For example: ensures that broadcasts match.
+            // This needs to happen before the block is evaluated
+            // (i.e., before the predicate can be run) because "broadcast and wait"
+            // needs to have a precise collection of started threads.
+            for (const matchField in optMatchFields) {
+                if (hatFields[matchField].value !== optMatchFields[matchField]) {
+                    // Field mismatch.
+                    return;
                 }
             }
 
@@ -2161,8 +2160,8 @@ class Runtime extends EventEmitter {
                 // any existing threads starting with the top block.
                 const existingThread = this.threadMap.get(Thread.getIdFromTargetAndBlock(target, topBlockId));
                 if (existingThread) {
-                    if (hasHatParam) {
-                        existingThread.hatParam = optMatchFields;
+                    if (hatParam) {
+                        existingThread.hatParam = hatParam;
                     }
                     const thread = this._restartThread(existingThread);
                     newThreads.push(thread);
@@ -2190,8 +2189,8 @@ class Runtime extends EventEmitter {
 
 
             let opt = null;
-            if (hasHatParam) {
-                opt = {hatParam: optMatchFields};
+            if (hatParam) {
+                opt = {hatParam};
             }
             const thread = this._pushThread(topBlockId, target, opt);
             // Start the thread with this top block.
@@ -2209,13 +2208,20 @@ class Runtime extends EventEmitter {
         return newThreads;
     }
 
-    /* CCW
+    /**
+     * CCW
         startHatsWithParams is only used in block utility for extension,
         WhitExtraMsg means skip field check when start a hat block.
         define here is only for debug
-    */
-    startHatsWithParams (requestedHat, optMatchFields, optTarget) {
-        return this.startHats(requestedHat, optMatchFields, optTarget, true);
+     * @param {!string} requestedHatOpcode Opcode of hats to start.
+     * @param {object} data Optionally, contains fields to match on the hat and parameters to ccw_hat_parameter.
+     * @param {Target=} optTarget Optionally, a target to restrict to.
+     * @return {Array.<Thread>} List of threads started by this function.
+     */
+    startHatsWithParams (requestedHat, data, optTarget) {
+        const fields = (data && data.fields) ?? {};
+        const parameters = (data && data.parameters) ?? null;
+        return this.startHats(requestedHat, fields, optTarget, parameters);
     }
 
     /**

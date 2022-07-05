@@ -211,16 +211,17 @@ class BlockUtility {
      * @param {!string} requestedHat Opcode of hats to start.
      * @param {object=} optMatchFields Optionally, fields to match on the hat.
      * @param {Target=} optTarget Optionally, a target to restrict to.
-     * @param {boolean} hasHatParam Optionally, start hats with CCW_LOCAL when true.
+     * @param {object=} hatParam Optionally, start hats with ccw_hat_parameter if true,
+                                    will skip field check and inject ccw_hat_parameter to thread.
      * @return {Array.<Thread>} List of threads started by this function.
      */
-    startHats (requestedHat, optMatchFields, optTarget, hasHatParam = false) {
+    startHats (requestedHat, optMatchFields, optTarget, hatParam) {
         // Store thread and sequencer to ensure we can return to the calling block's context.
         // startHats may execute further blocks and dirty the BlockUtility's execution context
         // and confuse the calling block when we return to it.
         const callerThread = this.thread;
         const callerSequencer = this.sequencer;
-        const result = this.sequencer.runtime.startHats(requestedHat, optMatchFields, optTarget, hasHatParam);
+        const result = this.sequencer.runtime.startHats(requestedHat, optMatchFields, optTarget, hatParam);
 
         // Restore thread and sequencer to prior values before we return to the calling block.
         this.thread = callerThread;
@@ -229,12 +230,20 @@ class BlockUtility {
         return result;
     }
 
-    /* CCW
+    /**
+     * CCW
         startHatsWithParams is only used in block utility for extension,
-        WhitExtraMsg means skip field check when start a hat block
-    */
-    startHatsWithParams (requestedHat, optMatchFields, optTarget) {
-        return this.startHats(requestedHat, optMatchFields, optTarget, true);
+        WhitExtraMsg means skip field check when start a hat block.
+        define here is only for debug
+     * @param {!string} requestedHat Opcode of hats to start.
+     * @param {object} data Optionally, contains fields to match on the hat and parameters to ccw_hat_parameter.
+     * @param {Target=} optTarget Optionally, a target to restrict to.
+     * @return {Array.<Thread>} List of threads started by this function.
+     */
+    startHatsWithParams (requestedHat, data, optTarget) {
+        const fields = (data && data.fields) ?? {};
+        const parameters = (data && data.parameters) ?? null;
+        return this.startHats(requestedHat, fields, optTarget, parameters);
     }
 
 
