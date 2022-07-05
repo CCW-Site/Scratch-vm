@@ -55,7 +55,8 @@ const CORE_EXTENSIONS = [
     'operator',
     'procedures',
     'sensing',
-    'sound'
+    'sound',
+    'ccw' // ccw customize block prefix,like ccw_hat_parameter
 ];
 
 // Constants referring to 'primitive' blocks that are usually shadows,
@@ -778,7 +779,7 @@ const deserializeInputDesc = function (inputDescOrId, parentId, isShadow, blocks
         return null;
     }
     }
-    
+
     blocks[newId] = primitiveObj;
 
     return primitiveObj.id;
