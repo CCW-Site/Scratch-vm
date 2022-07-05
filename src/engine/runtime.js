@@ -2219,8 +2219,8 @@ class Runtime extends EventEmitter {
      * @return {Array.<Thread>} List of threads started by this function.
      */
     startHatsWithParams (requestedHat, data, optTarget) {
-        const fields = (data && data.fields) ?? {};
-        const parameters = (data && data.parameters) ?? null;
+        const fields = (data && typeof data.fields === 'object' && data.fields) || {};
+        const parameters = (data && typeof data.parameters === 'object' && data.parameters) || {};
         return this.startHats(requestedHat, fields, optTarget, parameters);
     }
 
