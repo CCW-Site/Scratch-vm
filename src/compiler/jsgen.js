@@ -422,7 +422,7 @@ class JSGenerator {
     descendInput (node) {
         switch (node.kind) {
         case 'args.ccw_hat_parameter':
-            return new TypedInput(`thread.hatParam['${node.index}']`, TYPE_UNKNOWN);
+            return new TypedInput(`thread.hatParam ? thread.hatParam['${node.index}']: null`, TYPE_UNKNOWN);
 
         case 'args.boolean':
             return new TypedInput(`toBoolean(p${node.index})`, TYPE_BOOLEAN);
