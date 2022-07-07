@@ -45,6 +45,7 @@ const defaultBlockPackages = {
 
 const interpolate = require('./tw-interpolate');
 
+
 const defaultExtensionColors = ['#0FBD8C', '#0DA57A', '#0B8E69'];
 
 const COMMENT_CONFIG_MAGIC = ' // _twconfig_';
@@ -458,7 +459,8 @@ class Runtime extends EventEmitter {
         this.runtimeOptions = {
             maxClones: Runtime.MAX_CLONES,
             miscLimits: true,
-            fencing: true
+            fencing: true,
+            hatsConcurrency: 1 // CCW allow trigger a hat when its thread doesn't done if true
         };
 
 
@@ -2170,23 +2172,23 @@ class Runtime extends EventEmitter {
             } else {
                 // If `restartExistingThreads` is false, we should
                 // give up if any threads with the top block are running.
+                let sameHatThreadCount = 0;
                 for (let j = 0; j < startingThreadListLength; j++) {
                     if (this.threads[j].target === target &&
                         this.threads[j].topBlock === topBlockId &&
                         // stack click threads and hat threads can coexist
                         !this.threads[j].stackClick &&
                         this.threads[j].status !== Thread.STATUS_DONE) {
-                        // Some thread is already running.
+                        // count same thread when it's not original hats blocks
+                        sameHatThreadCount++;
+                        if (requestedHatOpcode.startsWith('event_') || requestedHatOpcode.startsWith('control_') || this.runtimeOptions.hatsConcurrency <= sameHatThreadCount) {
+                            // Some original event thread is already running or concurrency thread count is max
+                            return;
+                        }
 
-                        // last event haven't done yet, don't change hat_param
-                        // if (hasHatParam) {
-                        //     pushExtraMsgToThread(this.threads[j], optMatchFields);
-                        // }
-                        return;
                     }
                 }
             }
-
 
             let opt = null;
             if (hatParam) {
