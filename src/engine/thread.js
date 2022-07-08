@@ -503,7 +503,15 @@ class Thread {
         let callCount = 5; // Max number of enclosing procedure calls to examine.
         const sp = this.stack.length - 1;
         for (let i = sp - 1; i >= 0; i--) {
-            const block = this.target.blocks.getBlock(this.stack[i]);
+            let block = this.target.blocks.getBlock(this.stack[i]);
+            if (!block) {
+                const globalTarget = this.getCurrentGlobalTarget();
+                block = globalTarget.blocks.getBlock(this.stack[i]);
+            }
+            if (!block) {
+                throw new Error(
+                    'not Found procedure in local or Global by BlockId ' + this.stack[i]);
+            }
             if (block.opcode === 'procedures_call' &&
                 block.mutation.proccode === procedureCode) {
                 return true;

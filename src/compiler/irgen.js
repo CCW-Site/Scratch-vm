@@ -648,7 +648,9 @@ class ScriptTreeGenerator {
             return {
                 kind: 'tw.lastKeyPressed'
             };
-
+        // ccw reporter customize procedures
+        case 'procedures_call_with_return':
+            throw new Error(`IR: not support procedures_call_with_return input thread skip compile`);
         default: {
             const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
             if (opcodeFunction) {
