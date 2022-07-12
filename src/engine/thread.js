@@ -340,13 +340,21 @@ class Thread {
     stopThisScript () {
         let blockID = this.peekStack();
         while (blockID !== null) {
-            const block = this.target.blocks.getBlock(blockID);
+            const stackFrame = this.peekStackFrame();
+            const globalTarget = stackFrame.executionContext && stackFrame.executionContext.globalTarget;
+            let block = this.target.blocks.getBlock(blockID);
+
+            if (!block && globalTarget) {
+                block = globalTarget.blocks.getBlock(blockID);
+            }
 
             // CCW: when stack is or waiting procedures_call_with_return, dont pop
             let isWaitingProceduresReturn = false;
-            const stackFrame = this.peekStackFrame();
             if (stackFrame.reporting) {
-                const reportBlock = this.target.blocks.getBlock(stackFrame.reporting);
+                let reportBlock = this.target.blocks.getBlock(stackFrame.reporting);
+                if (!reportBlock && globalTarget) {
+                    reportBlock = globalTarget.blocks.getBlock(stackFrame.reporting);
+                }
                 isWaitingProceduresReturn = reportBlock.opcode === 'procedures_call_with_return';
                 if (isWaitingProceduresReturn) {
                     // CCW:
