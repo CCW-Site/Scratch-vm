@@ -5,6 +5,7 @@ const Thread = require('./thread');
 const {Map} = require('immutable');
 const cast = require('../util/cast');
 
+
 /**
  * Single BlockUtility instance reused by execute for every pritimive ran.
  * @const
@@ -116,7 +117,10 @@ const handlePromise = (primitiveReportedValue, sequencer, thread, blockCached, l
         if (lastOperation) {
             let stackFrame;
             let nextBlockId;
+            let globalTarget;
             do {
+                globalTarget = thread.getCurrentGlobalTarget();
+
                 // In the case that the promise is the last block in the current thread stack
                 // We need to pop out repeatedly until we find the next block.
                 const popped = thread.popStack();
@@ -124,6 +128,11 @@ const handlePromise = (primitiveReportedValue, sequencer, thread, blockCached, l
                     return;
                 }
                 nextBlockId = thread.target.blocks.getNextBlock(popped);
+
+                if (!nextBlockId && globalTarget) {
+                    nextBlockId = globalTarget.blocks.getNextBlock(popped);
+                }
+
                 if (nextBlockId !== null) {
                     // A next block exists so break out this loop
                     break;
@@ -133,7 +142,7 @@ const handlePromise = (primitiveReportedValue, sequencer, thread, blockCached, l
                 stackFrame = thread.peekStackFrame();
             } while (stackFrame !== null && !stackFrame.isLoop);
 
-            thread.pushStack(nextBlockId);
+            thread.pushStack(nextBlockId, globalTarget);
         }
     }, rejectionReason => {
         // Promise rejected: the primitive had some error.
