@@ -722,7 +722,6 @@ const deserializeInputDesc = function (inputDescOrId, parentId, isShadow, blocks
     }
     case BROADCAST_PRIMITIVE: {
         primitiveObj.opcode = 'event_broadcast_menu';
-        primitiveObj.id = inputDescOrId[2] || primitiveObj.id;
         primitiveObj.fields = {
             BROADCAST_OPTION: {
                 name: 'BROADCAST_OPTION',
@@ -744,13 +743,15 @@ const deserializeInputDesc = function (inputDescOrId, parentId, isShadow, blocks
                 variableType: Variable.SCALAR_TYPE
             }
         };
-        if (inputDescOrId.length > 4) {
+        if (inputDescOrId.length === 5 || inputDescOrId.length === 6) {
             primitiveObj.topLevel = true;
             primitiveObj.x = inputDescOrId[3];
             primitiveObj.y = inputDescOrId[4];
-            primitiveObj.id = inputDescOrId[5] || newId;
-        } else {
+        }
+        if (inputDescOrId.length === 4) {
             primitiveObj.id = inputDescOrId[3] || newId;
+        } else if (inputDescOrId.length === 6) {
+            primitiveObj.id = inputDescOrId[5] || newId;
         }
         break;
     }
@@ -764,13 +765,16 @@ const deserializeInputDesc = function (inputDescOrId, parentId, isShadow, blocks
                 variableType: Variable.LIST_TYPE
             }
         };
-        if (inputDescOrId.length > 4) {
+        if (inputDescOrId.length === 5 || inputDescOrId.length === 6) {
             primitiveObj.topLevel = true;
             primitiveObj.x = inputDescOrId[3];
             primitiveObj.y = inputDescOrId[4];
-            primitiveObj.id = inputDescOrId[5] || newId;
-        } else {
-            primitiveObj.id = inputDescOrId[3] || newId;
+        }
+        if (inputDescOrId.length === 4) {
+            primitiveObj.id = inputDescOrId[3];
+        }
+        if (inputDescOrId.length === 6) {
+            primitiveObj.id = inputDescOrId[5];
         }
         break;
     }
@@ -780,7 +784,7 @@ const deserializeInputDesc = function (inputDescOrId, parentId, isShadow, blocks
     }
     }
 
-    blocks[newId] = primitiveObj;
+    blocks[primitiveObj.id] = primitiveObj;
 
     return primitiveObj.id;
 };
