@@ -57,6 +57,36 @@ const createRuntimeService = runtime => {
         runtime._registerExtensionPrimitives.bind(runtime);
     return service;
 };
+/**
+ * Fixed the problem of incorrect Inputs for VM deserialization, resulting in incorrect Inputs for VM deserialization.
+ * @param {*} data project data.
+ * @returns Fixed project data.
+ */
+const hotFixProjectJson = data => {
+    const fixedBlocks = [];
+    const broadcasts = data.targets.find(target => target.isStage).broadcasts;
+    for (let targetIndex = 0; targetIndex < data.targets.length; targetIndex++) {
+        const target = data.targets[targetIndex];
+        const blocks = Object.keys(target.blocks);
+        for (let index = 0; index < blocks.length; index++) {
+            const blockId = blocks[index];
+            const blockData = target.blocks[blockId];
+            if (blockData.opcode === 'event_broadcast' || blockData.opcode === 'event_broadcastandwait') {
+                if (!blockData.inputs.BROADCAST_INPUT) {
+                    continue;
+                }
+                const input = blockData.inputs.BROADCAST_INPUT[1];
+                if (typeof input === 'string' && broadcasts[input]) {
+                    console.log('Fixing broadcast', blockId, broadcasts[input]);
+                    blockData.inputs.BROADCAST_INPUT[1] = [11, broadcasts[input], input];
+                    // 用于协作工程的修复
+                    fixedBlocks.push([target.name, blockId, JSON.stringify(blockData.inputs.BROADCAST_INPUT[1])]);
+                }
+            }
+        }
+    }
+    return fixedBlocks;
+};
 
 /**
  * Handles connections between blocks, stage, and extensions.
@@ -466,9 +496,10 @@ class VirtualMachine extends EventEmitter {
     /**
      * Load a Scratch project from a .sb, .sb2, .sb3 or json string.
      * @param {string | object} input A json string, object, or ArrayBuffer representing the project to load.
+     * @param {?function} callback A callback to run when the project is loaded.
      * @return {!Promise} Promise that resolves after targets are installed.
      */
-    loadProject (input) {
+    loadProject (input, callback) {
         const _projectProcessingUniqueId = (this._projectProcessingUniqueId =
             Math.random());
         if (
@@ -570,6 +601,10 @@ class VirtualMachine extends EventEmitter {
                         }
 
                         zip = null;
+                    }
+                    const fiexdData = hotFixProjectJson(json);
+                    if (callback) {
+                        callback(fiexdData);
                     }
                     return this.deserializeProject(
                         json,
