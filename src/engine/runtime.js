@@ -3043,10 +3043,11 @@ class Runtime extends EventEmitter {
      * @param {!string} targetId Remove all monitors with given target ID.
      */
     requestRemoveMonitorByTargetId (targetId) {
-        const monitor = this._monitorState.find(value => value.targetId === targetId);
-        if (monitor) {
-            this.emitMonitorsChanged(['delete', monitor.id]);
-        }
+        this._monitorState.forEach(monitor => {
+            if (monitor.get('targetId') === targetId) {
+                this.emitMonitorsChanged(['delete', monitor.get('id')]);
+            }
+        });
         this._monitorState = this._monitorState.filterNot(value => value.targetId === targetId);
     }
 
