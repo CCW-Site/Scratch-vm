@@ -571,14 +571,14 @@ class RenderedTarget extends Target {
      * this target only has one costume.
      */
     deleteCostume (index, isRemoteOperation) {
-        if (!isRemoteOperation) {
-            this.runtime.emitTargetCostumeChanged(this.id, ['costumes', index, 'delete']);
-        }
         const originalCostumeCount = this.sprite.costumes.length;
         if (originalCostumeCount === 1) return null;
 
         if (index < 0 || index >= originalCostumeCount) {
             return null;
+        }
+        if (!isRemoteOperation) {
+            this.runtime.emitTargetCostumeChanged(this.id, ['costumes', index, 'delete']);
         }
 
         const deletedCostume = this.sprite.deleteCostumeAt(index);
