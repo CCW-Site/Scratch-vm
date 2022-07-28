@@ -538,15 +538,15 @@ class RenderedTarget extends Target {
      * @param {?boolean} isRemoteOperation Whether this is a remote operation
      */
     renameCostume (costumeIndex, newName, isRemoteOperation) {
-        if (!isRemoteOperation) {
-            this.runtime.emitTargetCostumeChanged(this.id, ['costumes', costumeIndex, 'update', {name: newName}]);
-        }
         const usedNames = this.sprite.costumes
             .filter((costume, index) => costumeIndex !== index)
             .map(costume => costume.name);
         const oldName = this.getCostumes()[costumeIndex].name;
         const newUnusedName = StringUtil.unusedName(newName, usedNames);
         this.getCostumes()[costumeIndex].name = newUnusedName;
+        if (!isRemoteOperation) {
+            this.runtime.emitTargetCostumeChanged(this.id, ['costumes', costumeIndex, 'update', {name: newUnusedName}]);
+        }
 
         if (this.isStage) {
             // Since this is a backdrop, go through all targets and
