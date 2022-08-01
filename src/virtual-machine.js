@@ -779,6 +779,18 @@ class VirtualMachine extends EventEmitter {
             sb3.serialize(this.runtime, null, serializationOptions)
         );
     }
+    /**
+     * Serialize a sprite in the sprite3 format.
+     * @param {string} targetId ID of the target to export
+     * @returns {Object} Serialized state of the runtime.
+     */
+    serializeSprite (targetId) {
+        const sb3 = require('./serialization/sb3');
+        const target = this.runtime.getTargetById(targetId);
+        if (target) {
+            return sb3.serializeTarget(target.toJSON(), new Set(), true);
+        }
+    }
 
     // TODO do we still need this function? Keeping it here so as not to introduce
     // a breaking change.
