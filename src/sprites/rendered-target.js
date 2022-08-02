@@ -614,6 +614,7 @@ class RenderedTarget extends Target {
      * Rename a sound, taking care to avoid duplicate names.
      * @param {int} soundIndex - the index of the sound to be renamed.
      * @param {string} newName - the desired new name of the sound (will be modified if already in use).
+     * @return {string} The new name of the sound.
      */
     renameSound (soundIndex, newName) {
         const usedNames = this.sprite.sounds
@@ -623,6 +624,7 @@ class RenderedTarget extends Target {
         const newUnusedName = StringUtil.unusedName(newName, usedNames);
         this.sprite.sounds[soundIndex].name = newUnusedName;
         this.blocks.updateAssetName(oldName, newUnusedName, 'sound');
+        return newUnusedName;
     }
 
     /**

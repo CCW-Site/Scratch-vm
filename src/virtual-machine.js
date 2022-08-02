@@ -1302,8 +1302,8 @@ class VirtualMachine extends EventEmitter {
      * @param {string} newName - the desired new name of the sound (will be modified if already in use).
      */
     renameSound (soundIndex, newName) {
-        this.editingTarget.renameSound(soundIndex, newName);
-        this.runtime.emitTargetSoundsChanged(this.editingTarget.id, [soundIndex, 'update', {name: newName}]);
+        const newUnusedName = this.editingTarget.renameSound(soundIndex, newName);
+        this.runtime.emitTargetSoundsChanged(this.editingTarget.id, [soundIndex, 'update', {name: newUnusedName}]);
         this.emitTargetsUpdate();
     }
 
