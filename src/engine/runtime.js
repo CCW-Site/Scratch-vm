@@ -3016,7 +3016,9 @@ class Runtime extends EventEmitter {
      * @return {boolean} true if monitor exists and was updated, false otherwise
      */
     requestHideMonitor (monitorId) {
-        this.emitMonitorsChanged(['update', monitorId, {visible: false}]);
+        if (this._monitorState.get(monitorId) && this._monitorState.get(monitorId).visible) {
+            this.emitMonitorsChanged(['update', monitorId, {visible: false}]);
+        }
         return this.requestUpdateMonitor(new Map([
             ['id', monitorId],
             ['visible', false]
@@ -3030,7 +3032,9 @@ class Runtime extends EventEmitter {
      * @return {boolean} true if monitor exists and was updated, false otherwise
      */
     requestShowMonitor (monitorId) {
-        this.emitMonitorsChanged(['update', monitorId, {visible: true}]);
+        if (!this._monitorState.get(monitorId) || !this._monitorState.get(monitorId).visible) {
+            this.emitMonitorsChanged(['update', monitorId, {visible: true}]);
+        }
         return this.requestUpdateMonitor(new Map([
             ['id', monitorId],
             ['visible', true]
