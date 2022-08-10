@@ -747,14 +747,14 @@ class VirtualMachine extends EventEmitter {
      */
     exportSprite (targetId, optZipType) {
         const sb3 = require('./serialization/sb3');
-        const teamStatus = this.runtime.isTeamworkMode;
+        const temp = this.runtime.isTeamworkMode;
         const soundDescs = serializeSounds(this.runtime, targetId);
         const costumeDescs = serializeCostumes(this.runtime, targetId);
         this.runtime.isTeamworkMode = false;
         const spriteJson = StringUtil.stringify(
             sb3.serialize(this.runtime, targetId)
         );
-        this.runtime.isTeamworkMode = teamStatus;
+        this.runtime.isTeamworkMode = temp;
         const zip = new JSZip();
         zip.file('sprite.json', spriteJson);
         this._addFileDescsToZip(soundDescs.concat(costumeDescs), zip);
