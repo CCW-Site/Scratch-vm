@@ -652,15 +652,15 @@ class Blocks {
 
                 // Update all blocks on all targets that use the renamed variable
                 const targets = this.runtime.targets;
-                const teampMap = {};
+                const tempMap = {};
                 for (let i = 0; i < targets.length; i++) {
                     const currTarget = targets[i];
                     const affectedBlocks = currTarget.blocks.updateBlocksAfterVarRename(e.varId, e.newName);
                     if (affectedBlocks.length) {
-                        teampMap[currTarget.id] = affectedBlocks;
+                        tempMap[currTarget.id] = affectedBlocks;
                     }
                 }
-                this.runtime.affectedBlocksAfterVarRename = teampMap;
+                this.runtime.affectedBlocksAfterVarRename = tempMap;
                 this.emitProjectChanged();
                 this.runtime.emitTargetVariablesChanged(stage.id,
                     [e.varId, e.varType, 'update', [0, e.newName]]
