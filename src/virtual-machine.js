@@ -2193,17 +2193,6 @@ class VirtualMachine extends EventEmitter {
             k => localVarMap[k]
         );
 
-        // CCW: globalProcedures
-        // get all global procedures and pass to target
-        let globalProcedures = [];
-        for (let i = 0; i < this.runtime.targets.length; i++) {
-            const target = this.runtime.targets[i];
-            if (target === this.editingTarget) {
-                // skip self avoid duplicate procedure
-                continue;
-            }
-            globalProcedures = globalProcedures.concat(target.blocks.getGlobalProceduresXML());
-        }
         const workspaceComments = Object.keys(this.editingTarget.comments)
             .map(k => this.editingTarget.comments[k])
             .filter(c => c.blockId === null);
@@ -2214,7 +2203,7 @@ class VirtualMachine extends EventEmitter {
                                 ${localVariables.map(v => v.toXML(true)).join()}
                             </variables>
                             <procedures>
-                            ${globalProcedures.join()}
+                                ${this.getWorkspaceGlobalProcedures().join()}
                             </procedures>
                             ${workspaceComments.map(c => c.toXML()).join()}
                             ${this.editingTarget.blocks.toXML(
@@ -2241,6 +2230,23 @@ class VirtualMachine extends EventEmitter {
             return target.id;
         }
         return null;
+    }
+
+    /**
+     * CCW: Get all global procedures and pass to target
+     * @returns {Array} Array of XML strings
+     */
+    getWorkspaceGlobalProcedures () {
+        let globalProcedures = [];
+        for (let i = 0; i < this.runtime.targets.length; i++) {
+            const target = this.runtime.targets[i];
+            if (target === this.editingTarget) {
+                // skip self avoid duplicate procedure
+                continue;
+            }
+            globalProcedures = globalProcedures.concat(target.blocks.getGlobalProceduresXML());
+        }
+        return globalProcedures;
     }
 
     /**
