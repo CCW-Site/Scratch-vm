@@ -29,10 +29,10 @@ const blockIconURI = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNv
  * @type {string}
  */
 // const SERVER_HOST = 'https://synthesis-service.scratch.mit.edu';
-// powered by xigua start
+
 // eslint-disable-next-line no-undef
-const SERVER_HOST = `${process.env.STUDY_WEB_HOST || STUDY_WEB_HOST || ''}/study-main/external/speech/tts`;
-// powered by xigua end
+const SERVER_HOST = process.env.STUDY_WEB_HOST || STUDY_WEB_HOST;
+
 /**
  * How long to wait in ms before timing out requests to synthesis server.
  * @type {int}
@@ -159,6 +159,8 @@ class Scratch3Text2SpeechBlocks {
         this._supportedLocales = this._getSupportedLocales();
         // powered by xigua start
         this.thirdPartApiKey = localStorage.getItem('xg-access-code');
+
+        this.host = runtime.ccwAPI.getOnlineExtensionsConfig().hosts && runtime.ccwAPI.getOnlineExtensionsConfig().hosts.tts;
         // powered by xigua end
     }
 
@@ -772,13 +774,15 @@ class Scratch3Text2SpeechBlocks {
         }
 
         // Build up URL
-        // let path = `${SERVER_HOST}/synth`;
+        const path = `${this.host || SERVER_HOST}/study-main/external/speech/tts`;
+
+        // path = `${SERVER_HOST}/synth`;
         // path += `?locale=${locale}`;
         // path += `&gender=${gender}`;
         // path += `&text=${encodeURIComponent(words.substring(0, 128))}`;
 
         // Perform HTTP request to get audio file
-        return fetchWithTimeout(SERVER_HOST, {
+        return fetchWithTimeout(path, {
             // powered by xigua start
             method: 'post',
             body: JSON.stringify({
