@@ -25,7 +25,7 @@ const blockIconURI =
  * The url of the translate server.
  * @type {string}
  */
-// const serverURL = 'https://translate-service.scratch.mit.edu/';
+const serverURL = 'https://translate-service.scratch.mit.edu/';
 // const serverURL = 'https://trampoline.turbowarp.org/translate/';
 
 // powered by xigua start
@@ -35,7 +35,7 @@ const blockIconURI =
 
 // powered by xigua start
 // eslint-disable-next-line no-undef
-const xiguaServerURL = process.env.STUDY_WEB_HOST || STUDY_WEB_HOST;
+const xiguaServerURL = typeof STUDY_WEB_HOST === 'undefined' ? process.env.STUDY_WEB_HOST : STUDY_WEB_HOST;
 // powered by xigua end
 
 const translateSupportLanguage = [
@@ -65,7 +65,7 @@ const serverTimeoutMs = 10000; // 10 seconds (chosen arbitrarily).
  * @constructor
  */
 class Scratch3TranslateBlocks {
-    constructor (runtime) {
+    constructor(runtime) {
         /**
          * Language code of the viewer, based on their locale.
          * @type {string}
@@ -113,6 +113,10 @@ class Scratch3TranslateBlocks {
         this.thirdPartApiKey = localStorage.getItem('xg-access-code');
 
         this.host = runtime.ccwAPI.getOnlineExtensionsConfig().hosts && runtime.ccwAPI.getOnlineExtensionsConfig().hosts.translate;
+
+        if (this.host || xiguaServerURL) {
+            this.isCCWService = true;
+        }
         // powered by xigua end
     }
 
@@ -211,9 +215,12 @@ class Scratch3TranslateBlocks {
 
     // powered by xigua start
     _getXiguaSupportedLanguages (code) {
-        return this._getSupportedLanguages(code).filter(item =>
-            translateSupportLanguage.includes(item.value)
-        );
+        return this._getSupportedLanguages(code).filter(item => {
+            if (this.isCCWService) {
+                return translateSupportLanguage.includes(item.value);
+            }
+            return true;
+        });
     }
     // powered by xigua end
     /**
@@ -316,12 +323,13 @@ class Scratch3TranslateBlocks {
         }
 
         const lang = this.getLanguageCodeFromArg(args.LANGUAGE);
+        if (this.host || xiguaServerURL) {
+            return this.runWithCCWAPI(args, lang);
+        }
+        return this.runWithScratchAPI(args, lang);
+    }
 
-        // let urlBase = `${serverURL}translate?language=`;
-        // urlBase += lang;
-        // urlBase += '&text=';
-        // urlBase += encodeURIComponent(args.WORDS);
-
+    runWithCCWAPI (args, lang) {
         const url = `${this.host || xiguaServerURL}/study-main/external/mt/translate/`;
 
         const tempThis = this;
@@ -358,6 +366,31 @@ class Scratch3TranslateBlocks {
                 tempThis._lastLangTranslated = args.LANGUAGE;
                 return translated;
                 // powered by xigua end
+            })
+            .catch(err => {
+                log.warn(`error fetching translate result! ${err}`);
+                return '';
+            });
+        return translatePromise;
+    }
+
+    runWithScratchAPI (args, lang) {
+        let urlBase = `${serverURL}translate?language=`;
+        urlBase += lang;
+        urlBase += '&text=';
+        urlBase += encodeURIComponent(args.WORDS);
+
+        const tempThis = this;
+        const translatePromise = fetchWithTimeout(urlBase, {}, serverTimeoutMs)
+            .then(response => response.text())
+            .then(responseText => {
+                const translated = JSON.parse(responseText).result;
+                tempThis._translateResult = translated;
+                // Cache what we just translated so we don't keep making the
+                // same call over and over.
+                tempThis._lastTextTranslated = args.WORDS;
+                tempThis._lastLangTranslated = args.LANGUAGE;
+                return translated;
             })
             .catch(err => {
                 log.warn(`error fetching translate result! ${err}`);

@@ -28,10 +28,10 @@ const blockIconURI = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNv
  * The url of the synthesis server.
  * @type {string}
  */
-// const SERVER_HOST = 'https://synthesis-service.scratch.mit.edu';
+const SERVER_HOST = 'https://synthesis-service.scratch.mit.edu';
 
 // eslint-disable-next-line no-undef
-const SERVER_HOST = process.env.STUDY_WEB_HOST || STUDY_WEB_HOST;
+const XIGUA_SERVER_HOST = typeof STUDY_WEB_HOST === 'undefined' ? process.env.STUDY_WEB_HOST : STUDY_WEB_HOST;
 
 /**
  * How long to wait in ms before timing out requests to synthesis server.
@@ -161,6 +161,9 @@ class Scratch3Text2SpeechBlocks {
         this.thirdPartApiKey = localStorage.getItem('xg-access-code');
 
         this.host = runtime.ccwAPI.getOnlineExtensionsConfig().hosts && runtime.ccwAPI.getOnlineExtensionsConfig().hosts.tts;
+        if (this.host || XIGUA_SERVER_HOST) {
+            this.isCCWService = true;
+        }
         // powered by xigua end
     }
 
@@ -744,14 +747,22 @@ class Scratch3Text2SpeechBlocks {
      * @return {Promise} A promise that resolves after playing the sound
      */
     speakAndWait (args, util) {
+        // Build up URL
+        if (this.isCCWService) {
+            return this.runWithCCWAPI(args, util);
+        }
+        return this.runWithScratchAPI(args, util);
+    }
+
+    runWithCCWAPI (args, util) {
         // Cast input to string
         let words = Cast.toString(args.WORDS);
-        // let locale = this._getSpeechSynthLocale();
+
         // powered by xigua start
         let locale = LANGUAGE_MAP[this.getCurrentLanguage()];
         // powered by xigua end
-        const state = this._getState(util.target);
 
+        const state = this._getState(util.target);
         let gender = this.VOICE_INFO[state.voiceId].gender;
         let playbackRate = this.VOICE_INFO[state.voiceId].playbackRate;
 
@@ -772,16 +783,8 @@ class Scratch3Text2SpeechBlocks {
             words = words.replace(/\S+/g, 'meow');
             locale = LANGUAGE_MAP[this.LANGUAGE_INFO[this.DEFAULT_LANGUAGE].speechSynthLocale];
         }
+        const path = this.host || `${XIGUA_SERVER_HOST}/study-main/external/speech/tts`;
 
-        // Build up URL
-        const path = `${this.host || SERVER_HOST}/study-main/external/speech/tts`;
-
-        // path = `${SERVER_HOST}/synth`;
-        // path += `?locale=${locale}`;
-        // path += `&gender=${gender}`;
-        // path += `&text=${encodeURIComponent(words.substring(0, 128))}`;
-
-        // Perform HTTP request to get audio file
         return fetchWithTimeout(path, {
             // powered by xigua start
             method: 'post',
@@ -797,6 +800,82 @@ class Scratch3Text2SpeechBlocks {
             }
             // powered by xigua end
         }, SERVER_TIMEOUT)
+            .then(res => {
+                if (res.status !== 200) {
+                    throw new Error(`HTTP ${res.status} error reaching translation service`);
+                }
+
+                return res.arrayBuffer();
+            })
+            .then(buffer => {
+                // Play the sound
+                const sound = {
+                    data: {
+                        buffer
+                    }
+                };
+                return this.runtime.audioEngine.decodeSoundPlayer(sound);
+            })
+            .then(soundPlayer => {
+                this._soundPlayers.set(soundPlayer.id, soundPlayer);
+
+                soundPlayer.setPlaybackRate(playbackRate);
+
+                // Increase the volume
+                const engine = this.runtime.audioEngine;
+                const chain = engine.createEffectChain();
+                chain.set('volume', SPEECH_VOLUME);
+                soundPlayer.connect(chain);
+
+                soundPlayer.play();
+                return new Promise(resolve => {
+                    soundPlayer.on('stop', () => {
+                        this._soundPlayers.delete(soundPlayer.id);
+                        resolve();
+                    });
+                });
+            })
+            .catch(err => {
+                log.warn(err);
+            });
+    }
+
+    runWithScratchAPI (args, util) {
+        // Cast input to string
+        let words = Cast.toString(args.WORDS);
+        let locale = this._getSpeechSynthLocale();
+
+        const state = this._getState(util.target);
+
+        let gender = this.VOICE_INFO[state.voiceId].gender;
+        let playbackRate = this.VOICE_INFO[state.voiceId].playbackRate;
+
+        // Special case for voices where the synthesis service only provides a
+        // single gender voice. In that case, always request the female voice,
+        // and set special playback rates for the tenor and giant voices.
+        if (this.LANGUAGE_INFO[this.getCurrentLanguage()].singleGender) {
+            gender = 'female';
+            if (state.voiceId === TENOR_ID) {
+                playbackRate = FEMALE_TENOR_RATE;
+            }
+            if (state.voiceId === GIANT_ID) {
+                playbackRate = FEMALE_GIANT_RATE;
+            }
+        }
+
+        if (state.voiceId === KITTEN_ID) {
+            words = words.replace(/\S+/g, 'meow');
+            locale = this.LANGUAGE_INFO[this.DEFAULT_LANGUAGE].speechSynthLocale;
+        }
+
+        // Build up URL
+        let path = `${SERVER_HOST}/synth`;
+        path += `?locale=${locale}`;
+        path += `&gender=${gender}`;
+        path += `&text=${encodeURIComponent(words.substring(0, 128))}`;
+
+        // Perform HTTP request to get audio file
+        return fetchWithTimeout(path, {}, SERVER_TIMEOUT)
             .then(res => {
                 if (res.status !== 200) {
                     throw new Error(`HTTP ${res.status} error reaching translation service`);
