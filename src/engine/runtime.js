@@ -3395,7 +3395,6 @@ class Runtime extends EventEmitter {
 
     // powered by xigua start
     getFormatMessage (message) {
-        console.log(message);
         const globalFormatMessage = require('format-message');
         const formatMessage = globalFormatMessage.namespace();
         return (...args) => {
