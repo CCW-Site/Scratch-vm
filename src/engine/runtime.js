@@ -1068,6 +1068,7 @@ class Runtime extends EventEmitter {
             id: extensionInfo.id,
             name: maybeFormatMessage(extensionInfo.name),
             showStatusButton: extensionInfo.showStatusButton,
+            warningTipText: extensionInfo.warningTipText,
             blockIconURI: extensionInfo.blockIconURI,
             menuIconURI: extensionInfo.menuIconURI
         };
@@ -1116,6 +1117,7 @@ class Runtime extends EventEmitter {
         const categoryInfo = this._blockInfo.find(info => info.id === extensionInfo.id);
         if (categoryInfo) {
             categoryInfo.name = maybeFormatMessage(extensionInfo.name);
+            categoryInfo.warningTipText = extensionInfo.warningTipText;
             this._fillExtensionCategory(categoryInfo, extensionInfo);
 
             this.emit(Runtime.BLOCKSINFO_UPDATE, categoryInfo);
@@ -1711,14 +1713,25 @@ class Runtime extends EventEmitter {
                 `iconURI="${menuIconURI}"` : '';
 
             let statusButtonXML = '';
+            let extensionTipXML = '';
             if (categoryInfo.showStatusButton) {
                 statusButtonXML = 'showStatusButton="true"';
             }
 
+            if (categoryInfo.warningTipText) {
+                extensionTipXML = `warningTipText="${categoryInfo.warningTipText}"`;
+            }
             return {
                 id: categoryInfo.id,
-                xml: `<category name="${name}" id="${categoryInfo.id}" ${statusButtonXML} ${colorXML} ${menuIconXML}>${
-                    paletteBlocks.map(block => block.xml).join('')}</category>`
+                xml: `<category name="${name}"
+                        id="${categoryInfo.id}"
+                        official="false"
+                        ${statusButtonXML}
+                        ${extensionTipXML}
+                        ${colorXML}
+                        ${menuIconXML}>
+                        ${paletteBlocks.map(block => block.xml).join('')}
+                    </category>`
             };
         });
     }
@@ -3382,6 +3395,7 @@ class Runtime extends EventEmitter {
 
     // powered by xigua start
     getFormatMessage (message) {
+        console.log(message);
         const globalFormatMessage = require('format-message');
         const formatMessage = globalFormatMessage.namespace();
         return (...args) => {

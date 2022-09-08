@@ -1,3 +1,4 @@
+const formatMessage = require('format-message');
 const dispatch = require('../dispatch/central-dispatch');
 const log = require('../util/log');
 const maybeFormatMessage = require('../util/maybe-format-message');
@@ -30,6 +31,17 @@ const builtinExtensions = {
     // tw: core extension
     tw: () => require('../extensions/tw')
 };
+
+const officialExtension = [
+    'music',
+    'pen',
+    'videoSensing',
+    'text',
+    'faceSensing',
+    'microbit',
+    'text2speech',
+    'translate'
+];
 
 // powered by xigua start
 /** 从外部注入的扩展 */
@@ -116,6 +128,12 @@ class ExtensionManager {
          *  - "iframe"
          */
         this.workerMode = 'worker';
+
+        /**
+         * Whether to show a warning that extensions are officially incompatible with Scratch.
+         * @type {boolean>}
+         */
+        this.showCompatibilityWarning = false;
 
         /**
          * Keep a reference to the runtime so we can construct internal extension objects.
@@ -427,6 +445,16 @@ class ExtensionManager {
         extensionInfo = Object.assign({}, extensionInfo);
         if (!/^[a-z0-9]+$/i.test(extensionInfo.id)) {
             throw new Error('Invalid extension id');
+        }
+        const warningTipText = extensionInfo.warningTipText || formatMessage({
+            id: 'gui.extension.compatibilityWarning',
+            default: 'This advanced extension uses its own server independent of Scratch, which may cause project to fail to run in Scratch. When publishing your project, you can choose to publish to Cocrea, where the advanced extension can work adequately, or export it locally.',
+            description: 'Give a warning when an extension is not official in Scratch.'
+        });
+        if (!officialExtension.includes(extensionInfo.id) && this.showCompatibilityWarning) {
+            extensionInfo.warningTipText = warningTipText;
+        } else {
+            delete extensionInfo.warningTipText;
         }
         extensionInfo.name = extensionInfo.name || extensionInfo.id;
         extensionInfo.blocks = extensionInfo.blocks || [];
