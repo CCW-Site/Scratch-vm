@@ -448,7 +448,7 @@ class ExtensionManager {
         }
         const warningTipText = extensionInfo.warningTipText || formatMessage({
             id: 'gui.extension.compatibilityWarning',
-            default: 'This advanced extension uses its own server independent of Scratch, which may cause project to fail to run in Scratch. When publishing your project, you can choose to publish to Cocrea, where the advanced extension can work adequately, or export it locally.',
+            default: 'This extension is incompatible with Scratch. Projects made with it cannot be uploaded to the Scratch website. You can share the project on Cocrea. Make sure before you use it.',
             description: 'Give a warning when an extension is not official in Scratch.'
         });
         if (!officialExtension.includes(extensionInfo.id) && this.showCompatibilityWarning) {
