@@ -1504,7 +1504,7 @@ class Runtime extends EventEmitter {
         }
         return {
             info: blockInfo,
-            xml: `<sep gap="36"/><label text="${blockInfo.slice(3)}"/>`
+            xml: `<sep gap="36"/><Text text="${blockInfo.slice(3)}"/>`
         };
 
     }
