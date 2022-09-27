@@ -54,6 +54,8 @@
   "devDependencies": {
     "@babel/core": "7.13.10",
     "@babel/preset-env": "7.14.8",
+    "@teana/scratch-analyzer": "^1.1.0",
+    "@xigua/scratch-render": "^0.2.8",
     "adm-zip": "0.4.11",
     "babel-eslint": "10.1.0",
     "babel-loader": "8.2.2",
@@ -69,6 +71,7 @@
     "in-publish": "2.0.1",
     "jsdoc": "3.6.6",
     "json": "^9.0.4",
+    "lodash": "^4.17.21",
     "lodash.defaultsdeep": "4.6.1",
     "pngjs": "3.3.3",
     "scratch-audio": "0.1.0-prerelease.20200528195344",

@@ -82,7 +82,8 @@ module.exports = [
         target: 'web',
         entry: {
             'benchmark': './src/playground/benchmark',
-            'video-sensing-extension-debug': './src/extensions/scratch3_video_sensing/debug'
+            'video-sensing-extension-debug': './src/extensions/scratch3_video_sensing/debug',
+            'stage': './src/playground/stage'
         },
         output: {
             path: path.resolve(__dirname, 'playground'),
