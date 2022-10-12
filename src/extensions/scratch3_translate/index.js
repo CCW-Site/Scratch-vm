@@ -112,7 +112,12 @@ class Scratch3TranslateBlocks {
         // powered by xigua start
         this.thirdPartApiKey = localStorage.getItem('xg-access-code');
 
-        this.host = runtime.ccwAPI.getOnlineExtensionsConfig().hosts && runtime.ccwAPI.getOnlineExtensionsConfig().hosts.translate;
+        if (runtime.ccwAPI && runtime.ccwAPI.getOnlineExtensionsConfig) {
+            const config = runtime.ccwAPI.getOnlineExtensionsConfig();
+            if (config && config.hosts && config.hosts.translate) {
+                this.host = config.hosts.translate;
+            }
+        }
 
         if (this.host || xiguaServerURL) {
             this.isCCWService = true;
