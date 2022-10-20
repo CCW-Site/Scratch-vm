@@ -2719,7 +2719,7 @@ class Runtime extends EventEmitter {
         blockInfo.blocks.push({
             info: {},
             xml:
-               '<block type="procedures_call" gap="16"><mutation generateshadows="true" warp="false"' +
+                '<block type="procedures_call" gap="16"><mutation generateshadows="true" warp="false"' +
                 ` proccode="${xmlEscape(procedureCode)}"` +
                 ` argumentnames="${xmlEscape(JSON.stringify(names))}"` +
                 ` argumentids="${xmlEscape(JSON.stringify(ids))}"` +
@@ -3405,67 +3405,6 @@ class Runtime extends EventEmitter {
 
     getOriginalFormatMessage () {
         return require('format-message');
-    }
-
-    loadOnlineExtensionsLibrary () {
-        const onlineScriptId = '__scratchOnlineLibId__';
-        const maybeCreatedScript = document.getElementById(onlineScriptId);
-
-        if (!maybeCreatedScript) {
-            // eslint-disable-next-line no-undef
-            const ENV = typeof DEPLOY_ENV === 'undefined' ? void 0 : DEPLOY_ENV;
-            // https://static-dev.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m/static/js/
-
-            const staticName = {
-                dev: '-dev',
-                qa: '-qa',
-                prod: ''
-            }[ENV];
-
-            const scriptHost = staticName === void 0 ? '' : `https://static${staticName}.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m`;
-
-            let onlineScriptUrl = `${scriptHost}/static/js/main.js?_=${Date.now()}`;
-            if (this.ccwAPI && this.ccwAPI.getOnlineExtensionsConfig) {
-                onlineScriptUrl = this.ccwAPI.getOnlineExtensionsConfig().fileSrc || onlineScriptUrl;
-            }
-            if (!onlineScriptUrl) {
-                log.warn('onlineScriptUrl is null');
-            }
-            const script = document.createElement('script');
-            script.src = onlineScriptUrl;
-            script.id = onlineScriptId;
-            script.defer = true;
-
-            script._successCallBacks = [];
-            script._failedCallBacks = [];
-            return new Promise((resolve, reject) => {
-                script.onload = () => {
-                    const {scratchExtensions} = window;
-                    resolve(scratchExtensions);
-                    script._successCallBacks.forEach(successCallBack => {
-                        successCallBack(scratchExtensions);
-                    });
-                };
-
-                script.onerror = e => {
-                    reject(e);
-                    script._failedCallBacks.forEach(failedCallBack => {
-                        failedCallBack(e);
-                    });
-                };
-
-                document.body.append(script);
-            });
-        }
-
-        if (!window.scratchExtensions) {
-            return new Promise((resolve, reject) => {
-                maybeCreatedScript._successCallBacks.push(resolve);
-                maybeCreatedScript._failedCallBacks.push(reject);
-            });
-        }
-
-        return Promise.resolve(window.scratchExtensions);
     }
     // powered by xigua end
 }
