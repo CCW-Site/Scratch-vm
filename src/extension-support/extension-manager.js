@@ -426,7 +426,8 @@ class ExtensionManager {
      */
     _prepareExtensionInfo (serviceName, extensionInfo) {
         extensionInfo = Object.assign({}, extensionInfo);
-        if (!/^[a-zA-Z0-9.-]+$/i.test(extensionInfo.id)) {
+        // Allowed ID characters are those matching the regular expression [\w-.]: A-Z, a-z, 0-9, hyphen ("-") and dot (".") .
+        if (/[^\w-.]/i.test(extensionInfo.id)) {
             throw new Error('Invalid extension id');
         }
         const warningTipText = extensionInfo.warningTipText || formatMessage({
