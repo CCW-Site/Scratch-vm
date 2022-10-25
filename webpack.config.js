@@ -1,6 +1,8 @@
+// @ts-nocheck
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const defaultsDeep = require('lodash.defaultsdeep');
 const path = require('path');
+const webpack = require('webpack');
 
 const base = {
     mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
@@ -20,7 +22,8 @@ const base = {
             loader: 'babel-loader',
             include: path.resolve(__dirname, 'src'),
             query: {
-                presets: [['@babel/preset-env']]
+                presets: [['@babel/preset-env']],
+                // plugins: ["@babel/plugin-transform-runtime"]
             }
         },
         {
@@ -33,6 +36,15 @@ const base = {
     },
     plugins: []
 };
+
+if (process.env.NODE_ENV === 'playground') { // for local playground
+    console.log('====================================');
+    console.log('playground');
+    console.log('====================================');
+    base.plugins.push(new webpack.DefinePlugin({
+        DEPLOY_ENV: '"prod"'
+    }));
+}
 
 module.exports = [
     // Web-compatible
