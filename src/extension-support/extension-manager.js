@@ -711,8 +711,8 @@ class ExtensionManager {
             onlineScriptUrl = `${scriptHost}/static/js/main.js?_=${Date.now()}`;
         }
 
-        if (this.ccwAPI && this.ccwAPI.getOnlineExtensionsConfig) {
-            onlineScriptUrl = this.ccwAPI.getOnlineExtensionsConfig().fileSrc || onlineScriptUrl;
+        if (this.runtime.ccwAPI && this.runtime.ccwAPI.getOnlineExtensionsConfig) {
+            onlineScriptUrl = this.runtime.ccwAPI.getOnlineExtensionsConfig().fileSrc || onlineScriptUrl;
         }
         return new Promise((resolve, reject) => this.loadRemoteExtensionWithURL(onlineScriptUrl, async () => {
             if (window.scratchExtensions) {
