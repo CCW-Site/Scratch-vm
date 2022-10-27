@@ -710,9 +710,6 @@ class ExtensionManager {
 
             onlineScriptUrl = `${scriptHost}/static/js/main.js?_=${Date.now()}`;
         }
-        if (window.scratchExtensions) {
-            return Promise.resolve(window.scratchExtensions);
-        }
 
         if (this.ccwAPI && this.ccwAPI.getOnlineExtensionsConfig) {
             onlineScriptUrl = this.ccwAPI.getOnlineExtensionsConfig().fileSrc || onlineScriptUrl;
