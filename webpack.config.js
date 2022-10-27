@@ -21,9 +21,14 @@ const base = {
             test: /\.js$/,
             loader: 'babel-loader',
             include: path.resolve(__dirname, 'src'),
-            query: {
-                presets: [['@babel/preset-env']],
-                // plugins: ["@babel/plugin-transform-runtime"]
+            options: {
+                plugins: [
+                    '@babel/plugin-transform-runtime'
+                ],
+                presets: [
+                    ['@babel/preset-env', {targets: {browsers: ['last 3 versions', 'Safari >= 8', 'iOS >= 8']}}]
+                ],
+                sourceType: 'unambiguous'
             }
         },
         {
