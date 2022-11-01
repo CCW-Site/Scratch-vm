@@ -714,7 +714,9 @@ class ExtensionManager {
         if (this.runtime.ccwAPI && this.runtime.ccwAPI.getOnlineExtensionsConfig) {
             onlineScriptUrl = this.runtime.ccwAPI.getOnlineExtensionsConfig().fileSrc || onlineScriptUrl;
         }
-        return new Promise((resolve, reject) => this.loadRemoteExtensionWithURL(onlineScriptUrl, async () => {
+        // use 'OfficialExtensions' as script tag dom id
+        // make load remote script file only once
+        return new Promise((resolve, reject) => this.loadRemoteExtensionWithURL('OfficialExtensions', onlineScriptUrl, async () => {
             if (window.scratchExtensions) {
                 const {default: lib} = await window.scratchExtensions.default();
                 Object.keys(lib).forEach(key => {
@@ -729,7 +731,7 @@ class ExtensionManager {
     }
 
     loadCustomExtensionsLibrary (url) {
-        return new Promise((resolve, reject) => this.loadRemoteExtensionWithURL(url, async () => {
+        return new Promise((resolve, reject) => this.loadRemoteExtensionWithURL(url, url, async () => {
             if (window.ExtensionLib) {
                 const lib = await window.ExtensionLib;
                 Object.keys(lib).forEach(key => {
@@ -743,18 +745,21 @@ class ExtensionManager {
         }, reject));
     }
 
-    loadRemoteExtensionWithURL (url, onLoadSuccess, onLoadError) {
+    loadRemoteExtensionWithURL (uniqueId, url, onLoadSuccess, onLoadError) {
         if (!url) {
             log.warn('loadRemoteExtensionWithURL() url is null');
             return Promise.resolve(null);
         }
-        const onlineScriptId = url;
-        const loader = document.getElementById(onlineScriptId) || this.createdScriptLoader(url, url);
+        const loader = this.createdScriptLoader(url, uniqueId);
         loader.successCallBack.push(onLoadSuccess);
         loader.failedCallBack.push(onLoadError);
     }
 
     createdScriptLoader (url, id) {
+        const exist = document.getElementById(id);
+        if (exist) {
+            return exist;
+        }
         if (!url) {
             log.warn('onlineScriptUrl is null');
         }
