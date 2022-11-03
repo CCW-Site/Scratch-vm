@@ -1,6 +1,6 @@
 {
   "name": "@xigua/scratch-vm",
-  "version": "1.3.43",
+  "version": "1.4.2",
   "description": "Virtual Machine for Scratch 3.0 merged tw-vm",
   "author": "Massachusetts Institute of Technology",
   "license": "LGPL-3.0-only",
@@ -8,12 +8,13 @@
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/LLK/scratch-vm.git",
-    "sha": "7d939198040f0d276290cdf4e143b01de1eea7d8"
+    "sha": "8ec805aa2b4c996f5876e16e4777faaebc8766b4"
   },
   "main": "./src/index.js",
   "browser": "./src/index.js",
   "scripts": {
     "build": "npm run docs && webpack --progress --colors --bail",
+    "build:playground": "export NODE_ENV=playground && webpack --progress --colors --bail",
     "coverage": "tap ./test/{unit,integration}/*.js --coverage --coverage-report=lcov",
     "deploy": "touch playground/.nojekyll && gh-pages -t -d playground -m \"Build for $(git log --pretty=format:%H -n1)\"",
     "docs": "exit 0 || jsdoc -c .jsdoc.json",
@@ -21,7 +22,7 @@
     "i18n:push": "tx-push-src scratch-editor extensions translations/core/en.json",
     "lint": "exit 0 || eslint . && format-message lint src/**/*.js",
     "prepublish": "in-publish && npm run build || not-in-publish",
-    "start": "webpack-dev-server",
+    "start": "export NODE_ENV=playground && webpack-dev-server",
     "tap": "tap ./test/{unit,integration}/*.js",
     "tap:unit": "tap ./test/unit/*.js",
     "tap:integration": "tap ./test/integration/*.js",
@@ -42,7 +43,7 @@
     "immutable": "3.8.2",
     "jszip": "^3.1.5",
     "minilog": "3.1.0",
-    "scratch-parser": "github:TurboWarp/scratch-parser",
+    "scratch-parser": "github:CCW-Site/scratch-parser#gandi",
     "scratch-sb1-converter": "0.2.7",
     "scratch-translate-extension-languages": "0.0.20191118205314",
     "text-encoding": "0.7.0",
@@ -53,6 +54,8 @@
   },
   "devDependencies": {
     "@babel/core": "7.13.10",
+    "@babel/plugin-syntax-dynamic-import": "^7.8.3",
+    "@babel/plugin-transform-runtime": "^7.19.6",
     "@babel/preset-env": "7.14.8",
     "@teana/scratch-analyzer": "^1.1.0",
     "@xigua/scratch-render": "^0.2.8",

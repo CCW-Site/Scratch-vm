@@ -1258,7 +1258,7 @@ class VirtualMachine extends EventEmitter {
         const target = optTargetId ?
             this.runtime.getTargetById(optTargetId) :
             this.editingTarget;
-            
+
         if (target) {
             loadSound(
                 sound,
@@ -1421,7 +1421,6 @@ class VirtualMachine extends EventEmitter {
                 target.sprite.costumes.splice(costumeIndex, 1, costumeObject);
                 if (target.renderer) {
                     target.renderer.updateDrawableSkinId(target.drawableID, costumeObject.skinId);
-        
                     target.emitFast('EVENT_TARGET_VISUAL_CHANGE', target);
                     target.runtime.requestTargetsUpdate(target);
                 }
@@ -1544,7 +1543,6 @@ class VirtualMachine extends EventEmitter {
         costume.assetId = costume.asset.assetId;
         costume.md5 = `${costume.assetId}.${costume.dataFormat}`;
         const {assetId, bitmapResolution, dataFormat, md5, name} = costume;
-        
         this.runtime.emitTargetCostumeChanged(this.editingTarget.id, ['costumes', costumeIndex, 'update', {
             assetId,
             bitmapResolution,
@@ -1868,7 +1866,7 @@ class VirtualMachine extends EventEmitter {
         const sb3 = require('./serialization/sb3');
         return sb3.deserializeBlocks(blocks);
     }
-    
+
     /**
      * Deserialize a block input descriptors. This is either a
      * block id or a serialized primitive, e.g. an array
@@ -1883,7 +1881,7 @@ class VirtualMachine extends EventEmitter {
         const sb3 = require('./serialization/sb3');
         return sb3.deserializeInputDesc(inputDescOrId, parentId, isShadow, blocks, blockId);
     }
-    
+
     serializeVariables (variables) {
         const sb3 = require('./serialization/sb3');
         return sb3.serializeVariables(variables);
@@ -1970,7 +1968,6 @@ class VirtualMachine extends EventEmitter {
     setTargetBlocks (blocks, targetId) {
         const sb3 = require('./serialization/sb3');
         const target = this.runtime.getTargetById(targetId);
-        
         const copiedBlocks = JSON.parse(JSON.stringify(blocks));
         const extensionIDs = new Set(
             copiedBlocks
@@ -1990,7 +1987,6 @@ class VirtualMachine extends EventEmitter {
                 } else {
                     target.blocks.createBlock(block);
                 }
-                
             });
             target.blocks.updateTargetSpecificBlocks(target.isStage);
         });
@@ -2314,7 +2310,6 @@ class VirtualMachine extends EventEmitter {
         const target = this.runtime.getTargetById(targetId);
         if (target) {
             const reorderSuccessful = target.reorderSound(soundIndex, newIndex);
-            
             if (reorderSuccessful) {
                 this.runtime.emitTargetSoundsChanged(target.id, [soundIndex, 'reorder', [soundIndex, newIndex]]);
                 this.runtime.emitProjectChanged();
@@ -2427,8 +2422,12 @@ class VirtualMachine extends EventEmitter {
     }
     // powered by xigua start
 
-    loadOnlineExtensionsLibrary () {
-        return this.runtime.loadOnlineExtensionsLibrary();
+    loadOfficialExtensionsLibrary () {
+        return this.extensionManager.loadOfficialExtensionsLibrary();
+    }
+
+    loadCustomExtensionsLibrary (url) {
+        return this.extensionManager.loadCustomExtensionsLibrary(url);
     }
     // powered by xigua end
 }

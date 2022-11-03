@@ -32,7 +32,7 @@ const builtinExtensions = {
     tw: () => require('../extensions/tw')
 };
 
-const officialExtension = [
+const scratchExtension = [
     'music',
     'pen',
     'videoSensing',
@@ -46,6 +46,10 @@ const officialExtension = [
 // powered by xigua start
 /** 从外部注入的扩展 */
 const injectExtensions = {};
+/** Gandi官方的扩展 */
+const officialExtension = {};
+/** 用户加载的扩展 */
+const customExtension = {};
 // powered by xigua end
 
 /**
@@ -205,21 +209,14 @@ class ExtensionManager {
      * @param {string} extensionURL - the URL for the extension to load OR the ID of an internal extension
      * @returns {Promise} resolved once the extension is loaded and initialized or rejected on failure
      */
-    loadExtensionURL (extensionURL) {
-
-        if (
-            builtinExtensions.hasOwnProperty(extensionURL) ||
-            injectExtensions.hasOwnProperty(extensionURL)
-        ) {
+    async loadExtensionURL (extensionURL) {
+        const registExt = extension => {
             /** @TODO dupe handling for non-builtin extensions. See commit 670e51d33580e8a2e852b3b038bb3afc282f81b9 */
             if (this.isExtensionLoaded(extensionURL)) {
                 const message = `Rejecting attempt to load a second extension with ID ${extensionURL}`;
                 log.warn(message);
                 return Promise.resolve();
             }
-
-
-            const extension = (builtinExtensions[extensionURL] || injectExtensions[extensionURL])();
             const extensionInstance = new extension(this.runtime);
             const serviceName =
                 this._registerInternalExtension(extensionInstance);
@@ -229,56 +226,42 @@ class ExtensionManager {
                 extensionInstance
             );
             return Promise.resolve();
+        };
+
+        let extension = this.getLocalExtension(extensionURL);
+        if (extension) {
+            return registExt(extension);
+        }
+
+        extension = await this.getRemoteExtension(extensionURL);
+        if (extension) {
+            return registExt(extension.default || extension);
         }
 
         this.runtime.emit('EXTENSION_DATA_LOADING', true); // ccw start loading remote extension event
 
-        return this.runtime
-            .loadOnlineExtensionsLibrary() // ccw remote extensions library
-            .then(lib => lib.default())
-            .then(({default: remoteExtensions}) => {
-                const remoteExtensionConfig = remoteExtensions[extensionURL];
-                if (remoteExtensionConfig && remoteExtensionConfig.Extension) {
-                    return remoteExtensionConfig
-                        .Extension()
-                        .then(({default: remoteExtension}) => {
-                            const extensionInstance = new remoteExtension(this.runtime);
-                            const serviceName = this._registerInternalExtension(extensionInstance);
-                            this.setLoadedExtension(extensionURL, serviceName);
-                            return Promise.resolve();
-                        });
-                }
+        await this.loadOfficialExtensionsLibrary();
 
-                // eslint-disable-next-line no-console
-                log.warn(`ccw: [${extensionURL}] not found in remote extensions library,try load as URL`);
-                // TW
-                this.loadingAsyncExtensions++;
-                return new Promise((resolve, reject) => {
-                    this.pendingExtensions.push({extensionURL, resolve, reject});
-                    this.createExtensionWorker()
-                        .then(worker => dispatch.addWorker(worker))
-                        .catch(error => {
-                            this.runtime.emit('EXTENSION_NOT_FOUND', extensionURL);
-                            return reject(error);
-                        });
+        if (officialExtension[extensionURL]) {
+            extension = await this.getRemoteExtension(extensionURL);
+            if (extension) {
+                this.runtime.emit('EXTENSION_DATA_LOADING', false);
+                return registExt(extension.default);
+            }
+        }
+
+        log.warn(`ccw: [${extensionURL}] not found in remote extensions library,try load as URL`);
+        // TW
+        this.loadingAsyncExtensions++;
+        return new Promise((resolve, reject) => {
+            this.pendingExtensions.push({extensionURL, resolve, reject});
+            this.createExtensionWorker()
+                .then(worker => dispatch.addWorker(worker))
+                .catch(error => {
+                    this.runtime.emit('EXTENSION_NOT_FOUND', extensionURL);
+                    return reject(error);
                 });
-
-                // original
-                // return new Promise((resolve, reject) => {
-                //     // If we `require` this at the global level it breaks non-webpack targets, including tests
-                //     const ExtensionWorker = require('worker-loader?name=extension-worker.js!./extension-worker');
-
-                //     this.pendingExtensions.push({
-                //         extensionURL,
-                //         resolve,
-                //         reject
-                //     });
-                //     dispatch.addWorker(new ExtensionWorker());
-                // });
-            })
-            .finally(() => {
-                this.runtime.emit('EXTENSION_DATA_LOADING', false); // ccw end loading remote extension event
-            });
+        }).finally(() => this.runtime.emit('EXTENSION_DATA_LOADING', false));
     }
 
     /**
@@ -443,7 +426,8 @@ class ExtensionManager {
      */
     _prepareExtensionInfo (serviceName, extensionInfo) {
         extensionInfo = Object.assign({}, extensionInfo);
-        if (!/^[a-z0-9]+$/i.test(extensionInfo.id)) {
+        // Allowed ID characters are those matching the regular expression [\w-.]: A-Z, a-z, 0-9, hyphen ("-") and dot (".") .
+        if (/[^\w-.]/i.test(extensionInfo.id)) {
             throw new Error('Invalid extension id');
         }
         const warningTipText = extensionInfo.warningTipText || formatMessage({
@@ -451,7 +435,7 @@ class ExtensionManager {
             default: 'This extension is incompatible with Scratch. Projects made with it cannot be uploaded to the Scratch website. You can share the project on Cocrea. Make sure before you use it.',
             description: 'Give a warning when an extension is not official in Scratch.'
         });
-        if (!officialExtension.includes(extensionInfo.id) && this.showCompatibilityWarning) {
+        if (!scratchExtension.includes(extensionInfo.id) && this.showCompatibilityWarning) {
             extensionInfo.warningTipText = warningTipText;
         } else {
             delete extensionInfo.warningTipText;
@@ -486,11 +470,7 @@ class ExtensionManager {
                     results.push(result);
                 } catch (e) {
                     // TODO: more meaningful error reporting
-                    log.error(
-                        `Error processing block: ${
-                            e.message
-                        }, Block:\n${JSON.stringify(blockInfo)}`
-                    );
+                    log.error(`Error processing block: ${e.message}, Block:\n${JSON.stringify(blockInfo)}`);
                 }
                 return results;
             },
@@ -673,19 +653,138 @@ class ExtensionManager {
     }
 
     // powered by xigua start
-    injectExtension (extensionId, extension) {
+
+    shouldReplaceExtension (extensionId) {
         if (
             builtinExtensions.hasOwnProperty(extensionId) ||
             injectExtensions.hasOwnProperty(extensionId)
         ) {
             log.warn(`${extensionId} 已存在，将替换原有扩展`);
+            // TODO:  处理重复扩展
         }
+    }
+
+    injectExtension (extensionId, extension) {
+        this.shouldReplaceExtension(extensionId);
         injectExtensions[extensionId] = () => extension;
     }
 
     clearLoadedExtensions () {
         this._loadedExtensions.clear();
     }
+
+    registOfficialExtensions (extensionId, extension) {
+        this.shouldReplaceExtension(extensionId);
+        officialExtension[extensionId] = extension;
+    }
+
+    registCustomExtensions (extensionId, extension) {
+        this.shouldReplaceExtension(extensionId);
+        customExtension[extensionId] = extension;
+    }
+
+    getLocalExtension (extensionId) {
+        const func = builtinExtensions[extensionId] || injectExtensions[extensionId];
+        return func && func();
+    }
+
+    async getRemoteExtension (extensionId) {
+        const func = customExtension[extensionId] || officialExtension[extensionId];
+        return func && await Promise.resolve(func());
+    }
+
+    loadOfficialExtensionsLibrary (serviceURL = '') {
+        if (this._officialExtensionInfo) {
+            return Promise.resolve(this._officialExtensionInfo);
+        }
+        let onlineScriptUrl = serviceURL;
+        if (!onlineScriptUrl) {
+            const ENV = typeof DEPLOY_ENV === 'undefined' ? void 0 : DEPLOY_ENV;
+            const staticName = {
+                dev: '-dev',
+                qa: '-qa',
+                prod: ''
+            }[ENV];
+            // https://static-dev.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m/static/js/
+            const scriptHost = staticName === void 0 ? '' : `https://static${staticName}.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m`;
+
+            onlineScriptUrl = `${scriptHost}/static/js/main.js?_=${Date.now()}`;
+        }
+
+        if (this.runtime.ccwAPI && this.runtime.ccwAPI.getOnlineExtensionsConfig) {
+            onlineScriptUrl = this.runtime.ccwAPI.getOnlineExtensionsConfig().fileSrc || onlineScriptUrl;
+        }
+        // use 'OfficialExtensions' as script tag dom id
+        // make load remote script file only once
+        return new Promise((resolve, reject) => this.loadRemoteExtensionWithURL('OfficialExtensions', onlineScriptUrl, async () => {
+            if (window.scratchExtensions) {
+                const {default: lib} = await window.scratchExtensions.default();
+                Object.keys(lib).forEach(key => {
+                    const obj = lib[key];
+                    const id = (obj.info && obj.info.extensionId) || key;
+                    this.registOfficialExtensions(id, obj.Extension);
+                });
+                this._officialExtensionInfo = lib;
+            }
+            resolve(this._officialExtensionInfo);
+        }, reject));
+    }
+
+    loadCustomExtensionsLibrary (url) {
+        return new Promise((resolve, reject) => this.loadRemoteExtensionWithURL(url, url, async () => {
+            if (window.ExtensionLib) {
+                const lib = await window.ExtensionLib;
+                Object.keys(lib).forEach(key => {
+                    const obj = lib[key];
+                    const id = (obj.info && obj.info.extensionId) || key;
+                    this.registCustomExtensions(id, obj.Extension);
+                });
+                this._customlExtensionInfo = {...this._customlExtensionInfo, ...lib};
+            }
+            resolve(this._customlExtensionInfo);
+        }, reject));
+    }
+
+    loadRemoteExtensionWithURL (uniqueId, url, onLoadSuccess, onLoadError) {
+        if (!url) {
+            log.warn('loadRemoteExtensionWithURL() url is null');
+            return Promise.resolve(null);
+        }
+        const loader = this.createdScriptLoader(url, uniqueId);
+        loader.successCallBack.push(onLoadSuccess);
+        loader.failedCallBack.push(onLoadError);
+    }
+
+    createdScriptLoader (url, id) {
+        const exist = document.getElementById(id);
+        if (exist) {
+            return exist;
+        }
+        if (!url) {
+            log.warn('onlineScriptUrl is null');
+        }
+        const script = document.createElement('script');
+        script.src = url;
+        script.id = id;
+        script.defer = true;
+
+        script.successCallBack = [];
+        script.failedCallBack = [];
+
+        script.onload = () => {
+            script.successCallBack.forEach(cb => cb());
+            script.successCallBack = [];
+            document.body.removeChild(script);
+        };
+        script.onerror = e => {
+            script.failedCallBack.forEach(cb => cb(e));
+            script.failedCallBack = [];
+            document.body.removeChild(script);
+        };
+        document.body.append(script);
+        return script;
+    }
+
     // powered by xigua end
 }
 

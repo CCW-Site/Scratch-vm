@@ -160,7 +160,12 @@ class Scratch3Text2SpeechBlocks {
         // powered by xigua start
         this.thirdPartApiKey = localStorage.getItem('xg-access-code');
 
-        this.host = runtime.ccwAPI.getOnlineExtensionsConfig().hosts && runtime.ccwAPI.getOnlineExtensionsConfig().hosts.tts;
+        if (runtime.ccwAPI && runtime.ccwAPI.getOnlineExtensionsConfig) {
+            const config = runtime.ccwAPI.getOnlineExtensionsConfig();
+            if (config && config.hosts && config.hosts.tts) {
+                this.host = config.hosts.tts;
+            }
+        }
         if (this.host || XIGUA_SERVER_HOST) {
             this.isCCWService = true;
         }

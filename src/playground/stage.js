@@ -1,13 +1,13 @@
-import ScratchRender from '@xigua/scratch-render';
-import {BitmapAdapter as V2BitmapAdapter} from 'scratch-svg-renderer';
-import ScratchStorage from 'scratch-storage';
-import VirtualMachine from '../index';
-import Runtime from '../engine/runtime';
-import AudioEngine from 'scratch-audio';
-import AssetType from 'scratch-storage/src/AssetType';
-import {decodeString} from '@teana/scratch-analyzer';
-import jszip from 'jszip';
-import lodash from 'lodash';
+const ScratchRender  = require( '@xigua/scratch-render');
+const {BitmapAdapter:V2BitmapAdapter}  = require( 'scratch-svg-renderer');
+const ScratchStorage  = require( 'scratch-storage');
+const VirtualMachine  = require( '../index');
+const Runtime  = require( '../engine/runtime');
+const AudioEngine  = require( 'scratch-audio');
+const AssetType  = require( 'scratch-storage/src/AssetType');
+const {decodeString} = require('@teana/scratch-analyzer');
+const jszip  = require( 'jszip');
+const lodash  = require( 'lodash');
 
 const Scratch = window.Scratch = window.Scratch || {vm: null, render: null};
 const USER_PROJECTS_ASSETS = 'user_projects_assets';
@@ -264,7 +264,7 @@ const run = function () {
 
     console.log('load project');
 
-    vm.downloadProjectId('https://m.xiguacity.cn/user_projects_sb3/203524981/40c2e5ee70103516d62bfe9d128f4e57.sb3?t=1664249224306');
+    vm.downloadProjectId('https://m.xiguacity.cn/user_projects_sb3/203524981/1a960ec2e98527683c35be177123d463.sb3?t=1666699908198');
 
     vm.runtime.on(Runtime.PROJECT_LOADED, () => {
         console.log('Runtime.PROJECT_LOADED');
