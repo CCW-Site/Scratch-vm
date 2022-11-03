@@ -151,8 +151,8 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.PROJECT_RUN_STOP, () => {
             this.emit(Runtime.PROJECT_RUN_STOP);
         });
-        this.runtime.on(Runtime.PROJECT_RUN_PAUSE, () => {
-            this.emit(Runtime.PROJECT_RUN_PAUSE);
+        this.runtime.on(Runtime.PROJECT_RUN_PAUSE, status => {
+            this.emit(Runtime.PROJECT_RUN_PAUSE, status);
         });
         this.runtime.on(Runtime.PROJECT_RUN_RESUME, () => {
             this.emit(Runtime.PROJECT_RUN_RESUME);
@@ -2357,12 +2357,15 @@ class VirtualMachine extends EventEmitter {
     /**
      * Post/edit sprite info for the current editing target or the drag target.
      * @param {object} data An object with sprite info data to set.
+     * @param {?string} targetId The id for the target to set info.
      */
-    postSpriteInfo (data) {
+    postSpriteInfo (data, targetId) {
+        const target = targetId ? this.runtime.getTargetById(targetId) : this.editingTarget;
+
         if (this._dragTarget) {
             this._dragTarget.postSpriteInfo(data);
         } else {
-            this.editingTarget.postSpriteInfo(data);
+            target.postSpriteInfo(data);
         }
         // Post sprite info means the gui has changed something about a sprite,
         // either through the sprite info pane fields (e.g. direction, size) or
