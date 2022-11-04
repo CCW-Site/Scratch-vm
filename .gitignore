@@ -21,4 +21,6 @@ npm-*
 # Localization
 /translations
 
-yarn.lock
+*.log
+
+package-lock.json
