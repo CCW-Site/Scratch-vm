@@ -7536,9 +7536,9 @@ scratch-l10n@3.14.20211125031554:
     babel-plugin-react-intl "^3.0.1"
     transifex "1.6.6"
 
-"scratch-parser@github:CCW-Site/scratch-parser#gandi":
+"scratch-parser@github:Gandi-IDE/scratch-parser#gandi":
   version "0.0.0-development"
-  resolved "https://codeload.github.com/CCW-Site/scratch-parser/tar.gz/803bbbeee8831bbdfd25a4dca0d40e3c72fc46e5"
+  resolved "https://codeload.github.com/Gandi-IDE/scratch-parser/tar.gz/803bbbeee8831bbdfd25a4dca0d40e3c72fc46e5"
   dependencies:
     ajv "6.3.0"
     jszip "3.1.5"

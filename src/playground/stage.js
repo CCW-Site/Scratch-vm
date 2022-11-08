@@ -264,7 +264,8 @@ const run = function () {
 
     console.log('load project');
 
-    vm.downloadProjectId('https://m.xiguacity.cn/user_projects_sb3/203524981/1a960ec2e98527683c35be177123d463.sb3?t=1666699908198');
+    // vm.downloadProjectId('https://m.xiguacity.cn/user_projects_sb3/203524981/1a960ec2e98527683c35be177123d463.sb3?t=1666699908198');
+    vm.downloadProjectId('https://m.xiguacity.cn/user_projects_sb3/196429945/a81c5ff730ceb8da30432862b451a43a.sb3?t=1667887927207');
 
     vm.runtime.on(Runtime.PROJECT_LOADED, () => {
         console.log('Runtime.PROJECT_LOADED');
