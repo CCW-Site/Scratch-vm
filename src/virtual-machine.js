@@ -272,6 +272,12 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.COMPILE_ERROR, (target, error) => {
             this.emit(Runtime.COMPILE_ERROR, target, error);
         });
+        this.runtime.on(Runtime.TURBO_MODE_ON, (target, error) => {
+            this.emit(Runtime.TURBO_MODE_ON, target, error);
+        });
+        this.runtime.on(Runtime.TURBO_MODE_OFF, (target, error) => {
+            this.emit(Runtime.TURBO_MODE_OFF, target, error);
+        });
 
         this.extensionManager = new ExtensionManager(this.runtime);
 
