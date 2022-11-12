@@ -598,6 +598,14 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for CCWAPI changing.
+     * @const {string}
+     */
+    static get CCWAPI_CHANGED () {
+        return 'CCWAPI_CHANGED';
+    }
+
+    /**
      * Event name when the project is started (threads may not necessarily be
      * running).
      * @const {string}
@@ -2649,6 +2657,7 @@ class Runtime extends EventEmitter {
      */
     setCCWAPI (ccwAPI) {
         this.ccwAPI = ccwAPI;
+        this.emit(Runtime.CCWAPI_CHANGED);
     }
 
     /**

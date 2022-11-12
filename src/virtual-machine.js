@@ -278,6 +278,9 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.TURBO_MODE_OFF, (target, error) => {
             this.emit(Runtime.TURBO_MODE_OFF, target, error);
         });
+        this.runtime.on(Runtime.CCWAPI_CHANGED, (target, error) => {
+            this.emit(Runtime.CCWAPI_CHANGED, target, error);
+        });
 
         this.extensionManager = new ExtensionManager(this.runtime);
 
