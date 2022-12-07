@@ -636,8 +636,14 @@ class ExtensionManager {
                         `Could not find extension block function called ${funcName}`
                     );
                 }
-                return (args, util, realBlockInfo) =>
-                    serviceObject[funcName](args, util, realBlockInfo);
+
+                return (args, util, realBlockInfo) => {
+                    if (serviceObject[funcName]) {
+                        return serviceObject[funcName](args, util, realBlockInfo);
+                    }
+                    log.error(`Warning: the method '${funcName}' in the ${
+                        serviceObject.constructor.name} has not been implemented yet.`);
+                };
             })();
 
             blockInfo.func = (args, util) => {
