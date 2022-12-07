@@ -77,7 +77,6 @@ const hotFixProjectJson = data => {
                 }
                 const input = blockData.inputs.BROADCAST_INPUT[1];
                 if (typeof input === 'string' && broadcasts[input]) {
-                    console.log('Fixing broadcast', blockId, broadcasts[input]);
                     blockData.inputs.BROADCAST_INPUT[1] = [11, broadcasts[input], input];
                     // 用于协作工程的修复
                     fixedBlocks.push([target.name, blockId, JSON.stringify(blockData.inputs.BROADCAST_INPUT[1])]);
