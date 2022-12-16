@@ -191,7 +191,7 @@ class Scratch3VideoSensingBlocks {
         if (stage) {
             stage.videoState = state;
         }
-        // return state;
+        return state;
     }
 
     /**
