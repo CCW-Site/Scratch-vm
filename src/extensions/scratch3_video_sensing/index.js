@@ -173,7 +173,7 @@ class Scratch3VideoSensingBlocks {
     /**
      * The video state of the video preview stored in a value accessible by any
      * object connected to the virtual machine.
-     * @type {number}
+     * @type {string}
      */
     get globalVideoState () {
         const stage = this.runtime.getTargetForStage();
@@ -191,7 +191,7 @@ class Scratch3VideoSensingBlocks {
         if (stage) {
             stage.videoState = state;
         }
-        return state;
+        // return state;
     }
 
     /**
@@ -561,7 +561,7 @@ class Scratch3VideoSensingBlocks {
      */
     videoToggle (args) {
         const state = args.VIDEO_STATE;
-        this.globalVideoState = state;
+        this.globalVideoState = Cast.toString(state);
         if (state === VideoState.OFF) {
             this.runtime.ioDevices.video.disableVideo();
         } else {
