@@ -63,28 +63,30 @@ const createRuntimeService = runtime => {
  * @returns Fixed project data.
  */
 const hotFixProjectJson = data => {
-    const fixedBlocks = [];
-    const broadcasts = data.targets.find(target => target.isStage).broadcasts;
-    for (let targetIndex = 0; targetIndex < data.targets.length; targetIndex++) {
-        const target = data.targets[targetIndex];
-        const blocks = Object.keys(target.blocks);
-        for (let index = 0; index < blocks.length; index++) {
-            const blockId = blocks[index];
-            const blockData = target.blocks[blockId];
-            if (blockData.opcode === 'event_broadcast' || blockData.opcode === 'event_broadcastandwait') {
-                if (!blockData.inputs.BROADCAST_INPUT) {
-                    continue;
-                }
-                const input = blockData.inputs.BROADCAST_INPUT[1];
-                if (typeof input === 'string' && broadcasts[input]) {
-                    blockData.inputs.BROADCAST_INPUT[1] = [11, broadcasts[input], input];
-                    // 用于协作工程的修复
-                    fixedBlocks.push([target.name, blockId, JSON.stringify(blockData.inputs.BROADCAST_INPUT[1])]);
+    const targets = data.targets;
+    if (targets.length) {
+        const broadcasts = targets.find(target => target.isStage).broadcasts;
+        return targets.reduce((acc, target) => {
+            for (const blockId in target.blocks) {
+                if (Object.hasOwnProperty.call(target.blocks, blockId)) {
+                    const blockData = target.blocks[blockId];
+                    if (blockData.opcode === 'event_broadcast' || blockData.opcode === 'event_broadcastandwait') {
+                        if (!blockData.inputs.BROADCAST_INPUT) {
+                            continue;
+                        }
+                        const input = blockData.inputs.BROADCAST_INPUT[1];
+                        if (typeof input === 'string' && broadcasts[input]) {
+                            blockData.inputs.BROADCAST_INPUT[1] = [11, broadcasts[input], input];
+                            // 用于协作工程的修复
+                            acc.push([target.name, blockId, JSON.stringify(blockData.inputs.BROADCAST_INPUT[1])]);
+                        }
+                    }
                 }
             }
-        }
+            return acc;
+        }, []);
     }
-    return fixedBlocks;
+    throw new Error('At least one target should be included in project data.');
 };
 
 /**
@@ -610,9 +612,11 @@ class VirtualMachine extends EventEmitter {
 
                         zip = null;
                     }
-                    const fiexdData = hotFixProjectJson(json);
-                    if (callback) {
-                        callback(fiexdData);
+                    try {
+                        const data = hotFixProjectJson(json);
+                        if (callback) callback(data);
+                    } catch (error) {
+                        return Promise.reject(error);
                     }
                     return this.deserializeProject(
                         json,
