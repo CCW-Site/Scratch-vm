@@ -63,30 +63,32 @@ const createRuntimeService = runtime => {
  * @returns Fixed project data.
  */
 const hotFixProjectJson = data => {
-    const targets = data.targets;
-    if (targets.length) {
-        const broadcasts = targets.find(target => target.isStage).broadcasts;
-        return targets.reduce((acc, target) => {
-            for (const blockId in target.blocks) {
-                if (Object.hasOwnProperty.call(target.blocks, blockId)) {
-                    const blockData = target.blocks[blockId];
-                    if (blockData.opcode === 'event_broadcast' || blockData.opcode === 'event_broadcastandwait') {
-                        if (!blockData.inputs.BROADCAST_INPUT) {
-                            continue;
-                        }
-                        const input = blockData.inputs.BROADCAST_INPUT[1];
-                        if (typeof input === 'string' && broadcasts[input]) {
-                            blockData.inputs.BROADCAST_INPUT[1] = [11, broadcasts[input], input];
-                            // 用于协作工程的修复
-                            acc.push([target.name, blockId, JSON.stringify(blockData.inputs.BROADCAST_INPUT[1])]);
+    if (data.projectVersion === 3) {
+        const targets = data.targets;
+        if (targets.length) {
+            const broadcasts = targets.find(target => target.isStage).broadcasts;
+            return targets.reduce((acc, target) => {
+                for (const blockId in target.blocks) {
+                    if (Object.hasOwnProperty.call(target.blocks, blockId)) {
+                        const blockData = target.blocks[blockId];
+                        if (blockData.opcode === 'event_broadcast' || blockData.opcode === 'event_broadcastandwait') {
+                            if (!blockData.inputs.BROADCAST_INPUT) {
+                                continue;
+                            }
+                            const input = blockData.inputs.BROADCAST_INPUT[1];
+                            if (typeof input === 'string' && broadcasts[input]) {
+                                blockData.inputs.BROADCAST_INPUT[1] = [11, broadcasts[input], input];
+                                // 用于协作工程的修复
+                                acc.push([target.name, blockId, JSON.stringify(blockData.inputs.BROADCAST_INPUT[1])]);
+                            }
                         }
                     }
                 }
-            }
-            return acc;
-        }, []);
+                return acc;
+            }, []);
+        }
+        throw new Error('At least one target should be included in project data.');
     }
-    throw new Error('At least one target should be included in project data.');
 };
 
 /**
