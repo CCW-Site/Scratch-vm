@@ -112,6 +112,16 @@ const fetchBitmapCanvas_ = function (costume, runtime, rotationCenter) {
         }
 
         if (typeof createImageBitmap !== 'undefined') {
+            if (asset.data.length === 0) {
+                asset.data = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
+                    0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0,
+                    0, 1, 115, 82, 71, 66, 0, 174, 206, 28, 233, 0, 0, 0, 11, 73,
+                    68, 65, 84, 24, 87, 99, 96, 0, 2, 0, 0, 5, 0, 1, 170, 213, 200,
+                    81, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130]);
+                if (window.$customToast) {
+                    window.$customToast.loadCostumeWarning(asset.assetId);
+                }
+            }
             return createImageBitmap(
                 new Blob([asset.data], {type: asset.assetType.contentType})
             );
