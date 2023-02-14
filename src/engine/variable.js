@@ -36,6 +36,49 @@ class Variable {
         }
     }
 
+
+    get name () {
+        return this._name;
+    }
+
+    set name (newValue) {
+        // eslint-disable-next-line no-undef
+        if (globalThis.monitoringAllVMVariables && (newValue instanceof Array || newValue !== this._name)) {
+            window.dispatchEvent(new CustomEvent('variableChange', {detail:
+                {...this, value: this.value, name: newValue}
+            }));
+        }
+        this._name = newValue;
+    }
+
+    get value () {
+        return this._value;
+    }
+
+    set value (newValue) {
+        const thisArg = this;
+        if (newValue instanceof Array) {
+            newValue = new Proxy(newValue, {
+                set (list, idx, value) {
+                    // The default behavior to store the value
+                    list[idx] = value;
+                    window.dispatchEvent(new CustomEvent('variableChange', {detail:
+                        {...thisArg, name: thisArg.name, value: list}
+                    }));
+                    return true;
+                }
+            });
+        }
+        // eslint-disable-next-line no-undef
+        if (globalThis.monitoringAllVMVariables && (newValue instanceof Array || newValue !== this._value)) {
+            window.dispatchEvent(new CustomEvent('variableChange', {detail:
+                {...this, name: this.name, value: newValue}
+            }));
+        }
+        this._value = newValue;
+    }
+
+
     toXML (isLocal) {
         isLocal = (isLocal === true);
         return `<variable type="${this.type}" id="${this.id}" islocal="${isLocal
