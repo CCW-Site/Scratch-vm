@@ -129,7 +129,7 @@ class Target extends EventEmitter {
         if (variable) return variable;
 
         // No variable with this name exists - create it locally.
-        const newVariable = new Variable(id, name, Variable.SCALAR_TYPE, false);
+        const newVariable = new Variable(id, name, Variable.SCALAR_TYPE, false, this.id);
         this.variables[id] = newVariable;
         return newVariable;
     }
@@ -252,7 +252,7 @@ class Target extends EventEmitter {
         if (list) return list;
 
         // No variable with this name exists - create it locally.
-        const newList = new Variable(id, name, Variable.LIST_TYPE, false);
+        const newList = new Variable(id, name, Variable.LIST_TYPE, false, this.id);
         this.variables[id] = newList;
         return newList;
     }
@@ -268,7 +268,7 @@ class Target extends EventEmitter {
      */
     createVariable (id, name, type, isCloud) {
         if (!this.variables.hasOwnProperty(id)) {
-            const newVariable = new Variable(id, name, type, false);
+            const newVariable = new Variable(id, name, type, false, this.id);
             if (isCloud && this.isStage && this.runtime.canAddCloudVariable()) {
                 newVariable.isCloud = true;
                 this.runtime.addCloudVariable();
@@ -408,18 +408,20 @@ class Target extends EventEmitter {
      * this target's variables.
      * @param {string} id Id of variable to duplicate.
      * @param {boolean=} optKeepOriginalId Optional flag to keep the original variable ID
+     * @param {!object} targetId ID of the target which owns the variable.
      * for the duplicate variable. This is necessary when cloning a sprite, for example.
      * @return {?Variable} The duplicated variable, or null if
      * the original variable was not found.
      */
-    duplicateVariable (id, optKeepOriginalId) {
+    duplicateVariable (id, optKeepOriginalId, targetId) {
         if (this.variables.hasOwnProperty(id)) {
             const originalVariable = this.variables[id];
             const newVariable = new Variable(
                 optKeepOriginalId ? id : null, // conditionally keep original id or generate a new one
                 originalVariable.name,
                 originalVariable.type,
-                originalVariable.isCloud
+                originalVariable.isCloud,
+                targetId
             );
             if (newVariable.type === Variable.LIST_TYPE) {
                 newVariable.value = originalVariable.value.slice(0);
@@ -434,18 +436,19 @@ class Target extends EventEmitter {
     /**
      * Duplicate the dictionary of this target's variables as part of duplicating.
      * this target or making a clone.
+     * @param {!object} targetId ID of the target which owns this variables.
      * @param {object=} optBlocks Optional block container for the target being duplicated.
      * If provided, new variables will be generated with new UIDs and any variable references
      * in this blocks container will be updated to refer to the corresponding new IDs.
      * @return {object} The duplicated dictionary of variables
      */
-    duplicateVariables (optBlocks) {
+    duplicateVariables (targetId, optBlocks) {
         let allVarRefs;
         if (optBlocks) {
             allVarRefs = optBlocks.getAllVariableAndListReferences();
         }
         return Object.keys(this.variables).reduce((accum, varId) => {
-            const newVariable = this.duplicateVariable(varId, !optBlocks);
+            const newVariable = this.duplicateVariable(varId, !optBlocks, targetId);
             accum[newVariable.id] = newVariable;
             if (optBlocks && allVarRefs) {
                 const currVarRefs = allVarRefs[varId];
@@ -600,7 +603,7 @@ class Target extends EventEmitter {
         if (existingLocalVar) {
             newVarId = existingLocalVar.id;
         } else {
-            const newVar = new Variable(null, varName, varType);
+            const newVar = new Variable(null, varName, varType, false, sprite.id);
             newVarId = newVar.id;
             sprite.variables[newVarId] = newVar;
         }

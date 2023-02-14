@@ -1062,7 +1062,8 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 varId, // var id is the index of the variable desc array in the variables obj
                 variable[0], // name of the variable
                 Variable.SCALAR_TYPE, // type of the variable
-                isCloud
+                isCloud,
+                target.id
             );
             if (isCloud) runtime.addCloudVariable();
             newVariable.value = variable[1];
@@ -1080,9 +1081,8 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 listId,
                 list[0],
                 Variable.LIST_TYPE,
-                // powered by xigua start
-                isCloud
-                // powered by xigua end
+                isCloud,
+                target.id
             );
             // powered by xigua start
             if (isCloud) runtime.addCloudVariable();
@@ -1098,7 +1098,8 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 broadcastId,
                 broadcast,
                 Variable.BROADCAST_MESSAGE_TYPE,
-                false
+                false,
+                target.id
             );
             // no need to explicitly set the value, variable constructor
             // sets the value to the same as the name for broadcast msgs

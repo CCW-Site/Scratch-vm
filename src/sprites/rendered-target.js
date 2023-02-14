@@ -1050,7 +1050,7 @@ class RenderedTarget extends Target {
         newClone.currentCostume = this.currentCostume;
         newClone.rotationStyle = this.rotationStyle;
         newClone.effects = Clone.simple(this.effects);
-        newClone.variables = this.duplicateVariables();
+        newClone.variables = this.duplicateVariables(newClone.id);
         newClone._edgeActivatedHatValues = Clone.simple(this._edgeActivatedHatValues);
         newClone.initDrawable(StageLayering.SPRITE_LAYER);
         newClone.updateAllDrawableProperties();
@@ -1075,7 +1075,7 @@ class RenderedTarget extends Target {
             newTarget.currentCostume = this.currentCostume;
             newTarget.rotationStyle = this.rotationStyle;
             newTarget.effects = JSON.parse(JSON.stringify(this.effects));
-            newTarget.variables = this.duplicateVariables(newTarget.blocks);
+            newTarget.variables = this.duplicateVariables(newTarget.id, newTarget.blocks);
             newTarget.updateAllDrawableProperties();
             return newTarget;
         });

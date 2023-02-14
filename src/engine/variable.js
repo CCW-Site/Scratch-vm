@@ -14,11 +14,13 @@ class Variable {
      * @param {boolean} isCloud Whether the variable is stored in the cloud.
      * @constructor
      */
-    constructor (id, name, type, isCloud) {
+    constructor (id, name, type, isCloud, targetId) {
         this.id = id || uid();
         this.name = name;
         this.type = type;
         this.isCloud = isCloud;
+        this.targetId = targetId;
+
         switch (this.type) {
         case Variable.SCALAR_TYPE:
             this.value = 0;

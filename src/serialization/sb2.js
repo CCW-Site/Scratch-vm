@@ -578,7 +578,8 @@ const parseScratchObject = function (object, runtime, extensions, topLevel, zip,
                 getVariableId(variable.name, Variable.SCALAR_TYPE),
                 variable.name,
                 Variable.SCALAR_TYPE,
-                isCloud
+                isCloud,
+                target.id
             );
             if (isCloud) runtime.addCloudVariable();
             newVariable.value = variable.value;
@@ -671,7 +672,8 @@ const parseScratchObject = function (object, runtime, extensions, topLevel, zip,
                 getVariableId(list.listName, Variable.LIST_TYPE),
                 list.listName,
                 Variable.LIST_TYPE,
-                false
+                false,
+                target.id
             );
             newVariable.value = list.contents;
             target.variables[newVariable.id] = newVariable;
@@ -801,7 +803,8 @@ const parseScratchObject = function (object, runtime, extensions, topLevel, zip,
                         msgId,
                         msgName,
                         Variable.BROADCAST_MESSAGE_TYPE,
-                        false
+                        false,
+                        target.id
                     );
                     target.variables[newMsg.id] = newMsg;
                 }

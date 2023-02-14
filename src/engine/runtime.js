@@ -3298,8 +3298,8 @@ class Runtime extends EventEmitter {
         const varType = (typeof optVarType === 'string') ? optVarType : Variable.SCALAR_TYPE;
         const allVariableNames = this.getAllVarNamesOfType(varType);
         const newName = StringUtil.unusedName(variableName, allVariableNames);
-        const variable = new Variable(optVarId || uid(), newName, varType);
         const stage = this.getTargetForStage();
+        const variable = new Variable(optVarId || uid(), newName, varType, false, stage.id);
         stage.variables[variable.id] = variable;
         return variable;
     }
