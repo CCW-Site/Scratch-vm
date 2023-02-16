@@ -2,7 +2,7 @@
  * @fileoverview
  * Object representing a Scratch variable.
  */
-
+const debounce = require('lodash.debounce');
 const uid = require('../util/uid');
 const xmlEscape = require('../util/xml-escape');
 
@@ -20,6 +20,7 @@ class Variable {
         this.type = type;
         this.isCloud = isCloud;
         this.targetId = targetId;
+        this.debounceOnChange = debounce(this.onChange, 50);
 
         switch (this.type) {
         case Variable.SCALAR_TYPE:
@@ -36,19 +37,16 @@ class Variable {
         }
     }
 
-
     get name () {
         return this._name;
     }
 
-    set name (newValue) {
-        // eslint-disable-next-line no-undef
-        if (globalThis.monitoringAllVMVariables && (newValue instanceof Array || newValue !== this._name)) {
-            window.dispatchEvent(new CustomEvent('variableChange', {detail:
-                {...this, value: this.value, name: newValue}
-            }));
+    set name (newName) {
+        const tempName = this._name;
+        this._name = newName;
+        if (tempName !== newName) {
+            this.onChange();
         }
-        this._name = newValue;
     }
 
     get value () {
@@ -56,33 +54,43 @@ class Variable {
     }
 
     set value (newValue) {
-        const thisArg = this;
+        const _this = this;
+        const tempValue = this._value;
         if (newValue instanceof Array) {
             newValue = new Proxy(newValue, {
                 set (list, idx, value) {
-                    // The default behavior to store the value
+                    if (idx !== 'length') {
+                        _this.debounceOnChange();
+                    }
                     list[idx] = value;
-                    window.dispatchEvent(new CustomEvent('variableChange', {detail:
-                        {...thisArg, name: thisArg.name, value: list}
-                    }));
                     return true;
                 }
             });
         }
-        // eslint-disable-next-line no-undef
-        if (globalThis.monitoringAllVMVariables && (newValue instanceof Array || newValue !== this._value)) {
-            window.dispatchEvent(new CustomEvent('variableChange', {detail:
-                {...this, name: this.name, value: newValue}
-            }));
+        _this._value = newValue;
+        if (newValue !== tempValue) {
+            _this.onChange();
         }
-        this._value = newValue;
     }
-
 
     toXML (isLocal) {
         isLocal = (isLocal === true);
         return `<variable type="${this.type}" id="${this.id}" islocal="${isLocal
         }" iscloud="${this.isCloud}">${xmlEscape(this.name)}</variable>`;
+    }
+
+    onChange () {
+        /* eslint-disable no-undef */
+        if (typeof globalThis.onVMTargetVariableChange === 'function') {
+            /* eslint-disable no-undef */
+            globalThis.onVMTargetVariableChange({
+                name: this._name,
+                value: this._value,
+                targetId: this.targetId,
+                type: this.type,
+                id: this.id
+            });
+        }
     }
 
     /**

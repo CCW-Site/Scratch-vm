@@ -42,6 +42,7 @@
     "htmlparser2": "3.10.0",
     "immutable": "3.8.2",
     "jszip": "^3.1.5",
+    "lodash.debounce": "^4.0.8",
     "minilog": "3.1.0",
     "scratch-parser": "github:Gandi-IDE/scratch-parser#gandi",
     "scratch-sb1-converter": "0.2.7",
