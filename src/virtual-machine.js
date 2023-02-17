@@ -681,6 +681,21 @@ class VirtualMachine extends EventEmitter {
     }
 
     /**
+     * Serialize project.
+     * @returns {Object} Serialized state of the runtime.
+     */
+    serializeProject () {
+        const soundDescs = serializeSounds(this.runtime);
+        const costumeDescs = serializeCostumes(this.runtime);
+        const projectJson = this.toJSON();
+        return {
+            soundDescs,
+            costumeDescs,
+            projectJson
+        };
+    }
+
+    /**
      * @returns {string} Project in a Scratch 3.0 JSON representation.
      */
     saveProjectJson () {
@@ -805,6 +820,25 @@ class VirtualMachine extends EventEmitter {
         if (target) {
             return sb3.serializeTarget(target.toJSON(), new Set(), true);
         }
+    }
+
+    /**
+     * Serialize sprite assets for gui
+     * @param {string} targetId ID of the target to export
+     * @returns {Object} sound & costume & spriteJson result of serialize
+     */
+    serializeSpriteAssets (targetId) {
+        const sb3 = require('./serialization/sb3');
+        const soundDescs = serializeSounds(this.runtime, targetId);
+        const costumeDescs = serializeCostumes(this.runtime, targetId);
+        const spriteJson = StringUtil.stringify(
+            sb3.serialize(this.runtime, targetId)
+        );
+        return {
+            soundDescs,
+            costumeDescs,
+            spriteJson
+        };
     }
 
     // TODO do we still need this function? Keeping it here so as not to introduce
