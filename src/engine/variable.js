@@ -5,6 +5,8 @@
 const debounce = require('lodash.debounce');
 const uid = require('../util/uid');
 const xmlEscape = require('../util/xml-escape');
+// Resolve the issue of "globalThis is not defined" error in a low version client.
+require('../util/global-this-shim');
 
 class Variable {
     /**
@@ -80,9 +82,7 @@ class Variable {
     }
 
     onChange () {
-        /* eslint-disable no-undef */
         if (typeof globalThis.onVMTargetVariableChange === 'function') {
-            /* eslint-disable no-undef */
             globalThis.onVMTargetVariableChange({
                 name: this._name,
                 value: this._value,
