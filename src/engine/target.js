@@ -364,7 +364,7 @@ class Target extends EventEmitter {
     /**
      * Removes the variable with the given id from the dictionary of variables.
      * @param {string} id Id of variable to delete.
-     * @param {number} isRemoteOperation - set to true if this is a remote operation
+     * @param {boolean} isRemoteOperation - set to true if this is a remote operation
      */
     deleteVariable (id, isRemoteOperation) {
         if (this.variables.hasOwnProperty(id)) {

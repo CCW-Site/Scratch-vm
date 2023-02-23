@@ -906,7 +906,7 @@ class VirtualMachine extends EventEmitter {
      * @param {ImportedExtensionsInfo} extensions - metadata about extensions used by these targets
      * @param {boolean} wholeProject - set to true if installing a whole project, as opposed to a single sprite.
      * @param {number} _projectProcessingUniqueId 加载project的Id
-     * @param {number} isRemoteOperation - set to true if this is a remote operation
+     * @param {boolean} isRemoteOperation - set to true if this is a remote operation
      * @returns {Promise} resolved once targets have been installed
      */
     async installTargets (
@@ -1068,7 +1068,7 @@ class VirtualMachine extends EventEmitter {
      * Add a single sprite from the "Sprite2" (i.e., SB2 sprite) format.
      * @param {object} sprite Object representing 2.0 sprite to be added.
      * @param {?ArrayBuffer} zip Optional zip of assets being referenced by json
-     * @param {?Boolean} isRemoteOperation Whether to change editing target
+     * @param {?boolean} isRemoteOperation Whether to change editing target
      * @returns {Promise} Promise that resolves after the sprite is added
      */
     _addSprite2 (sprite, zip, isRemoteOperation) {
@@ -1085,7 +1085,7 @@ class VirtualMachine extends EventEmitter {
      * Add a single sb3 sprite.
      * @param {object} sprite Object rperesenting 3.0 sprite to be added.
      * @param {?ArrayBuffer} zip Optional zip of assets being referenced by target json
-     * @param {?Boolean} isRemoteOperation Whether to change editing target
+     * @param {?boolean} isRemoteOperation Whether to change editing target
      * @returns {Promise} Promise that resolves after the sprite is added
      */
     _addSprite3 (sprite, zip, isRemoteOperation) {
@@ -2297,7 +2297,7 @@ class VirtualMachine extends EventEmitter {
      * Reorder target by index. Return whether a change was made.
      * @param {!string} targetIndex Index of the target.
      * @param {!number} newIndex index that the target should be moved to.
-     * @param {!number} isRemoteOperation - set to true if this is a remote operation
+     * @param {!boolean} isRemoteOperation - set to true if this is a remote operation
      * @returns {boolean} Whether a target was reordered.
      */
     reorderTarget (targetIndex, newIndex, isRemoteOperation) {
