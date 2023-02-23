@@ -1,8 +1,8 @@
+/* eslint-disable no-undef */
 /**
  * @fileoverview
  * Object representing a Scratch variable.
  */
-const debounce = require('lodash.debounce');
 const uid = require('../util/uid');
 const xmlEscape = require('../util/xml-escape');
 // Resolve the issue of "globalThis is not defined" error in a low version client.
@@ -22,7 +22,6 @@ class Variable {
         this.type = type;
         this.isCloud = isCloud;
         this.targetId = targetId;
-        this.debounceOnChange = debounce(this.onChange, 50);
 
         switch (this.type) {
         case Variable.SCALAR_TYPE:
@@ -37,41 +36,10 @@ class Variable {
         default:
             throw new Error(`Invalid variable type: ${this.type}`);
         }
-    }
-
-    get name () {
-        return this._name;
-    }
-
-    set name (newName) {
-        const tempName = this._name;
-        this._name = newName;
-        if (tempName !== newName) {
-            this.onChange();
-        }
-    }
-
-    get value () {
-        return this._value;
-    }
-
-    set value (newValue) {
-        const _this = this;
-        const tempValue = this._value;
-        if (newValue instanceof Array) {
-            newValue = new Proxy(newValue, {
-                set (list, idx, value) {
-                    if (idx !== 'length') {
-                        _this.debounceOnChange();
-                    }
-                    list[idx] = value;
-                    return true;
-                }
-            });
-        }
-        _this._value = newValue;
-        if (newValue !== tempValue) {
-            _this.onChange();
+        if (global.$monitoringVariable) {
+            global.dispatchEvent(new CustomEvent('createVariable', {detail:
+                {...this}
+            }));
         }
     }
 
@@ -79,18 +47,6 @@ class Variable {
         isLocal = (isLocal === true);
         return `<variable type="${this.type}" id="${this.id}" islocal="${isLocal
         }" iscloud="${this.isCloud}">${xmlEscape(this.name)}</variable>`;
-    }
-
-    onChange () {
-        if (typeof globalThis.onVMTargetVariableChange === 'function') {
-            globalThis.onVMTargetVariableChange({
-                name: this._name,
-                value: this._value,
-                targetId: this.targetId,
-                type: this.type,
-                id: this.id
-            });
-        }
     }
 
     /**
