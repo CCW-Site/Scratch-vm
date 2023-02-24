@@ -682,16 +682,17 @@ class VirtualMachine extends EventEmitter {
 
     /**
      * Serialize project.
+     * @param {object} whetherSerialize
+     * @param {bool} whetherSerialize.isSerializeSounds whether to serialize sound
+     * @param {bool} whetherSerialize.isSerializeCostumes whether to serialize costumes
+     * @param {bool} whetherSerialize.isSerializeJson whether to serialize json
      * @returns {Object} Serialized state of the runtime.
      */
-    serializeProject () {
-        const soundDescs = serializeSounds(this.runtime);
-        const costumeDescs = serializeCostumes(this.runtime);
-        const projectJson = this.toJSON();
+    serializeProject ({isSerializeSounds = false, isSerializeCostumes = false, isSerializeJson = false} = {}) {
         return {
-            soundDescs,
-            costumeDescs,
-            projectJson
+            ...(isSerializeSounds && {soundDescs: serializeSounds(this.runtime)}),
+            ...(isSerializeCostumes && {costumeDescs: serializeCostumes(this.runtime)}),
+            ...(isSerializeJson && {projectJson: this.toJSON()})
         };
     }
 
