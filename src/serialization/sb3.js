@@ -21,6 +21,7 @@ const optimize = require('./tw-optimize-sb3');
 const {loadCostume} = require('../import/load-costume.js');
 const {loadSound} = require('../import/load-sound.js');
 const {deserializeCostume, deserializeSound} = require('./deserialize-assets.js');
+const {loadGandiAsset} = require('../import/gandi-load-asset');
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 
@@ -596,6 +597,26 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
         obj.monitors = serializeMonitors(runtime.getMonitorState(), runtime);
     }
 
+    // Assemble Gandi Asset
+    if (runtime.gandi) {
+        const assets = runtime.gandi.assets.map(gandiAsset => {
+            const item = Object.create(null);
+            item.assetId = gandiAsset.assetId;
+            item.name = gandiAsset.name;
+            item.md5ext = gandiAsset.md5;
+            item.dataFormat = gandiAsset.dataFormat.toLowerCase();
+            if (item.dataFormat === 'py' || item.dataFormat === 'json') {
+                // py and json file need GandiPython extension to run
+                extensions.add('GandiPython');
+            }
+            return item;
+        });
+        obj.gandi = {
+            assets,
+            wildExtensions: runtime.gandi.wildExtensions
+        };
+    }
+
     // Assemble extension list
     obj.extensions = Array.from(extensions);
 
@@ -618,7 +639,6 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
     if (allowOptimization) {
         optimize(obj);
     }
-
     return obj;
 };
 
@@ -1313,6 +1333,23 @@ const replaceUnsafeCharsInVariableIds = function (targets) {
     return targets;
 };
 
+const parseGandiObject = (gandiObject, runtime) => {
+    runtime.gandi = {assets: [], wildExtensions: {}};
+    const filePromises = (gandiObject.assets || []).map(file => {
+        const gandiAsset = {
+            asset: null,
+            assetId: file.assetId,
+            name: file.name,
+            md5: file.md5ext,
+            dataFormat: file.dataFormat
+        };
+        return loadGandiAsset(file.md5ext, gandiAsset, runtime);
+    });
+    Promise.all(filePromises).then(gandiAssets => {
+        runtime.gandi = {assets: gandiAssets, wildExtensions: gandiObject.wildExtensions};
+    });
+};
+
 /**
  * Deserialize the specified representation of a VM runtime and loads it into the provided runtime instance.
  * @param  {object} json - JSON representation of a VM runtime.
@@ -1343,6 +1380,19 @@ const deserialize = function (json, runtime, zip, isSingleSprite) {
         .sort((a, b) => a.layerOrder - b.layerOrder);
 
     const monitorObjects = json.monitors || [];
+
+    // Gandi: extended project.json to include global assets such as python files
+    const gandiObjects = json.gandi;
+    if (gandiObjects) {
+        // find extension need to load
+        gandiObjects.assets.forEach(asset => {
+            if (asset.dataFormat === 'py' || asset.dataFormat === 'json') {
+                // py and json file need GandiPython extension to run
+                extensions.extensionIDs.add('GandiPython');
+            }
+        });
+        parseGandiObject(gandiObjects, runtime);
+    }
 
     // @ts-ignore
     return Promise.resolve(

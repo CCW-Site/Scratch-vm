@@ -10,12 +10,14 @@ const blockIconURI = 'data:image/svg+xml,%3Csvg id="rotate-counter-clockwise" xm
  * and used as part of tests.
  */
 class Scratch3CoreExample {
-    constructor (runtime) {
+
+    constructor(runtime) {
         /**
          * The runtime instantiating this block package.
          * @type {Runtime}
          */
         this.runtime = runtime;
+        this.NS = 'coreExample';
     }
     handleCCWHat (args, util) {
         console.log('handleCCWHat', args);
@@ -87,22 +89,88 @@ class Scratch3CoreExample {
                 }
             }
         };
+
+        const dynamicBlock = {
+            opcode: 'dynamicBlock',
+            blockType: BlockType.REPORTER,
+            text: 'dynamic Block',
+            isDynamic: true,
+            // arguments: {
+            //     A: {
+            //         type: ArgumentType.STRING,
+            //         defaultValue: '1',
+            //         dynamicArguments: {
+            //             hideAddButton: false,
+            //             hideDeleteButton: false,
+            //             seperator: ',',
+            //             defaultValues: '1'
+            //         }
+            //         type: ArgumentType.STRING,
+            //         defaultValue: '1'
+            //     },
+            //     B: {
+            //         type: ArgumentType.STRING,
+            //         defaultValue: '2'
+            //     }
+            // }
+        };
+
+        const staticBlock = {
+            opcode: 'staticBlockOp',
+            blockType: BlockType.REPORTER,
+            text: 'staticBlock'
+        };
+
+        const arrayBuilderBlock = {
+            opcode: 'arrayBuilderBlock',
+            blockType: BlockType.REPORTER,
+            text: 'arrayBuilderBlock [A] [B]',
+            arguments: {
+                A: {
+                    type: ArgumentType.ARRAY,
+                    mutation: {
+                        items: 2,
+                        movable: false,
+                        hideAddButton: true
+                    }
+                },
+                B: {
+                    type: ArgumentType.ARRAY,
+                    mutation: {
+                        items: 2,
+                        movable: false,
+                        hideAddButton: true
+                    }
+                }
+            }
+        };
+
+        const button = {
+            blockType: 'button',
+            text: 'updateExtension',
+            onClick: this.updateExtension.bind(this)
+        };
+
         return {
-            id: 'coreExample',
+            id: this.NS,
             name: 'CoreEx', // This string does not need to be translated as this extension is only used as an example.
             blocks: [
-                triggerCCWHat,
-                handleCCWHat,
-                makeVarBtn,
-                exampleOpcode,
-                exampleWithInlineImage
+                button,
+                // arrayBuilderBlock,
+                // triggerCCWHat,
+                // handleCCWHat,
+                // makeVarBtn,
+                // exampleOpcode,
+                // exampleWithInlineImage,
+                dynamicBlock,
+                staticBlock
             ],
             menus: {
-                hatMenu: [
-                    {text: '*', value: '*'},
-                    {text: 'a', value: 'a'},
-                    {text: 'b', value: 'b'}
-                ]
+                // hatMenu: [
+                //     {text: '*', value: '*'},
+                //     {text: 'a', value: 'a'},
+                //     {text: 'b', value: 'b'}
+                // ]
             }
         };
     }
@@ -116,10 +184,51 @@ class Scratch3CoreExample {
         return stage ? stage.getName() : 'no stage yet';
     }
 
-    exampleWithInlineImage () {
+    exampleWithInlineImage (args) {
         return;
     }
+    staticBlockOp (args) {
 
+    }
+
+    dynamicBlock (args) {
+        console.log('dynamic block', args);
+        return 'dynamic block';
+    }
+
+    arrayBuilderBlock (args) {
+        console.log('A :', args.A);
+        console.log('B :', args.B);
+    }
+
+    updateExtension () {
+        const dynamicBlock = {
+            opcode: 'dynamicBlock',
+            blockType: BlockType.REPORTER,
+            text: 'dynamic Block [A][B][C]',
+            isDynamic: true,
+            disableMonitor: true,
+            arguments: {
+                A: {
+                    type: ArgumentType.STRING,
+                    defaultValue: '1'
+                },
+                B: {
+                    type: ArgumentType.STRING,
+                    defaultValue: '2'
+                },
+                C: {
+                    type: ArgumentType.STRING,
+                    defaultValue: '3'
+                }
+            }
+        };
+
+        const newInfo = this.getInfo();
+        newInfo.blocks = newInfo.blocks.concat(dynamicBlock);
+        const categoryInfo = this.runtime._blockInfo.find(info => info.id === this.NS);
+        (categoryInfo ? this.runtime._refreshExtensionPrimitives : this.runtime._registerExtensionPrimitives).bind(this.runtime)(newInfo);
+    }
 }
 
 module.exports = Scratch3CoreExample;

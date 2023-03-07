@@ -28,6 +28,7 @@ const {
     serializeSounds,
     serializeCostumes
 } = require('./serialization/serialize-assets');
+const {loadGandiAsset} = require('./import/gandi-load-asset');
 require('canvas-toBlob');
 
 const RESERVED_NAMES = ['_mouse_', '_stage_', '_edge_', '_myself_', '_random_'];
@@ -298,13 +299,15 @@ class VirtualMachine extends EventEmitter {
         this.variableListener = this.variableListener.bind(this);
 
         // powered by xigua start
-        const thirdPartApiKey = 'xg-access-code';
-        const accessCode = localStorage.getItem(thirdPartApiKey);
-        if (!accessCode || accessCode.length !== 16) {
-            const code = `${Math.random()}${Math.random()}`
-                .replace(/\./g, '')
-                .substr(1, 16);
-            localStorage.setItem(thirdPartApiKey, code);
+        if (typeof window !== 'undefined') {
+            const thirdPartApiKey = 'xg-access-code';
+            const accessCode = localStorage.getItem(thirdPartApiKey);
+            if (!accessCode || accessCode.length !== 16) {
+                const code = `${Math.random()}${Math.random()}`
+                    .replace(/\./g, '')
+                    .substr(1, 16);
+                localStorage.setItem(thirdPartApiKey, code);
+            }
         }
         this._projectProcessingUniqueId = 0;
         // powered by xigua end
@@ -683,9 +686,9 @@ class VirtualMachine extends EventEmitter {
     /**
      * Serialize project.
      * @param {object} whetherSerialize
-     * @param {bool} whetherSerialize.isSerializeSounds whether to serialize sound
-     * @param {bool} whetherSerialize.isSerializeCostumes whether to serialize costumes
-     * @param {bool} whetherSerialize.isSerializeJson whether to serialize json
+     * @param {boolean} whetherSerialize.isSerializeSounds whether to serialize sound
+     * @param {boolean} whetherSerialize.isSerializeCostumes whether to serialize costumes
+     * @param {boolean} whetherSerialize.isSerializeJson whether to serialize json
      * @returns {Object} Serialized state of the runtime.
      */
     serializeProject ({isSerializeSounds = false, isSerializeCostumes = false, isSerializeJson = false} = {}) {
@@ -745,7 +748,9 @@ class VirtualMachine extends EventEmitter {
      * @type {Array<object>} Array of all costumes and sounds currently in the runtime
      */
     get assets () {
-        return this.runtime.targets.reduce(
+        const gandiAssets = this.runtime.gandi ?
+            this.runtime.gandi.assets.map(obj => obj.asset).filter(obj => obj) : [];
+        const allAssets = this.runtime.targets.reduce(
             (acc, target) =>
                 acc
                     .concat(target.sprite.sounds.map(sound => sound.asset))
@@ -753,7 +758,53 @@ class VirtualMachine extends EventEmitter {
                         target.sprite.costumes.map(costume => costume.asset)
                     ),
             []
+        ).concat(gandiAssets);
+        return allAssets;
+    }
+
+    createGandiAssetFile (name, assetType, data = '') {
+        const fileName = `${name}.${assetType.runtimeFormat}`;
+        if (this.getGandiAssetFile(fileName)) {
+            throw new Error(`Asset with name ${fileName} already exists`);
+        }
+        if (!this.runtime.gandi) {
+            this.runtime.gandi = {};
+        }
+        if (!this.runtime.gandi.assets) {
+            this.runtime.gandi.assets = [];
+        }
+        const storage = this.runtime.storage;
+        const obj = {name};
+        obj.dataFormat = assetType.runtimeFormat;
+        obj.asset = storage.createAsset(
+            assetType,
+            obj.dataFormat,
+            new _TextEncoder().encode(data),
+            null,
+            true // generate md5
         );
+        obj.assetId = obj.asset.assetId;
+        obj.md5 = `${obj.assetId}.${obj.dataFormat}`;
+
+        this.runtime.gandi.assets.push(obj);
+        this.emitGandiAssetsUpdate({type: 'add', data: obj, index: this.runtime.gandi.assets.length - 1});
+        return {name: fileName, dataFormat: obj.dataFormat};
+    }
+
+    getGandiAssetsList (type) {
+        return this.runtime.getGandiAssetsList(type);
+    }
+
+    getGandiAssetContent (fileName) {
+        return this.runtime.getGandiAssetContent(fileName);
+    }
+
+    getGandiAssetsFileList (type) {
+        return this.runtime.getGandiAssetsFileList(type);
+    }
+
+    getGandiAssetFile (fileName) {
+        return this.runtime.getGandiAssetFile(fileName);
     }
 
     _addFileDescsToZip (fileDescs, zip) {
@@ -958,7 +1009,7 @@ class VirtualMachine extends EventEmitter {
                 delete target.layerOrder;
             });
 
-            if (!isRemoteOperation){
+            if (!isRemoteOperation) {
                 // Select the first target for editing, e.g., the first sprite.
                 if (wholeProject && targets.length > 1) {
                     this.editingTarget = targets[1];
@@ -980,7 +1031,7 @@ class VirtualMachine extends EventEmitter {
                 this.emitTargetsUpdate(false /* Don't emit project change */);
                 this.emitWorkspaceUpdate();
             }
-            if (!isRemoteOperation){
+            if (!isRemoteOperation) {
                 this.runtime.setEditingTarget(this.editingTarget);
             }
             this.runtime.ioDevices.cloud.setStage(
@@ -1605,6 +1656,86 @@ class VirtualMachine extends EventEmitter {
     }
 
     /**
+     * Update a Gandi asset with the value
+     * @param {string} assetMd5 - the md5 of the asset to be updated.
+     * @param {string} newValue - new Value for the asset.
+     */
+    updateGandiAssetData (fileName, newValue) {
+        const file = this.getGandiAssetFile(fileName);
+        if (!file) {
+            throw new Error(`Could not find asset with file name ${fileName}`);
+        }
+        file.asset.encodeTextData(newValue, file.dataFormat, true);
+        file.assetId = file.asset.assetId;
+        file.md5 = `${file.asset.assetId}.${file.asset.dataFormat}`;
+        this.emitGandiAssetsUpdate({type: 'update', data: file, index: this.runtime.gandi.assets.indexOf(file)});
+    }
+
+    updateGandiAssetFromRemote (index, newAsset) {
+        if (!this.runtime.gandi) {
+            this.runtime.gandi = {assets: [], wildExtensions: {}};
+        }
+        const file = {
+            asset: null,
+            assetId: newAsset.assetId,
+            name: newAsset.name,
+            md5: newAsset.md5ext,
+            dataFormat: newAsset.dataFormat
+        };
+        loadGandiAsset(newAsset.md5ext, file, this.runtime).then(gandiAssetObj => {
+            if (index >= 0 && this.runtime.gandi.assets.length > index) {
+                this.runtime.gandi.assets[index] = gandiAssetObj;
+            } else {
+                this.runtime.gandi.assets.push(gandiAssetObj);
+            }
+            this.runtime.emitGandiAssetsUpdate();
+        });
+
+    }
+
+    deleteGandiAssetFromRemote (index) {
+        if (!this.runtime.gandi) {
+            this.runtime.gandi = {assets: [], wildExtensions: {}};
+        }
+        if (index >= 0 && this.runtime.gandi.assets.length > index) {
+            this.runtime.gandi.assets.splice(index, 1);
+        } else {
+            console.warn(`deleteGandiAssetFromRemote: index:${index} out of range`);
+        }
+        this.runtime.emitGandiAssetsUpdate();
+    }
+
+    /**
+     * rename a Gandi asset
+     * @param {string} fileName - the md5 of the asset to be updated.
+     * @param {string} newName - new name for the asset.
+     */
+    renameGandiAsset (fileName, newName) {
+        const file = this.getGandiAssetFile(fileName);
+        const newfileName = `${newName}.${file.dataFormat}`;
+        if (this.getGandiAssetFile(newfileName)) {
+            throw new Error(`Asset with name ${newfileName} already exists`);
+        }
+        file.name = newName;
+        this.emitGandiAssetsUpdate({type: 'update', data: file, index: this.runtime.gandi.assets.indexOf(file)});
+        return file;
+    }
+
+    /**
+     * Delete a sprite and all its clones.
+     * @param {string} fileName name of a asset.
+     */
+    deleteGandiAsset (fileName) {
+        const file = this.getGandiAssetFile(fileName);
+        if (!file) {
+            throw new Error(`Could not find asset with file name ${fileName}`);
+        }
+        const index = this.runtime.gandi.assets.indexOf(file);
+        this.runtime.gandi.assets.splice(index, 1);
+        this.emitGandiAssetsUpdate({type: 'delete', data: file, index});
+    }
+
+    /**
      * Add a backdrop to the stage.
      * @param {string} md5ext - the MD5 and extension of the backdrop to be loaded.
      * @param {!object} backdropObject Object representing the backdrop.
@@ -1779,7 +1910,7 @@ class VirtualMachine extends EventEmitter {
     }
 
     // @deprecated
-    attachV2SVGAdapter () {}
+    attachV2SVGAdapter () { }
 
     /**
      * Set the bitmap adapter for the VM/runtime, which converts scratch 2
@@ -2151,7 +2282,7 @@ class VirtualMachine extends EventEmitter {
      * Emit metadata about available targets.
      * An editor UI could use this to display a list of targets and show
      * the currently editing one.
-     * @param {bool} triggerProjectChange If true, also emit a project changed event.
+     * @param {boolean} triggerProjectChange If true, also emit a project changed event.
      * Disabled selectively by updates that don't affect project serialization.
      * Defaults to true.
      */
@@ -2260,8 +2391,29 @@ class VirtualMachine extends EventEmitter {
     }
 
     /**
+     * Emit metadata about Gandi assets file.
+     * An editor UI could use this to display a list of files and show
+     * the currently editing one.
+     * @param {{data:object, type: 'add'|'update'|'delete', index: number|undefined}} action If true, also emit a project changed event.
+     * @param {boolean} triggerProjectChange If true, also emit a project changed event.
+     * Disabled selectively by updates that don't affect project serialization.
+     * Defaults to true.
+     */
+    emitGandiAssetsUpdate ({data, type, index}, triggerProjectChange = true) {
+        // for collabrative editing
+        const {assetId, dataFormat, name, asset} = data;
+        const md5ext = `${assetId}.${dataFormat}`;
+        this.emit(Runtime.GANDI_ASSET_UPDATE, {data: {assetId, dataFormat, name, md5ext, asset}, type, index});
+
+        this.runtime.emitGandiAssetsUpdate();
+        if (triggerProjectChange) {
+            this.runtime.emitProjectChanged();
+        }
+    }
+
+    /**
      * Get a target id for a drawable id. Useful for interacting with the renderer
-     * @param {int} drawableId The drawable id to request the target id for
+     * @param {number} drawableId The drawable id to request the target id for
      * @returns {?string} The target id, if found. Will also be null if the target found is the stage.
      */
     getTargetIdForDrawableId (drawableId) {

@@ -8,7 +8,7 @@
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/LLK/scratch-vm.git",
-    "sha": "313f006b3252e6c54609b6ba2c01451c291ec483"
+    "sha": "2c2bfc4a9f82f045312c77fd7731b2e2f6156390"
   },
   "main": "./src/index.js",
   "browser": "./src/index.js",
@@ -23,10 +23,10 @@
     "lint": "exit 0 || eslint . && format-message lint src/**/*.js",
     "prepublish": "in-publish && npm run build || not-in-publish",
     "start": "export NODE_ENV=playground && webpack-dev-server",
-    "tap": "tap ./test/{unit,integration}/*.js",
+    "tap:all": "tap ./test/{unit,integration}/*.js",
     "tap:unit": "tap ./test/unit/*.js",
     "tap:integration": "tap ./test/integration/*.js",
-    "test": "npm run lint && npm run docs && npm run tap",
+    "test": "npm run lint && npm run docs && npm run tap:all",
     "watch": "webpack --progress --colors --watch",
     "version": "json -f package.json -I -e \"this.repository.sha = '$(git log -n1 --pretty=format:%H)'\""
   },

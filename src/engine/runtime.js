@@ -228,6 +228,8 @@ class Runtime extends EventEmitter {
          */
         this.executableTargets = [];
 
+        this.gandi = null;
+
         /**
          * A list of threads that are currently running in the VM.
          * Threads are added when execution starts and pruned when execution ends.
@@ -693,10 +695,6 @@ class Runtime extends EventEmitter {
         return 'PROJECT_CHANGED';
     }
 
-    static get EXTENSIONS_CHANGED () {
-        return 'EXTENSIONS_CHANGED';
-    }
-
     /**
      * Event name for editing target's blocks was changed.
      * @const {string}
@@ -776,6 +774,14 @@ class Runtime extends EventEmitter {
      */
     static get TARGET_UPDATE () {
         return 'TARGET_UPDATE';
+    }
+
+    /**
+     * Event name for gandi asset update report.
+     * @const {string}
+     */
+    static get GANDI_ASSET_UPDATE () {
+        return 'GANDI_ASSET_UPDATE';
     }
 
     /**
@@ -3150,9 +3156,10 @@ class Runtime extends EventEmitter {
         this.emit(Runtime.PROJECT_CHANGED);
     }
 
-    emitExtensionsChanged () {
-        this.emit(Runtime.EXTENSIONS_CHANGED);
+    emitGandiAssetsUpdate () {
+        this.emit(Runtime.GANDI_ASSET_UPDATE);
     }
+
 
     /**
      * Report that the target has changed in a way that would affect serialization
@@ -3416,6 +3423,49 @@ class Runtime extends EventEmitter {
         return require('format-message');
     }
     // powered by xigua end
+
+    getGandiAssetsList (type) {
+        if (this.gandi && this.gandi.assets) {
+            return this.gandi.assets.filter(obj => {
+                if (type) {
+                    return obj.dataFormat === type;
+                }
+                return true;
+            });
+        }
+        return [];
+    }
+
+    getGandiAssetContent (fileName) {
+        const file = this.getGandiAssetFile(fileName);
+        if (file) {
+            return file.asset;
+        }
+        return null;
+    }
+
+    getGandiAssetsFileList (type) {
+        if (this.gandi && this.gandi.assets) {
+            const res = this.gandi.assets.filter(obj => {
+                if (type) {
+                    return obj.dataFormat === type;
+                }
+                return true;
+            });
+            return res.map(obj => ({name: `${obj.name}.${obj.dataFormat}`, dataFormat: obj.dataFormat}));
+        }
+        return [];
+    }
+
+    getGandiAssetFile (fileName) {
+        if (this.gandi && this.gandi.assets) {
+            const file = this.gandi.assets.find(obj => `${obj.name}.${obj.dataFormat}` === fileName);
+            if (file) {
+                return file;
+            }
+        }
+        return null;
+    }
 }
 
 /**

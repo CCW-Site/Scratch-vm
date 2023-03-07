@@ -1382,6 +1382,9 @@ class ScriptTreeGenerator {
         for (const name of Object.keys(block.fields)) {
             fields[name] = block.fields[name].value;
         }
+        if (block.mutation?.blockInfo?.isDynamic) {
+            inputs.mutation = {kind: 'gandi.blockMutation', value: block.mutation};
+        }
         return {
             kind: 'compat',
             opcode: block.opcode,

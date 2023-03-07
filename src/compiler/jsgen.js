@@ -421,6 +421,9 @@ class JSGenerator {
      */
     descendInput (node) {
         switch (node.kind) {
+        case 'gandi.blockMutation':
+            return new TypedInput(`${JSON.stringify(node.value)}`, TYPE_UNKNOWN);
+
         case 'args.ccw_hat_parameter':
             return new TypedInput(`(thread.hatParam ? thread.hatParam['${node.index}']: null)`, TYPE_UNKNOWN);
 
