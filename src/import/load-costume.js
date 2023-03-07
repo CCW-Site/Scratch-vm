@@ -221,7 +221,7 @@ const loadBitmap_ = function (costume, runtime, _rotationCenter) {
                 costume.md5 = `${costume.assetId}.${costume.dataFormat}`;
             };
 
-            if (!fetched.assetMatchesBase) {
+            if (fetched && !fetched.assetMatchesBase) {
                 updateCostumeAsset(fetched.canvas.toDataURL());
             }
 
