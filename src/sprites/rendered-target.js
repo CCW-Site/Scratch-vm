@@ -507,6 +507,7 @@ class RenderedTarget extends Target {
         }
         this.sprite.addCostumeAt(costumeObject, index);
         const {
+            uid,
             assetId,
             bitmapResolution,
             dataFormat,
@@ -519,6 +520,7 @@ class RenderedTarget extends Target {
         if (!isRemoteOperation) {
             this.runtime.emitTargetCostumeChanged(this.id, ['costumes', index, 'add',
                 {
+                    uid,
                     assetId,
                     bitmapResolution,
                     dataFormat,

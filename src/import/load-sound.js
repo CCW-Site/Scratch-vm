@@ -1,5 +1,6 @@
 const StringUtil = require('../util/string-util');
 const log = require('../util/log');
+const uid = require('../util/uid');
 
 /**
  * Initialize a sound from an asset asynchronously.
@@ -12,6 +13,9 @@ const log = require('../util/log');
  * @returns {!Promise} - a promise which will resolve to the sound when ready.
  */
 const loadSoundFromAsset = function (sound, soundAsset, runtime, soundBank) {
+    if (!sound.uid) {
+        sound.uid = uid();
+    }
     sound.assetId = soundAsset.assetId;
     if (!runtime.audioEngine) {
         log.error('No audio engine present; cannot load sound asset: ', sound.md5);

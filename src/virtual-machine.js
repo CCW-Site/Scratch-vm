@@ -29,6 +29,7 @@ const {
     serializeCostumes
 } = require('./serialization/serialize-assets');
 const {loadGandiAsset} = require('./import/gandi-load-asset');
+const uid = require('./util/uid');
 require('canvas-toBlob');
 
 const RESERVED_NAMES = ['_mouse_', '_stage_', '_edge_', '_myself_', '_random_'];
@@ -783,11 +784,12 @@ class VirtualMachine extends EventEmitter {
             null,
             true // generate md5
         );
+        obj.uid = uid(); // unique id for this asset, used in cloud project
         obj.assetId = obj.asset.assetId;
         obj.md5 = `${obj.assetId}.${obj.dataFormat}`;
 
         this.runtime.gandi.assets.push(obj);
-        this.emitGandiAssetsUpdate({type: 'add', data: obj, index: this.runtime.gandi.assets.length - 1});
+        this.emitGandiAssetsUpdate({type: 'add', data: obj});
         return {name: fileName, dataFormat: obj.dataFormat};
     }
 
@@ -1238,6 +1240,7 @@ class VirtualMachine extends EventEmitter {
         const clone = Object.assign({}, originalCostume);
         const md5ext = `${clone.assetId}.${clone.dataFormat}`;
         return loadCostume(md5ext, clone, this.runtime).then(() => {
+            clone.uid = uid();
             this.editingTarget.addCostume(clone, costumeIndex + 1);
             this.editingTarget.setCostume(costumeIndex + 1);
             this.emitTargetsUpdate();
@@ -1252,6 +1255,7 @@ class VirtualMachine extends EventEmitter {
     duplicateSound (soundIndex) {
         const originalSound = this.editingTarget.getSounds()[soundIndex];
         const clone = Object.assign({}, originalSound);
+        clone.uid = uid();
         return loadSound(
             clone,
             this.runtime,
@@ -1451,6 +1455,7 @@ class VirtualMachine extends EventEmitter {
                 null,
                 true // generate md5
             );
+            sound.uid = uid();
             sound.assetId = sound.asset.assetId;
             sound.dataFormat = storage.DataFormat.WAV;
             sound.md5 = `${sound.assetId}.${sound.dataFormat}`;
@@ -1589,6 +1594,7 @@ class VirtualMachine extends EventEmitter {
                     null, // id
                     true // generate md5
                 );
+                costume.uid = uid();
                 costume.assetId = costume.asset.assetId;
                 costume.md5 = `${costume.assetId}.${costume.dataFormat}`;
                 this.runtime.emitTargetCostumeChanged(this.editingTarget.id,
@@ -1640,6 +1646,7 @@ class VirtualMachine extends EventEmitter {
             null,
             true // generate md5
         );
+        costume.uid = uid();
         costume.assetId = costume.asset.assetId;
         costume.md5 = `${costume.assetId}.${costume.dataFormat}`;
         const {assetId, bitmapResolution, dataFormat, md5, name} = costume;
@@ -1668,7 +1675,7 @@ class VirtualMachine extends EventEmitter {
         file.asset.encodeTextData(newValue, file.dataFormat, true);
         file.assetId = file.asset.assetId;
         file.md5 = `${file.asset.assetId}.${file.asset.dataFormat}`;
-        this.emitGandiAssetsUpdate({type: 'update', data: file, index: this.runtime.gandi.assets.indexOf(file)});
+        this.emitGandiAssetsUpdate({type: 'update', data: file});
     }
 
     updateGandiAssetFromRemote (index, newAsset) {
@@ -1717,7 +1724,7 @@ class VirtualMachine extends EventEmitter {
             throw new Error(`Asset with name ${newfileName} already exists`);
         }
         file.name = newName;
-        this.emitGandiAssetsUpdate({type: 'update', data: file, index: this.runtime.gandi.assets.indexOf(file)});
+        this.emitGandiAssetsUpdate({type: 'update', data: file});
         return file;
     }
 
@@ -1732,7 +1739,7 @@ class VirtualMachine extends EventEmitter {
         }
         const index = this.runtime.gandi.assets.indexOf(file);
         this.runtime.gandi.assets.splice(index, 1);
-        this.emitGandiAssetsUpdate({type: 'delete', data: file, index});
+        this.emitGandiAssetsUpdate({type: 'delete', data: file});
     }
 
     /**
@@ -2394,16 +2401,16 @@ class VirtualMachine extends EventEmitter {
      * Emit metadata about Gandi assets file.
      * An editor UI could use this to display a list of files and show
      * the currently editing one.
-     * @param {{data:object, type: 'add'|'update'|'delete', index: number|undefined}} action If true, also emit a project changed event.
+     * @param {{data:object, type: 'add'|'update'|'delete'}} action If true, also emit a project changed event.
      * @param {boolean} triggerProjectChange If true, also emit a project changed event.
      * Disabled selectively by updates that don't affect project serialization.
      * Defaults to true.
      */
-    emitGandiAssetsUpdate ({data, type, index}, triggerProjectChange = true) {
-        // for collabrative editing
+    emitGandiAssetsUpdate ({data, type}, triggerProjectChange = true) {
+        // for collaborative editing
         const {assetId, dataFormat, name, asset} = data;
         const md5ext = `${assetId}.${dataFormat}`;
-        this.emit(Runtime.GANDI_ASSET_UPDATE, {data: {assetId, dataFormat, name, md5ext, asset}, type, index});
+        this.emit(Runtime.GANDI_ASSET_UPDATE, {data: {assetId, dataFormat, name, md5ext, asset}, type, id: assetId});
 
         this.runtime.emitGandiAssetsUpdate();
         if (triggerProjectChange) {

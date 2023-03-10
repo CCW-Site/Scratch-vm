@@ -1,6 +1,7 @@
 const StringUtil = require('../util/string-util');
 const log = require('../util/log');
 const {loadSvgString, serializeSvgToString} = require('scratch-svg-renderer');
+const uid = require('../util/uid');
 
 const loadVector_ = function (costume, runtime, rotationCenter, optVersion) {
     return new Promise(resolve => {
@@ -273,6 +274,10 @@ const loadBitmap_ = function (costume, runtime, _rotationCenter) {
  * @returns {?Promise} - a promise which will resolve after skinId is set, or null on error.
  */
 const loadCostumeFromAsset = function (costume, runtime, optVersion) {
+    if (!costume.uid) {
+        // Ensure that the costume has a unique ID.
+        costume.uid = uid();
+    }
     costume.assetId = costume.asset.assetId;
     const renderer = runtime.renderer;
     if (!renderer) {

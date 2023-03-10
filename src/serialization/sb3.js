@@ -359,6 +359,7 @@ const serializeBlocks = function (blocks, saveVarId) {
  */
 const serializeCostume = function (costume) {
     const obj = Object.create(null);
+    obj.uid = costume.uid;
     obj.assetId = costume.assetId;
     obj.name = costume.name;
     obj.bitmapResolution = costume.bitmapResolution;
@@ -381,6 +382,7 @@ const serializeCostume = function (costume) {
  */
 const serializeSound = function (sound) {
     const obj = Object.create(null);
+    obj.uid = sound.uid;
     obj.assetId = sound.assetId;
     obj.name = sound.name;
     obj.dataFormat = sound.dataFormat.toLowerCase();
@@ -599,8 +601,9 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
 
     // Assemble Gandi Asset
     if (runtime.gandi) {
-        const assets = runtime.gandi.assets.map(gandiAsset => {
+        const gandiAssetsList = runtime.gandi.assets.map(gandiAsset => {
             const item = Object.create(null);
+            item.uid = gandiAsset.uid;
             item.assetId = gandiAsset.assetId;
             item.name = gandiAsset.name;
             item.md5ext = gandiAsset.md5;
@@ -612,9 +615,10 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
             return item;
         });
         obj.gandi = {
-            assets,
-            wildExtensions: runtime.gandi.wildExtensions
-        };
+            assets: runtime.isTeamworkMode ?
+                gandiAssetsList.reduce((a, asset) => ({...a, [asset.assetId]: asset}), {}) :
+                gandiAssetsList,
+            wildExtensions: runtime.gandi.wildExtensions || {}};
     }
 
     // Assemble extension list
@@ -941,6 +945,7 @@ const parseScratchAssets = function (object, runtime, zip) {
         const costume = {
             // costumeSource only has an asset if an image is being uploaded as
             // a sprite
+            uid: costumeSource.uid || uid(),
             asset: costumeSource.asset,
             assetId: costumeSource.assetId,
             skinId: null,
@@ -970,6 +975,7 @@ const parseScratchAssets = function (object, runtime, zip) {
     // Sounds from JSON
     assets.soundPromises = (object.sounds || []).map(soundSource => {
         const sound = {
+            uid: soundSource.uid || uid(),
             assetId: soundSource.assetId,
             format: soundSource.format,
             rate: soundSource.rate,
@@ -1338,6 +1344,7 @@ const parseGandiObject = (gandiObject, runtime) => {
     const filePromises = (gandiObject.assets || []).map(file => {
         const gandiAsset = {
             asset: null,
+            uid: file.uid || uid(),
             assetId: file.assetId,
             name: file.name,
             md5: file.md5ext,

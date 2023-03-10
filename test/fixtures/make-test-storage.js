@@ -1,4 +1,5 @@
-const ScratchStorage = require('scratch-storage');
+// const ScratchStorage = require('scratch-storage');
+const GandiStorage = require('./gandi-storage');
 
 const ASSET_SERVER = 'https://cdn.assets.scratch.mit.edu/';
 const PROJECT_SERVER = 'https://cdn.projects.scratch.mit.edu/';
@@ -34,13 +35,13 @@ const getAssetUrl = function (asset) {
 
 /**
  * Construct a new instance of ScratchStorage and provide it with default web sources.
- * @returns {ScratchStorage} - an instance of ScratchStorage, ready to be used for tests.
+ * @returns {GandiStorage} - an instance of ScratchStorage, ready to be used for tests.
  */
 const makeTestStorage = function () {
-    const storage = new ScratchStorage();
-    const AssetType = storage.AssetType;
-    storage.addWebSource([AssetType.Project], getProjectUrl);
-    storage.addWebSource([AssetType.ImageVector, AssetType.ImageBitmap, AssetType.Sound], getAssetUrl);
+    const storage = new GandiStorage();
+    // const AssetType = storage.AssetType;
+    // storage.addWebSource([AssetType.Project], getProjectUrl);
+    // storage.addWebSource([AssetType.ImageVector, AssetType.ImageBitmap, AssetType.Sound], getAssetUrl);
     return storage;
 };
 
