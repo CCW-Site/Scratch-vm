@@ -22,6 +22,7 @@ const {loadCostume} = require('../import/load-costume.js');
 const {loadSound} = require('../import/load-sound.js');
 const {deserializeCostume, deserializeSound} = require('./deserialize-assets.js');
 const {loadGandiAsset} = require('../import/gandi-load-asset');
+const {isArray} = require('lodash');
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 
@@ -1390,7 +1391,7 @@ const deserialize = function (json, runtime, zip, isSingleSprite) {
 
     // Gandi: extended project.json to include global assets such as python files
     const gandiObjects = json.gandi;
-    if (gandiObjects) {
+    if (gandiObjects && gandiObjects.assets && isArray(gandiObjects.assets)) {
         // find extension need to load
         gandiObjects.assets.forEach(asset => {
             if (asset.dataFormat === 'py' || asset.dataFormat === 'json') {
