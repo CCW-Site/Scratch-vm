@@ -29,7 +29,7 @@ const {
     serializeCostumes
 } = require('./serialization/serialize-assets');
 const {loadGandiAsset} = require('./import/gandi-load-asset');
-const uid = require('./util/uid');
+const generateUid = require('./util/uid');
 require('canvas-toBlob');
 
 const RESERVED_NAMES = ['_mouse_', '_stage_', '_edge_', '_myself_', '_random_'];
@@ -784,13 +784,12 @@ class VirtualMachine extends EventEmitter {
             null,
             true // generate md5
         );
-        obj.uid = uid(); // unique id for this asset, used in cloud project
+        obj.uid = generateUid(); // unique id for this asset, used in cloud project
         obj.assetId = obj.asset.assetId;
         obj.md5 = `${obj.assetId}.${obj.dataFormat}`;
 
         this.runtime.gandi.assets.push(obj);
         this.emitGandiAssetsUpdate({type: 'add', data: obj});
-        return {name: fileName, dataFormat: obj.dataFormat};
     }
 
     getGandiAssetsList (type) {
@@ -1240,7 +1239,7 @@ class VirtualMachine extends EventEmitter {
         const clone = Object.assign({}, originalCostume);
         const md5ext = `${clone.assetId}.${clone.dataFormat}`;
         return loadCostume(md5ext, clone, this.runtime).then(() => {
-            clone.uid = uid();
+            clone.uid = generateUid();
             this.editingTarget.addCostume(clone, costumeIndex + 1);
             this.editingTarget.setCostume(costumeIndex + 1);
             this.emitTargetsUpdate();
@@ -1255,7 +1254,7 @@ class VirtualMachine extends EventEmitter {
     duplicateSound (soundIndex) {
         const originalSound = this.editingTarget.getSounds()[soundIndex];
         const clone = Object.assign({}, originalSound);
-        clone.uid = uid();
+        clone.uid = generateUid();
         return loadSound(
             clone,
             this.runtime,
@@ -1455,7 +1454,7 @@ class VirtualMachine extends EventEmitter {
                 null,
                 true // generate md5
             );
-            sound.uid = uid();
+            sound.uid = generateUid();
             sound.assetId = sound.asset.assetId;
             sound.dataFormat = storage.DataFormat.WAV;
             sound.md5 = `${sound.assetId}.${sound.dataFormat}`;
@@ -1594,7 +1593,7 @@ class VirtualMachine extends EventEmitter {
                     null, // id
                     true // generate md5
                 );
-                costume.uid = uid();
+                costume.uid = generateUid();
                 costume.assetId = costume.asset.assetId;
                 costume.md5 = `${costume.assetId}.${costume.dataFormat}`;
                 this.runtime.emitTargetCostumeChanged(this.editingTarget.id,
@@ -1646,7 +1645,7 @@ class VirtualMachine extends EventEmitter {
             null,
             true // generate md5
         );
-        costume.uid = uid();
+        costume.uid = generateUid();
         costume.assetId = costume.asset.assetId;
         costume.md5 = `${costume.assetId}.${costume.dataFormat}`;
         const {assetId, bitmapResolution, dataFormat, md5, name} = costume;
@@ -1678,38 +1677,65 @@ class VirtualMachine extends EventEmitter {
         this.emitGandiAssetsUpdate({type: 'update', data: file});
     }
 
-    updateGandiAssetFromRemote (index, newAsset) {
+    updateGandiAssetFromRemote (uid, newAsset) {
         if (!this.runtime.gandi) {
             this.runtime.gandi = {assets: [], wildExtensions: {}};
         }
         const file = {
             asset: null,
+            uid,
             assetId: newAsset.assetId,
             name: newAsset.name,
             md5: newAsset.md5ext,
             dataFormat: newAsset.dataFormat
         };
         loadGandiAsset(newAsset.md5ext, file, this.runtime).then(gandiAssetObj => {
-            if (index >= 0 && this.runtime.gandi.assets.length > index) {
-                this.runtime.gandi.assets[index] = gandiAssetObj;
-            } else {
-                this.runtime.gandi.assets.push(gandiAssetObj);
+            if (uid && this.runtime.gandi.assets.length > 0) {
+                this.runtime.gandi.assets.forEach((asset, index) => {
+                    if (asset.uid === gandiAssetObj.uid) {
+                        this.runtime.gandi.assets[index] = gandiAssetObj;
+                    }
+                });
+                this.runtime.emitGandiAssetsUpdate({type: 'update', data: gandiAssetObj, isFromRemote: true});
             }
-            this.runtime.emitGandiAssetsUpdate();
         });
-
     }
 
-    deleteGandiAssetFromRemote (index) {
+    addGandiAssetFromRemote (uid, newAsset) {
         if (!this.runtime.gandi) {
             this.runtime.gandi = {assets: [], wildExtensions: {}};
         }
-        if (index >= 0 && this.runtime.gandi.assets.length > index) {
-            this.runtime.gandi.assets.splice(index, 1);
-        } else {
-            console.warn(`deleteGandiAssetFromRemote: index:${index} out of range`);
+        const file = {
+            asset: null,
+            uid,
+            assetId: newAsset.assetId,
+            name: newAsset.name,
+            md5: newAsset.md5ext,
+            dataFormat: newAsset.dataFormat
+        };
+        loadGandiAsset(newAsset.md5ext, file, this.runtime).then(gandiAssetObj => {
+            this.runtime.gandi.assets.push(gandiAssetObj);
+            this.runtime.emitGandiAssetsUpdate({type: 'add', data: gandiAssetObj, isFromRemote: true});
+        });
+    }
+
+    deleteGandiAssetFromRemote (uid) {
+        if (!this.runtime.gandi) {
+            this.runtime.gandi = {assets: [], wildExtensions: {}};
         }
-        this.runtime.emitGandiAssetsUpdate();
+        if (uid && this.runtime.gandi.assets.length > 0) {
+            const index = this.runtime.gandi.assets.findIndex(asset => asset.uid === uid);
+            if (index > -1) {
+                const deleted = this.runtime.gandi.assets.splice(index, 1);
+                if (deleted.length > 0) {
+                    this.runtime.emitGandiAssetsUpdate({type: 'delete', data: deleted[0], isFromRemote: true});
+                }
+            } else {
+                log.warn(`deleteGandiAssetFromRemote: uid:${uid} not found`);
+            }
+        } else {
+            log.warn(`deleteGandiAssetFromRemote: uid:${uid} or no assets`);
+        }
     }
 
     /**
@@ -2293,7 +2319,7 @@ class VirtualMachine extends EventEmitter {
      * Disabled selectively by updates that don't affect project serialization.
      * Defaults to true.
      */
-    emitTargetsUpdate (triggerProjectChange) {
+    emitTargetsUpdate (triggerProjectChange = true) {
         if (typeof triggerProjectChange === 'undefined') {
             triggerProjectChange = true;
         }
@@ -2408,11 +2434,10 @@ class VirtualMachine extends EventEmitter {
      */
     emitGandiAssetsUpdate ({data, type}, triggerProjectChange = true) {
         // for collaborative editing
-        const {assetId, dataFormat, name, asset} = data;
+        const {uid, assetId, dataFormat, name, asset} = data;
         const md5ext = `${assetId}.${dataFormat}`;
-        this.emit(Runtime.GANDI_ASSET_UPDATE, {data: {assetId, dataFormat, name, md5ext, asset}, type, id: assetId});
-
-        this.runtime.emitGandiAssetsUpdate();
+        this.emit(Runtime.GANDI_ASSET_UPDATE, {data: {assetId, dataFormat, name, md5ext, asset, uid}, type, id: uid});
+        this.runtime.emitGandiAssetsUpdate({data, type});
         if (triggerProjectChange) {
             this.runtime.emitProjectChanged();
         }

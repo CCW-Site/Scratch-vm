@@ -1535,7 +1535,7 @@ class Runtime extends EventEmitter {
         // for now we only support these pre-defined callbacks handled in scratch-blocks
         const supportedCallbackKeys = ['MAKE_A_LIST', 'MAKE_A_PROCEDURE', 'MAKE_A_VARIABLE'];
         if (supportedCallbackKeys.indexOf(buttonInfo.func) < 0) {
-            log.error(`Custom button callbacks not supported yet: ${buttonInfo.func}`);
+            // log.error(`Custom button callbacks not supported yet: ${buttonInfo.func}`);
         }
 
         const extensionMessageContext = this.makeMessageContextForTarget();
@@ -3156,8 +3156,8 @@ class Runtime extends EventEmitter {
         this.emit(Runtime.PROJECT_CHANGED);
     }
 
-    emitGandiAssetsUpdate () {
-        this.emit(Runtime.GANDI_ASSET_UPDATE);
+    emitGandiAssetsUpdate (action) {
+        this.emit(Runtime.GANDI_ASSET_UPDATE, action);
     }
 
 
