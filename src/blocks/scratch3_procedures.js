@@ -1,5 +1,5 @@
 class Scratch3ProcedureBlocks {
-    constructor(runtime) {
+    constructor (runtime) {
         /**
          * The runtime instantiating this block package.
          * @type {Runtime}
@@ -64,13 +64,16 @@ class Scratch3ProcedureBlocks {
         if (!util.stackFrame.executed) {
             const procedureCode = args.mutation.proccode;
             const isGlobal = args.mutation.isglobal && args.mutation.isglobal !== 'null';
-            const [paramNamesIdsAndDefaults, globalTarget] = util.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
+            const results = util.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
+
             // If null, procedure could not be found, which can happen if custom
             // block is dragged between sprites without the definition.
             // Match Scratch 2.0 behavior and noop.
-            if (paramNamesIdsAndDefaults === null) {
+            if (results === null) {
                 return;
             }
+
+            const [paramNamesIdsAndDefaults, globalTarget] = results;
 
             const [paramNames, paramIds, paramDefaults] = paramNamesIdsAndDefaults;
 
@@ -88,10 +91,8 @@ class Scratch3ProcedureBlocks {
             util.stackFrame.executed = true;
             // CCW: pass global target to procedure if isGlobal === true
             util.startProcedure(procedureCode, globalTarget);
-
         }
     }
-
 
     argumentReporterStringNumber (args, util) {
         const value = util.getParam(args.VALUE);

@@ -1,7 +1,7 @@
 const StringUtil = require('../util/string-util');
+const uid = require('../util/uid');
 const log = require('../util/log');
 const {loadSvgString, serializeSvgToString} = require('scratch-svg-renderer');
-const uid = require('../util/uid');
 
 const loadVector_ = function (costume, runtime, rotationCenter, optVersion) {
     return new Promise(resolve => {
@@ -119,9 +119,7 @@ const fetchBitmapCanvas_ = function (costume, runtime, rotationCenter) {
                     0, 1, 115, 82, 71, 66, 0, 174, 206, 28, 233, 0, 0, 0, 11, 73,
                     68, 65, 84, 24, 87, 99, 96, 0, 2, 0, 0, 5, 0, 1, 170, 213, 200,
                     81, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130]);
-                if (window.$customToast) {
-                    window.$customToast.loadCostumeWarning(asset.assetId);
-                }
+                runtime.storage.onLoadCostumeError(asset.assetId);
             }
             return createImageBitmap(
                 new Blob([asset.data], {type: asset.assetType.contentType})
@@ -345,26 +343,45 @@ const loadCostume = function (md5ext, costume, runtime, optVersion) {
     const AssetType = runtime.storage.AssetType;
     const assetType = (ext === 'svg') ? AssetType.ImageVector : AssetType.ImageBitmap;
 
-    const costumePromise = runtime.storage.load(assetType, md5, ext);
-    if (!costumePromise) {
-        log.error(`Couldn't fetch costume asset: ${md5ext}`);
-        return;
-    }
-
-    let textLayerPromise;
-    if (costume.textLayerMD5) {
-        textLayerPromise = runtime.storage.load(AssetType.ImageBitmap, costume.textLayerMD5, 'png');
-    } else {
-        textLayerPromise = Promise.resolve(null);
-    }
-
-    return Promise.all([costumePromise, textLayerPromise]).then(assetArray => {
-        costume.asset = assetArray[0];
-        if (assetArray[1]) {
-            costume.textLayerAsset = assetArray[1];
+    const loadCostumePromise = asyncLoading => {
+        const costumePromise = runtime.storage.load(assetType, md5, ext);
+        if (!costumePromise) {
+            log.error(`Couldn't fetch costume asset: ${md5ext}`);
+            return;
         }
-        return loadCostumeFromAsset(costume, runtime, optVersion);
-    });
+
+        let textLayerPromise;
+        if (costume.textLayerMD5) {
+            textLayerPromise = runtime.storage.load(AssetType.ImageBitmap, costume.textLayerMD5, 'png');
+        } else {
+            textLayerPromise = Promise.resolve(null);
+        }
+        return Promise.all([costumePromise, textLayerPromise]).then(assetArray => {
+            costume.asset = assetArray[0];
+            costume.assetUnInit = false;
+            if (assetArray[1]) {
+                costume.textLayerAsset = assetArray[1];
+            }
+            if (asyncLoading) {
+                return () => loadCostumeFromAsset(costume, runtime, optVersion);
+            }
+            return loadCostumeFromAsset(costume, runtime, optVersion);
+        });
+    };
+
+    if (runtime.isLoadProjectAssetsNonBlocking) {
+        costume.assetUnInit = true;
+        costume.asset = runtime.storage.createAsset(
+            assetType,
+            assetType.runtimeFormat,
+            new Uint8Array([]),
+            uid(),
+            false
+        );
+        runtime.addWaitingLoadCallback(loadCostumePromise);
+        return Promise.resolve(costume);
+    }
+    return loadCostumePromise();
 };
 
 module.exports = {

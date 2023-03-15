@@ -37,9 +37,13 @@ class Variable {
             throw new Error(`Invalid variable type: ${this.type}`);
         }
         if (global.$monitoringVariable) {
-            global.dispatchEvent(new CustomEvent('createVariable', {detail:
-                {...this}
-            }));
+            // Broadcast the event after creating it to avoid the target
+            // from being unable to retrieve the corresponding variable instance.
+            setTimeout(() => {
+                global.dispatchEvent(new CustomEvent('createVariable', {detail:
+                    {...this}
+                }));
+            }, 1);
         }
     }
 

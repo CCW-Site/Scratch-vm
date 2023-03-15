@@ -126,6 +126,11 @@ class VirtualMachine extends EventEmitter {
         this.editingTarget = null;
 
         /**
+         * This variable indicates whether asynchronous loading of project resource files is supported
+         */
+        this.asyncLoadingProjectAssetsSupported = false;
+
+        /**
          * The currently dragging target, for redirecting IO data.
          * @type {Target}
          */
@@ -137,6 +142,15 @@ class VirtualMachine extends EventEmitter {
         });
         this.runtime.on(Runtime.SCRIPT_GLOW_OFF, glowData => {
             this.emit(Runtime.SCRIPT_GLOW_OFF, glowData);
+        });
+        this.runtime.on(Runtime.PROJECT_ASSETS_ASYNC_LOAD_START, data => {
+            this.emit(Runtime.PROJECT_ASSETS_ASYNC_LOAD_START, data);
+        });
+        this.runtime.on(Runtime.PROJECT_ASSETS_ASYNC_LOAD_PROGRESS_CHANGE, data => {
+            this.emit(Runtime.PROJECT_ASSETS_ASYNC_LOAD_PROGRESS_CHANGE, data);
+        });
+        this.runtime.on(Runtime.PROJECT_ASSETS_ASYNC_LOAD_DONE, () => {
+            this.emit(Runtime.PROJECT_ASSETS_ASYNC_LOAD_DONE);
         });
         this.runtime.on(Runtime.BLOCK_GLOW_ON, glowData => {
             this.emit(Runtime.BLOCK_GLOW_ON, glowData);
@@ -299,8 +313,7 @@ class VirtualMachine extends EventEmitter {
         this.monitorBlockListener = this.monitorBlockListener.bind(this);
         this.variableListener = this.variableListener.bind(this);
 
-        // powered by xigua start
-        if (typeof window !== 'undefined') {
+        if (typeof localStorage !== 'undefined') {
             const thirdPartApiKey = 'xg-access-code';
             const accessCode = localStorage.getItem(thirdPartApiKey);
             if (!accessCode || accessCode.length !== 16) {
@@ -311,7 +324,6 @@ class VirtualMachine extends EventEmitter {
             }
         }
         this._projectProcessingUniqueId = 0;
-        // powered by xigua end
     }
 
     /**
@@ -516,6 +528,15 @@ class VirtualMachine extends EventEmitter {
      * @return {!Promise} Promise that resolves after targets are installed.
      */
     loadProject (input, callback) {
+        // If assets are being loaded non-blockingly, they can all be aborted at once.
+        if (this.runtime.asyncLoadingProjectAssets) {
+            this.runtime.disposeFireWaitingLoadCallbackQueue();
+        }
+        // Support non-blocking loading of project assets.
+        if (this.asyncLoadingProjectAssetsSupported) {
+            this.runtime.asyncLoadingProjectAssets = true;
+            this.runtime.isLoadProjectAssetsNonBlocking = true;
+        }
         const _projectProcessingUniqueId = (this._projectProcessingUniqueId =
             Math.random());
         if (
@@ -631,6 +652,10 @@ class VirtualMachine extends EventEmitter {
                     );
                 })
                 .then(() => this.runtime.emitProjectLoaded())
+                .then(() => {
+                    this.runtime.isLoadProjectAssetsNonBlocking = false;
+                    this.runtime.fireWaitingLoadCallbackQueue();
+                })
                 .catch(error => {
                     // Intentionally rejecting here (want errors to be handled by caller)
                     if (error.hasOwnProperty('validationError')) {

@@ -17,9 +17,11 @@ const serializeAssets = function (runtime, assetType, optTargetId) {
         for (let j = 0; j < currAssets.length; j++) {
             const currAsset = currAssets[j];
             const asset = currAsset.asset;
-            assetDescs.push({
-                fileName: `${asset.assetId}.${asset.dataFormat}`,
-                fileContent: asset.data});
+            if (asset) {
+                assetDescs.push({
+                    fileName: `${asset.assetId}.${asset.dataFormat}`,
+                    fileContent: asset.data});
+            }
         }
     }
     return assetDescs;

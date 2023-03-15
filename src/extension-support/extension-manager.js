@@ -430,7 +430,7 @@ class ExtensionManager {
         if (/[^\w-.]/i.test(extensionInfo.id)) {
             throw new Error('Invalid extension id');
         }
-        const warningTipText = extensionInfo.warningTipText || formatMessage({
+        const warningTipText = extensionInfo.warningTipText || this.runtime.getFormatMessage()({
             id: 'gui.extension.compatibilityWarning',
             default: 'This extension is incompatible with Scratch. Projects made with it cannot be uploaded to the Scratch website. You can share the project on Cocrea. Make sure before you use it.',
             description: 'Give a warning when an extension is not official in Scratch.'

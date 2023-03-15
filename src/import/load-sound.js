@@ -60,13 +60,30 @@ const loadSound = function (sound, runtime, soundBank) {
     const md5 = idParts[0];
     const ext = idParts[1].toLowerCase();
     sound.dataFormat = ext;
-    return (
-        (sound.asset && Promise.resolve(sound.asset)) ||
+    const loadSoundPromise = asyncLoading => (
+        (sound.asset && !sound.assetUnInit && Promise.resolve(sound.asset)) ||
         runtime.storage.load(runtime.storage.AssetType.Sound, md5, ext)
     ).then(soundAsset => {
         sound.asset = soundAsset;
+        sound.assetUnInit = false;
+        if (asyncLoading) {
+            return () => loadSoundFromAsset(sound, soundAsset, runtime, soundBank);
+        }
         return loadSoundFromAsset(sound, soundAsset, runtime, soundBank);
     });
+    if (runtime.isLoadProjectAssetsNonBlocking) {
+        sound.assetUnInit = true;
+        sound.asset = runtime.storage.createAsset(
+            runtime.storage.AssetType.Sound,
+            runtime.storage.DataFormat.WAV,
+            new Uint8Array([0]),
+            sound.assetId,
+            false
+        );
+        runtime.addWaitingLoadCallback(loadSoundPromise);
+        return Promise.resolve(sound);
+    }
+    return loadSoundPromise();
 };
 
 module.exports = {

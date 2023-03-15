@@ -28,6 +28,7 @@ const MouseWheel = require('../io/mouseWheel');
 const UserData = require('../io/userData');
 const Video = require('../io/video');
 
+const CallbackListGenerator = require('../util/callback-list-generator');
 const StringUtil = require('../util/string-util');
 const uid = require('../util/uid');
 
@@ -476,6 +477,8 @@ class Runtime extends EventEmitter {
          */
         this.ccwAPI = {};
 
+        this.waitingLoadAssetCallbackQueue = [];
+
         this.debug = false;
 
         this._animationFrame = this._animationFrame.bind(this);
@@ -607,6 +610,30 @@ class Runtime extends EventEmitter {
         return 'CCWAPI_CHANGED';
     }
 
+    /**
+     * Event name for the project starts loading assets asynchronously
+     * @const {string}
+     */
+    static get PROJECT_ASSETS_ASYNC_LOAD_START () {
+        return 'PROJECT_ASSETS_ASYNC_LOAD_START';
+    }
+
+    /**
+     * Event name for the progress of the project asynchronously loading assets has changed
+     * @const {string}
+     */
+    static get PROJECT_ASSETS_ASYNC_LOAD_PROGRESS_CHANGE () {
+        return 'PROJECT_ASSETS_ASYNC_LOAD_PROGRESS_CHANGE';
+    }
+
+    /**
+     * Event name for the project completes loading the assets asynchronously
+     * @const {string}
+     */
+    static get PROJECT_ASSETS_ASYNC_LOAD_DONE () {
+        return 'PROJECT_ASSETS_ASYNC_LOAD_DONE';
+    }
+    
     /**
      * Event name when the project is started (threads may not necessarily be
      * running).
@@ -1689,6 +1716,40 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * @param {string} id - The ID of the costume
+     */
+    getCostumeInfo (id) {
+        return new Promise((resolve, reject) => {
+            const finder = () => {
+                for (let i = 0; i < this.targets.length; i++) {
+                    const target = this.targets[i];
+                    const costume = target.sprite.costumes_.find(item => item.assetId === id);
+                    if (costume) {
+                        return resolve({
+                            targetId: target.id,
+                            targetName: target.name,
+                            costumeId: id,
+                            costumeName: costume.name
+                        });
+                    }
+                }
+                reject(new Error(`Couldn't find costume(${id}) in targets`));
+            };
+            if (this.targets.length) {
+                finder();
+            } else {
+                const handler = () => {
+                    if (this.targets.length) {
+                        this.removeListener(Runtime.PROJECT_LOADED, handler);
+                        finder();
+                    }
+                };
+                this.addListener(Runtime.PROJECT_LOADED, handler);
+            }
+        });
+    }
+
+    /**
      * @returns {Array.<object>} scratch-blocks XML for each category of extension blocks, in category order.
      * @param {?Target} [target] - the active editing target (optional)
      * @property {string} id - the category / extension ID
@@ -1911,6 +1972,8 @@ class Runtime extends EventEmitter {
      */
     attachStorage (storage) {
         this.storage = storage;
+        this.storage._getCostumeInfo = this.getCostumeInfo.bind(this);
+        this.storage.onLoadCostumeError = this.storage.onLoadCostumeError || (() => {});
     }
 
     // powered by xigua start
@@ -3160,6 +3223,30 @@ class Runtime extends EventEmitter {
         this.emit(Runtime.GANDI_ASSET_UPDATE, action);
     }
 
+    /**
+     * Report that the project starts loading assets asynchronously
+     */
+    emitProjectAssetsAsyncLoadingStart (data) {
+        this.emit(Runtime.PROJECT_ASSETS_ASYNC_LOAD_START, data);
+    }
+
+    /**
+     * Report that the progress of the project asynchronously loading assets has changed
+     */
+    emitProjectAssetsAsyncLoadingProgressChange (data) {
+        this.emit(Runtime.PROJECT_ASSETS_ASYNC_LOAD_PROGRESS_CHANGE, data);
+    }
+
+    /**
+     * Report that the project completes loading the assets asynchronously
+     */
+    emitProjectAssetsAsyncLoadingDone () {
+        this.emit(Runtime.PROJECT_ASSETS_ASYNC_LOAD_DONE);
+    }
+
+    emitExtensionsChanged () {
+        this.emit(Runtime.EXTENSIONS_CHANGED);
+    }
 
     /**
      * Report that the target has changed in a way that would affect serialization
@@ -3342,7 +3429,7 @@ class Runtime extends EventEmitter {
     requestToolboxExtensionsUpdate () {
         this.emit(Runtime.TOOLBOX_EXTENSIONS_NEED_UPDATE);
     }
-
+    
     /**
      * Set up timers to repeatedly step in a browser.
      */
@@ -3409,7 +3496,6 @@ class Runtime extends EventEmitter {
         this.currentMSecs = Date.now();
     }
 
-    // powered by xigua start
     getFormatMessage (message) {
         const globalFormatMessage = require('format-message');
         const formatMessage = globalFormatMessage.namespace();
@@ -3422,7 +3508,6 @@ class Runtime extends EventEmitter {
     getOriginalFormatMessage () {
         return require('format-message');
     }
-    // powered by xigua end
 
     getGandiAssetsList (type) {
         if (this.gandi && this.gandi.assets) {
@@ -3465,6 +3550,69 @@ class Runtime extends EventEmitter {
             }
         }
         return null;
+    }
+
+    addWaitingLoadCallback (callback) {
+        this.waitingLoadAssetCallbackQueue.push(callback);
+    }
+
+    fireWaitingLoadCallbackQueue () {
+        if (this.waitingLoadAssetCallbackQueue.length) {
+            this.firingWaitingLoadCallbackQueue = true;
+            // The system starts to load cloud resources asynchronously.
+            const callbackPromises = this.waitingLoadAssetCallbackQueue.map(callback => callback(true));
+            this.waitingLoadAssetCallbackQueue = [];
+            // Report start of loading assets
+            this.emitProjectAssetsAsyncLoadingStart({total: callbackPromises.length, completed: 0});
+
+            Promise.allSettled(callbackPromises).then(queue => {
+                // Total number of assets
+                const total = queue.length;
+                // Number of loaded assets
+                let completed = 0;
+
+                let callbackList = CallbackListGenerator(queue.reduce(
+                    // eslint-disable-next-line no-confusing-arrow
+                    (acc, res) => res.status === 'fulfilled' ? [...acc, res.value] : acc, [])
+                );
+
+                const stepLoadAssets = () => {
+                    // Report progress
+                    this.emitProjectAssetsAsyncLoadingProgressChange({total, completed});
+                    completed++;
+                    if (callbackList.next().done) {
+                        this.targets.forEach(target => {
+                            if (target.isOriginal) {
+                                target.updateAllDrawableProperties();
+                            }
+                        });
+                        this.firingWaitingLoadCallbackQueue = false;
+                        this.asyncLoadingProjectAssets = false;
+                        this.emitProjectAssetsAsyncLoadingDone();
+                    } else if (this.firingWaitingLoadCallbackQueue) {
+                        this.requestAnimationFrameId = _requestAnimationFrame(stepLoadAssets);
+                    } else {
+                        callbackList = null;
+                    }
+                };
+
+                this.requestAnimationFrameId = _requestAnimationFrame(stepLoadAssets);
+            })
+                .catch(() => {
+                    this.firingWaitingLoadCallbackQueue = false;
+                    this.asyncLoadingProjectAssets = false;
+                    this.emitProjectAssetsAsyncLoadingDone();
+                });
+        }
+    }
+
+    /**
+     * Cancel all completed asynchronous resource loading tasks
+     */
+    disposeFireWaitingLoadCallbackQueue () {
+        this.asyncLoadingProjectAssets = false;
+        this.firingWaitingLoadCallbackQueue = false;
+        _cancelAnimationFrame(this.requestAnimationFrameId);
     }
 }
 
