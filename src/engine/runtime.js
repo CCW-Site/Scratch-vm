@@ -30,6 +30,7 @@ const Video = require('../io/video');
 
 const CallbackListGenerator = require('../util/callback-list-generator');
 const StringUtil = require('../util/string-util');
+const LogSystem = require('../util/log-system');
 const uid = require('../util/uid');
 
 const defaultBlockPackages = {
@@ -447,6 +448,13 @@ class Runtime extends EventEmitter {
          * @type {?string}
          */
         this.origin = null;
+
+        /**
+         * Provides the ability to log to the terminal.
+         * The default output is to the browser's console
+         * @type {LogSystem}
+         */
+        this.logSystem = new LogSystem();
 
         this._stageTarget = null;
 
