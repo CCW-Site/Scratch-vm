@@ -364,6 +364,7 @@ class ExtensionManager {
         const workerInfo = this.pendingWorkers[id];
         delete this.pendingWorkers[id];
         if (e) {
+            this.loadingAsyncExtensions = 0;
             workerInfo.reject(e);
         } else {
             workerInfo.resolve(id);
