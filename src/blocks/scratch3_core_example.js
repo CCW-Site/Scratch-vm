@@ -93,26 +93,26 @@ class Scratch3CoreExample {
         const dynamicBlock = {
             opcode: 'dynamicBlock',
             blockType: BlockType.REPORTER,
-            text: 'dynamic Block',
+            text: 'dynamic Block [B]',
             isDynamic: true,
-            // arguments: {
-            //     A: {
-            //         type: ArgumentType.STRING,
-            //         defaultValue: '1',
-            //         dynamicArguments: {
-            //             hideAddButton: false,
-            //             hideDeleteButton: false,
-            //             seperator: ',',
-            //             defaultValues: '1'
-            //         }
-            //         type: ArgumentType.STRING,
-            //         defaultValue: '1'
-            //     },
-            //     B: {
-            //         type: ArgumentType.STRING,
-            //         defaultValue: '2'
-            //     }
-            // }
+            arguments: {
+                // A: {
+                //     type: ArgumentType.STRING,
+                //     defaultValue: '1',
+                //     dynamicArguments: {
+                //         hideAddButton: false,
+                //         hideDeleteButton: false,
+                //         seperator: ',',
+                //         defaultValues: '1'
+                //     }
+                //     type: ArgumentType.STRING,
+                //     defaultValue: '1'
+                // },
+                B: {
+                    type: ArgumentType.STRING,
+                    menu: 'dynamicMenu'
+                }
+            }
         };
 
         const staticBlock = {
@@ -145,6 +145,18 @@ class Scratch3CoreExample {
             }
         };
 
+        const menuBlock = {
+            opcode: 'menuBlock',
+            blockType: BlockType.COMMAND,
+            text: 'menuBlock [DATA]',
+            arguments: {
+                DATA: {
+                    type: ArgumentType.STRING,
+                    menu: 'dynamicMenu'
+                }
+            }
+        };
+
         const button = {
             blockType: 'button',
             text: 'updateExtension',
@@ -155,7 +167,7 @@ class Scratch3CoreExample {
             id: this.NS,
             name: 'CoreEx', // This string does not need to be translated as this extension is only used as an example.
             blocks: [
-                button,
+                // button,
                 // arrayBuilderBlock,
                 // triggerCCWHat,
                 // handleCCWHat,
@@ -163,7 +175,8 @@ class Scratch3CoreExample {
                 // exampleOpcode,
                 // exampleWithInlineImage,
                 dynamicBlock,
-                staticBlock
+                // staticBlock,
+                // menuBlock
             ],
             menus: {
                 // hatMenu: [
@@ -171,6 +184,7 @@ class Scratch3CoreExample {
                 //     {text: 'a', value: 'a'},
                 //     {text: 'b', value: 'b'}
                 // ]
+                dynamicMenu: {items: 'buildDynamicMenu'}
             }
         };
     }
@@ -191,9 +205,17 @@ class Scratch3CoreExample {
 
     }
 
+    menuBlock (args) {
+        console.log('menuBlock', ...args);
+    }
+
     dynamicBlock (args) {
         console.log('dynamic block', args);
         return 'dynamic block';
+    }
+
+    buildDynamicMenu () {
+        return [{text: '1', value: '1'}];
     }
 
     arrayBuilderBlock (args) {
