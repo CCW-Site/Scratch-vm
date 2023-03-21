@@ -516,9 +516,13 @@ class Thread {
                 const globalTarget = this.getCurrentGlobalTarget();
                 block = globalTarget.blocks.getBlock(this.stack[i]);
             }
+
             if (!block) {
-                throw new Error(
-                    'not Found procedure in local or Global by BlockId ' + this.stack[i]);
+                // Gandi: when not found block, it means this procedure call is from other global procedure call
+                // is recursive call
+                return true;
+                // throw new Error(
+                //     'not Found procedure in local or Global by BlockId ' + this.stack[i]);
             }
             if (block.opcode === 'procedures_call' &&
                 block.mutation.proccode === procedureCode) {

@@ -1009,6 +1009,11 @@ class ScriptTreeGenerator {
                 kind: 'motion.step',
                 steps: this.descendInputOfBlock(block, 'STEPS')
             };
+        case 'motion_movegrids':
+            return {
+                kind: 'motion.movegrid',
+                grids: this.descendInputOfBlock(block, 'GRIDS')
+            };
         case 'motion_pointindirection':
             return {
                 kind: 'motion.setDirection',
@@ -1121,7 +1126,6 @@ class ScriptTreeGenerator {
             return {
                 kind: 'pen.stamp'
             };
-
         case 'procedures_call': {
             // setting of yields will be handled later in the analysis phase
 
@@ -1132,8 +1136,13 @@ class ScriptTreeGenerator {
                     kind: 'tw.debugger'
                 };
             }
-
-            const [paramNamesIdsAndDefaults, _target] = this.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
+            let paramNamesIdsAndDefaults;
+            let _target;
+            if (this.script.target) {
+                [paramNamesIdsAndDefaults, _target] = this.script.target.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
+            } else {
+                [paramNamesIdsAndDefaults, _target] = this.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
+            }
 
             if (paramNamesIdsAndDefaults === null) {
                 return {

@@ -32,10 +32,20 @@ class Scratch3ProcedureBlocks {
         // No-op: execute the blocks.
     }
 
-    callWithReturn (args, util) {
+    _callProcedure (args, util, canNestedCall = false) {
         const procedureCode = args.mutation.proccode;
-        const isGlobal = args.mutation.isglobal && args.mutation.isglobal !== 'null';
-        const [paramNamesIdsAndDefaults, globalTarget] = util.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
+        const isGlobal = args.mutation.isglobal === 'true';
+        let paramNamesIdsAndDefaults;
+        let globalTarget;
+        if (util.stackFrame.globalTarget && !isGlobal) {
+            // CCW: if we are in the process of a global procedure call,
+            //      1. we are now calling a non-global procedure, find ParamNamesIds in global target
+            [paramNamesIdsAndDefaults] = util.stackFrame.globalTarget.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
+            //      2. put it in to results as global procedure call, cuz this local procedure is defined in the global target.
+            globalTarget = util.stackFrame.globalTarget;
+        } else {
+            [paramNamesIdsAndDefaults, globalTarget] = util.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
+        }
         // If null, procedure could not be found, which can happen if custom
         // block is dragged between sprites without the definition.
         // Match Scratch 2.0 behavior and noop.
@@ -56,41 +66,24 @@ class Scratch3ProcedureBlocks {
                 util.pushParam(paramNames[i], paramDefaults[i]);
             }
         }
+        if (!canNestedCall) {
+            // reporter procedure call can be nested in same stackFrame
+            // statement procedure call cannot be nested in same stackFrame
+            util.stackFrame.executed = true;
+        }
         // CCW: pass global target to procedure if isGlobal === true
         util.startProcedure(procedureCode, globalTarget);
     }
 
+    callWithReturn (args, util) {
+        if (!util.stackFrame.executed) {
+            this._callProcedure(args, util, true);
+        }
+    }
+
     call (args, util) {
         if (!util.stackFrame.executed) {
-            const procedureCode = args.mutation.proccode;
-            const isGlobal = args.mutation.isglobal && args.mutation.isglobal !== 'null';
-            const results = util.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
-
-            // If null, procedure could not be found, which can happen if custom
-            // block is dragged between sprites without the definition.
-            // Match Scratch 2.0 behavior and noop.
-            if (results === null) {
-                return;
-            }
-
-            const [paramNamesIdsAndDefaults, globalTarget] = results;
-
-            const [paramNames, paramIds, paramDefaults] = paramNamesIdsAndDefaults;
-
-            // Initialize params for the current stackFrame to {}, even if the procedure does
-            // not take any arguments. This is so that `getParam` down the line does not look
-            // at earlier stack frames for the values of a given parameter (#1729)
-            util.initParams();
-            for (let i = 0; i < paramIds.length; i++) {
-                if (args.hasOwnProperty(paramIds[i])) {
-                    util.pushParam(paramNames[i], args[paramIds[i]]);
-                } else {
-                    util.pushParam(paramNames[i], paramDefaults[i]);
-                }
-            }
-            util.stackFrame.executed = true;
-            // CCW: pass global target to procedure if isGlobal === true
-            util.startProcedure(procedureCode, globalTarget);
+            this._callProcedure(args, util);
         }
     }
 

@@ -930,7 +930,9 @@ class JSGenerator {
         case 'motion.step':
             this.source += `runtime.ext_scratch3_motion._moveSteps(${this.descendInput(node.steps).asNumber()}, target);\n`;
             break;
-
+        case 'motion.movegrid':
+            this.source += `runtime.ext_scratch3_motion._moveSteps(${this.descendInput(node.grids).asNumber() * 40}, target);\n`;
+            break;
         case 'noop':
             // todo: remove noop entirely
             break;
