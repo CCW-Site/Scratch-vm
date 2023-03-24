@@ -215,6 +215,9 @@ const serializeBlock = function (block, saveVarId) {
     if (typeof block.hidden !== 'undefined') {
         obj.hidden = block.hidden;
     }
+    if (typeof block.locked !== 'undefined') {
+        obj.locked = block.locked;
+    }
     // powered by xigua end
     if (block.topLevel) {
         obj.topLevel = true;

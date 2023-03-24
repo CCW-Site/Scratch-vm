@@ -26,6 +26,10 @@ const domToBlock = function (blockDOM, blocks, isTopBlock, parent) {
         topLevel: isTopBlock, // If this block starts a stack.
         parent: parent, // Parent block ID, if available.
         shadow: blockDOM.name === 'shadow', // If this represents a shadow/slot.
+        // powered by xigua start
+        hidden: blockDOM.attribs.hidden === 'true',
+        locked: blockDOM.attribs.locked === 'true',
+        // powered by xigua end
         x: blockDOM.attribs.x, // X position of script, if top-level.
         y: blockDOM.attribs.y // Y position of script, if top-level.
     };

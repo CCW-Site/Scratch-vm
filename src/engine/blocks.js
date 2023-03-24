@@ -788,6 +788,17 @@ class Blocks {
                     delete block.hidden;
                 }
             }
+            break;
+        case 'blockLocked':
+            if (this.runtime.getEditingTarget()) {
+                const currTarget = this.runtime.getEditingTarget();
+                const block = currTarget.blocks.getBlock(e.blockId);
+                if (e.locked) {
+                    block.locked = true;
+                } else {
+                    delete block.locked;
+                }
+            }
         }
     }
 
@@ -1390,6 +1401,7 @@ class Blocks {
                 id="${block.id}"
                 type="${block.opcode}"
                 ${block.hidden ? `hidden="${block.hidden}"` : ''}
+                ${block.locked ? `locked="${block.locked}"` : ''}
                 ${block.topLevel ? `x="${block.x}" y="${block.y}"` : ''}
             >`;
         const commentId = block.comment;
