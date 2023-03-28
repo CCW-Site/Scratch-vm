@@ -46,6 +46,7 @@ const defaultBlockPackages = {
 };
 
 const interpolate = require('./tw-interpolate');
+const {loadCostume} = require('../import/load-costume');
 
 
 const defaultExtensionColors = ['#0FBD8C', '#0DA57A', '#0B8E69'];
@@ -641,7 +642,7 @@ class Runtime extends EventEmitter {
     static get PROJECT_ASSETS_ASYNC_LOAD_DONE () {
         return 'PROJECT_ASSETS_ASYNC_LOAD_DONE';
     }
-    
+
     /**
      * Event name when the project is started (threads may not necessarily be
      * running).
@@ -3437,7 +3438,7 @@ class Runtime extends EventEmitter {
     requestToolboxExtensionsUpdate () {
         this.emit(Runtime.TOOLBOX_EXTENSIONS_NEED_UPDATE);
     }
-    
+
     /**
      * Set up timers to repeatedly step in a browser.
      */
@@ -3621,6 +3622,31 @@ class Runtime extends EventEmitter {
         this.asyncLoadingProjectAssets = false;
         this.firingWaitingLoadCallbackQueue = false;
         _cancelAnimationFrame(this.requestAnimationFrameId);
+    }
+
+    /**
+     * Add a costume to the current editing target.
+     * async costume should only existed in project running
+     * once project is stopped, all async costume should be removed
+     * @param {string} md5ext - the MD5 and extension of the costume to be loaded.
+     * @param {!object} costumeObject Object representing the costume.
+     * @param {object} target - the target to add to.
+     * @param {?int} index Index at which to add costume
+     * @returns {?Promise} - a promise that resolves when the costume has been added
+     */
+    addAsyncCostumeToTarget (md5ext, costumeObject, target) {
+        if (target) {
+            const index = target.getCostumes().length;
+            return loadCostume(md5ext, costumeObject, this, 3).then(() => {
+                target.addCostume(costumeObject, index, true);
+                target.setCostume(index);
+                if (target.isOriginal) {
+                    target.updateAllDrawableProperties();
+                }
+            });
+        }
+        // If the target cannot be found by id, return a rejected promise
+        return Promise.reject();
     }
 }
 

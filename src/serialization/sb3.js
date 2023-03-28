@@ -490,8 +490,8 @@ const serializeTarget = function (target, extensions, saveVarId) {
     }
 
     obj.currentCostume = target.currentCostume;
-    obj.costumes = target.costumes.map(serializeCostume);
-    obj.sounds = target.sounds.map(serializeSound);
+    obj.costumes = target.costumes.filter(item => !item.isRuntimeAsyncLoad).map(serializeCostume);
+    obj.sounds = target.sounds.filter(item => !item.isRuntimeAsyncLoad).map(serializeSound);
     if (target.hasOwnProperty('volume')) obj.volume = target.volume;
     if (target.hasOwnProperty('layerOrder')) obj.layerOrder = target.layerOrder;
     if (obj.isStage) { // Only the stage should have these properties
@@ -622,7 +622,8 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
             assets: runtime.isTeamworkMode ?
                 gandiAssetsList.reduce((a, asset) => ({...a, [asset.assetId]: asset}), {}) :
                 gandiAssetsList,
-            wildExtensions: runtime.gandi.wildExtensions || {}};
+            wildExtensions: runtime.gandi.wildExtensions || {}
+        };
     }
 
     // Assemble extension list

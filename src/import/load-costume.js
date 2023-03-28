@@ -269,7 +269,7 @@ const loadBitmap_ = function (costume, runtime, _rotationCenter) {
  * @param {!Runtime} runtime - Scratch runtime, used to access the storage module.
  * @param {?int} optVersion - Version of Scratch that the costume comes from. If this is set
  *     to 2, scratch 3 will perform an upgrade step to handle quirks in SVGs from Scratch 2.0.
- * @returns {?Promise} - a promise which will resolve after skinId is set, or null on error.
+ * @returns {Promise} - a promise which will resolve after skinId is set, or null on error.
  */
 const loadCostumeFromAsset = function (costume, runtime, optVersion) {
     if (!costume.uid) {
@@ -316,7 +316,7 @@ const loadCostumeFromAsset = function (costume, runtime, optVersion) {
  * @param {!Runtime} runtime - Scratch runtime, used to access the storage module.
  * @param {?int} optVersion - Version of Scratch that the costume comes from. If this is set
  *     to 2, scratch 3 will perform an upgrade step to handle quirks in SVGs from Scratch 2.0.
- * @returns {?Promise} - a promise which will resolve after skinId is set, or null on error.
+ * @returns {Promise} - a promise which will resolve after skinId is set, or null on error.
  */
 const loadCostume = function (md5ext, costume, runtime, optVersion) {
     const idParts = StringUtil.splitFirst(md5ext, '.');
@@ -347,7 +347,7 @@ const loadCostume = function (md5ext, costume, runtime, optVersion) {
         const costumePromise = runtime.storage.load(assetType, md5, ext);
         if (!costumePromise) {
             log.error(`Couldn't fetch costume asset: ${md5ext}`);
-            return;
+            return Promise.reject();
         }
 
         let textLayerPromise;

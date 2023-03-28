@@ -16,6 +16,7 @@ const serializeAssets = function (runtime, assetType, optTargetId) {
         const currAssets = currTarget.sprite[assetType];
         for (let j = 0; j < currAssets.length; j++) {
             const currAsset = currAssets[j];
+            if (currAsset.isRuntimeAsyncLoad) continue;
             const asset = currAsset.asset;
             if (asset) {
                 assetDescs.push({

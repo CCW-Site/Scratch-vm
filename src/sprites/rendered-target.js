@@ -506,18 +506,19 @@ class RenderedTarget extends Target {
             index = this.sprite.costumes.length;
         }
         this.sprite.addCostumeAt(costumeObject, index);
-        const {
-            uid,
-            assetId,
-            bitmapResolution,
-            dataFormat,
-            md5,
-            name,
-            rotationCenterX,
-            rotationCenterY
-        } = costumeObject;
+
 
         if (!isRemoteOperation) {
+            const {
+                uid,
+                assetId,
+                bitmapResolution,
+                dataFormat,
+                md5,
+                name,
+                rotationCenterX,
+                rotationCenterY
+            } = costumeObject;
             this.runtime.emitTargetCostumeChanged(this.id, ['costumes', index, 'add',
                 {
                     uid,

@@ -779,9 +779,9 @@ class VirtualMachine extends EventEmitter {
         const allAssets = this.runtime.targets.reduce(
             (acc, target) =>
                 acc
-                    .concat(target.sprite.sounds.map(sound => sound.asset))
+                    .concat(target.sprite.sounds.filter(sound => !sound.isRuntimeAsyncLoad).map(sound => sound.asset))
                     .concat(
-                        target.sprite.costumes.map(costume => costume.asset)
+                        target.sprite.costumes.filter(costume => !costume.isRuntimeAsyncLoad).map(costume => costume.asset)
                     ),
             []
         ).concat(gandiAssets);
