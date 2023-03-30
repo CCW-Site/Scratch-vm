@@ -1358,7 +1358,7 @@ class Blocks {
         if (!block) {
             return null;
         }
-        const spriteMenuNames = ['TOWARDS', 'TO', 'OBJECT', 'VIDEOONMENU2',
+        const spriteMenuNames = ['TARGET', 'SPRITE', 'TOWARDS', 'TO', 'OBJECT', 'VIDEOONMENU2',
             'DISTANCETOMENU', 'TOUCHINGOBJECTMENU', 'CLONE_OPTION'];
         for (let i = 0; i < spriteMenuNames.length; i++) {
             const menuName = spriteMenuNames[i];
