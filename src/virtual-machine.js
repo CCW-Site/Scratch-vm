@@ -309,6 +309,7 @@ class VirtualMachine extends EventEmitter {
         }
 
         this.blockListener = this.blockListener.bind(this);
+        this.frameListener = this.frameListener.bind(this);
         this.flyoutBlockListener = this.flyoutBlockListener.bind(this);
         this.monitorBlockListener = this.monitorBlockListener.bind(this);
         this.variableListener = this.variableListener.bind(this);
@@ -1214,7 +1215,7 @@ class VirtualMachine extends EventEmitter {
      * @property {number} [bitmapResolution] - the resolution scale for a bitmap costume.
      * @param {string} optTargetId - the id of the target to add to, if not the editing target.
      * @param {string} optVersion - if this is 2, load costume as sb2, otherwise load costume as sb3.
-     * * @param {boolean} isRemoteOperation Whether this is a remote operation.
+     * @param {boolean} isRemoteOperation Whether this is a remote operation.
      * @returns {?Promise} - a promise that resolves when the costume has been added
      */
     addCostume (md5ext, costumeObject, optTargetId, optVersion, isRemoteOperation) {
@@ -2019,6 +2020,16 @@ class VirtualMachine extends EventEmitter {
      * Handle a Blockly event for the current editing target.
      * @param {!Blockly.Event} e Any Blockly event.
      */
+    frameListener (e) {
+        if (this.editingTarget && typeof e === 'object' && e.type.startsWith('frame_')) {
+            this.editingTarget.frames.blocklyListen(e);
+        }
+    }
+
+    /**
+     * Handle a Blockly event for the current editing target.
+     * @param {!Blockly.Event} e Any Blockly event.
+     */
     blockListener (e) {
         if (this.editingTarget) {
             this.editingTarget.blocks.blocklyListen(e, 'default');
@@ -2429,6 +2440,7 @@ class VirtualMachine extends EventEmitter {
         const localVariables = Object.keys(localVarMap).map(
             k => localVarMap[k]
         );
+        const frames = Object.values(this.editingTarget.frames._frames);
 
         const workspaceComments = Object.keys(this.editingTarget.comments)
             .map(k => this.editingTarget.comments[k])
@@ -2439,6 +2451,9 @@ class VirtualMachine extends EventEmitter {
                                 ${globalVariables.map(v => v.toXML()).join()}
                                 ${localVariables.map(v => v.toXML(true)).join()}
                             </variables>
+                            <frames>
+                                ${frames.map(i => this.editingTarget.frames.frameToXML(i)).join()}
+                            </frames>
                             <procedures>
                                 ${this.getWorkspaceGlobalProcedures().join()}
                             </procedures>

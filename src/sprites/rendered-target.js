@@ -23,6 +23,11 @@ class RenderedTarget extends Target {
          */
         this.sprite = sprite;
         /**
+         * All frames that this target contains.
+         * @type {!Frames}
+         */
+        this.frames = sprite.frames;
+        /**
          * Reference to the global renderer for this VM, if one exists.
          * @type {?RenderWebGL}
          */
@@ -1158,6 +1163,7 @@ class RenderedTarget extends Target {
             size: this.size,
             direction: this.direction,
             draggable: this.draggable,
+            frames: this.frames,
             currentCostume: this.currentCostume,
             costume: costumes[this.currentCostume],
             costumeCount: costumes.length,

@@ -5,6 +5,7 @@
  */
 
 const vmPackage = require('../../package.json');
+const Frames = require('../engine/frame');
 const Blocks = require('../engine/blocks');
 const Sprite = require('../sprites/sprite');
 const Variable = require('../engine/variable');
@@ -232,6 +233,23 @@ const serializeBlock = function (block, saveVarId) {
     if (block.comment) {
         obj.comment = block.comment;
     }
+    return obj;
+};
+
+/**
+ * Serialize the given frame.
+ * @param {object} frame The frame to serialize
+ * @return {object} A serialized representation of the frame.
+ */
+const serializeFrame = function (frame) {
+    const obj = Object.create(null);
+    obj.id = frame.id;
+    obj.title = frame.title;
+    obj.blocks = frame.blocks;
+    obj.width = frame.width;
+    obj.height = frame.height;
+    obj.x = frame.x;
+    obj.y = frame.y;
     return obj;
 };
 
@@ -482,6 +500,14 @@ const serializeTarget = function (target, extensions, saveVarId) {
     obj.broadcasts = vars.broadcasts;
     [obj.blocks, targetExtensions] = serializeBlocks(target.blocks, saveVarId);
     obj.comments = serializeComments(target.comments);
+
+    if (target.hasOwnProperty('frames')) {
+        const frames = Object.create(null);
+        for (const frameId in target.frames._frames) {
+            frames[frameId] = serializeFrame(target.frames._frames[frameId]);
+        }
+        obj.frames = frames;
+    }
 
     // TODO remove this check/patch when (#1901) is fixed
     if (target.currentCostume < 0 || target.currentCostume >= target.costumes.length) {
@@ -918,7 +944,6 @@ const deserializeBlocks = function (blocks) {
     return blocks;
 };
 
-
 /**
  * Parse the assets of a single "Scratch object" and load them. This
  * preprocesses objects to support loading the data for those assets over a
@@ -1024,10 +1049,12 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
         return Promise.resolve(null);
     }
     // Blocks container for this object.
-    const blocks = new Blocks(runtime, false, object.id);
+    const blocks = new Blocks(runtime, false);
+    
+    const frames = new Frames(runtime);
 
     // @todo: For now, load all Scratch objects (stage/sprites) as a Sprite.
-    const sprite = new Sprite(blocks, runtime);
+    const sprite = new Sprite(blocks, runtime, frames);
 
     // Sprite/stage name from JSON.
     if (object.hasOwnProperty('name')) {
@@ -1053,6 +1080,15 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
             }
         }
     }
+
+    if (object.hasOwnProperty('frames')) {
+        for (const frameId in object.frames) {
+            const frameJSON = object.frames[frameId];
+            frameJSON.frameId = frameId;
+            frames.createFrame(frameJSON);
+        }
+    }
+    
     // Costumes from JSON.
     const {costumePromises} = assets;
     // Sounds from JSON
