@@ -563,11 +563,11 @@ class Blocks {
             break;
         case 'endDrag':
             this.runtime.emitBlockDragUpdate(false /* areBlocksOverGui */);
-
             // Drag blocks onto another sprite
             if (e.isOutside) {
                 const newBlocks = adapter(e);
-                this.runtime.emitBlockEndDrag(newBlocks, e.blockId);
+                const newBatchBlocks = (e.batchHeadBlocksXml || []).map(xml => adapter({xml: xml}));
+                this.runtime.emitBlockEndDrag(newBlocks, e.blockId, newBatchBlocks);
             }
             break;
         case 'delete':
