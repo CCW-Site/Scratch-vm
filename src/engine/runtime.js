@@ -1736,7 +1736,7 @@ class Runtime extends EventEmitter {
                     if (costume) {
                         return resolve({
                             targetId: target.id,
-                            targetName: target.name,
+                            targetName: target.sprite.name,
                             costumeId: id,
                             costumeName: costume.name
                         });
