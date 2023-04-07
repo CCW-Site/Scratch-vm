@@ -61,7 +61,7 @@ class Frames {
             this.retitleFrame(e.frameId, e.newTitle);
             break;
         case 'frame_change':
-            this.changeFrame(e.frameId, e.newProperties);
+            this.changeFrame(e.frameId, e.element, e.newValue);
             break;
         }
     }
@@ -149,24 +149,29 @@ class Frames {
     /**
      * Frame management: change frame field values
      * @param {!string} frameId Id of the frame
-     * @param {!object} args Blockly change event to be processed
+     * @param {string} element One of 'rect', 'blocks', 'disabled', etc.
+     * @param {*} value Previous value of element.
      */
-    changeFrame (frameId, args) {
+    changeFrame (frameId, element, value) {
         const frame = this._frames[frameId];
         let didChange = false;
         if (typeof frame === 'undefined') return;
-        if (args.blocks) {
+        switch (element) {
+        case 'blocks':
             didChange = true;
-            frame.blocks = args.blocks;
-        } else {
-            didChange = (frame.x !== args.x) || (frame.y !== args.y) ||
-                (frame.width !== args.width) || (frame.height !== args.height);
-            frame.x = args.x;
-            frame.y = args.y;
-            frame.width = args.width;
-            frame.height = args.height;
+            frame.blocks = value;
+            break;
+        case 'rect':
+            didChange = (frame.x !== value.x) || (frame.y !== value.y) ||
+                (frame.width !== value.width) || (frame.height !== value.height);
+            frame.x = value.x;
+            frame.y = value.y;
+            frame.width = value.width;
+            frame.height = value.height;
+            break;
+        default:
+            break;
         }
-
         if (didChange) this.emitProjectChanged();
     }
 
