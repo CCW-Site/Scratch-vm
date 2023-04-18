@@ -740,6 +740,8 @@ class ExtensionManager {
     loadCustomExtensionsLibrary (url) {
         return new Promise((resolve, reject) => this.loadRemoteExtensionWithURL(url, url, async () => {
             if (window.ExtensionLib) {
+                // where is ExtensionLib?
+                // window.ExtensionLib is defined in CCW-Custom-Extension project which host is argument [url] in this function
                 const lib = await window.ExtensionLib;
                 Object.keys(lib).forEach(key => {
                     const obj = lib[key];
