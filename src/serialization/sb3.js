@@ -503,8 +503,8 @@ const serializeTarget = function (target, extensions, saveVarId) {
 
     if (target.hasOwnProperty('frames')) {
         const frames = Object.create(null);
-        for (const frameId in target.frames._frames) {
-            frames[frameId] = serializeFrame(target.frames._frames[frameId]);
+        for (const frameId in target.frames) {
+            frames[frameId] = serializeFrame(target.frames[frameId]);
         }
         obj.frames = frames;
     }
@@ -1080,14 +1080,6 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
             }
         }
     }
-
-    if (object.hasOwnProperty('frames')) {
-        for (const frameId in object.frames) {
-            const frameJSON = object.frames[frameId];
-            frameJSON.frameId = frameId;
-            frames.createFrame(frameJSON);
-        }
-    }
     
     // Costumes from JSON.
     const {costumePromises} = assets;
@@ -1115,6 +1107,13 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
     }
     if (object.hasOwnProperty('textToSpeechLanguage')) {
         target.textToSpeechLanguage = object.textToSpeechLanguage;
+    }
+    if (object.hasOwnProperty('frames')) {
+        for (const frameId in object.frames) {
+            const frameJSON = object.frames[frameId];
+            frameJSON.frameId = frameId;
+            target.createFrame(frameJSON);
+        }
     }
     if (object.hasOwnProperty('variables')) {
         for (const varId in object.variables) {

@@ -15,18 +15,12 @@ class RenderedTarget extends Target {
      * @constructor
      */
     constructor (sprite, runtime) {
-        super(runtime, sprite.blocks, sprite.id);
-
+        super(runtime, sprite.blocks, sprite.frames, sprite.id);
         /**
          * Reference to the sprite that this is a render of.
          * @type {!Sprite}
          */
         this.sprite = sprite;
-        /**
-         * All frames that this target contains.
-         * @type {!Frames}
-         */
-        this.frames = sprite.frames;
         /**
          * Reference to the global renderer for this VM, if one exists.
          * @type {?RenderWebGL}
@@ -1080,6 +1074,7 @@ class RenderedTarget extends Target {
             newTarget.draggable = this.draggable;
             newTarget.visible = this.visible;
             newTarget.size = this.size;
+            newTarget.frames = this.frames;
             newTarget.currentCostume = this.currentCostume;
             newTarget.rotationStyle = this.rotationStyle;
             newTarget.effects = JSON.parse(JSON.stringify(this.effects));
@@ -1163,7 +1158,7 @@ class RenderedTarget extends Target {
             size: this.size,
             direction: this.direction,
             draggable: this.draggable,
-            frames: this.frames,
+            frames: this.frames._frames,
             currentCostume: this.currentCostume,
             costume: costumes[this.currentCostume],
             costumeCount: costumes.length,
