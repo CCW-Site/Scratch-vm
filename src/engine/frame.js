@@ -1,4 +1,5 @@
 const Clone = require('../util/clone');
+const xmlEscape = require('../util/xml-escape');
 
 /**
  * @fileoverview
@@ -188,25 +189,23 @@ class Frames {
         if (!frame) return;
         return `<frame
                 id="${frame.id}"
-                title="${frame.title}"
                 ${frame.blocks ? `blocks="${JSON.stringify(frame.blocks)}"` : ''}
                 x="${frame.x}"
                 y="${frame.y}"
                 width="${frame.width}"
                 height="${frame.height}"
-            ></frame>`;
+            >${xmlEscape(frame.title)}</frame>`;
     }
 
     frameToXML (frame) {
         return `<frame
                 id="${frame.id}"
-                title="${frame.title}"
                 ${frame.blocks ? `blocks="${frame.blocks.join(' ')}"` : ''}
                 x="${frame.x}"
                 y="${frame.y}"
                 width="${frame.width}"
                 height="${frame.height}"
-            ></frame>`;
+            >${xmlEscape(frame.title)}</frame>`;
     }
 }
 
