@@ -756,6 +756,14 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for editing target's frames was changed.
+     * @const {string}
+     */
+    static get TARGET_FRAMES_CHANGED () {
+        return 'TARGET_FRAMES_CHANGED';
+    }
+
+    /**
      * Event name for editing target's costome was changed.
      * @const {string}
      */
@@ -3296,6 +3304,13 @@ class Runtime extends EventEmitter {
      */
     emitTargetCommentsChanged (targeId, data) {
         this.emit(Runtime.TARGET_COMMENTS_CHANGED, targeId, data);
+    }
+
+    /**
+     * Report that the target has changed in a way that would affect serialization
+     */
+    emitTargetFramesChanged (targeId, data) {
+        this.emit(Runtime.TARGET_FRAMES_CHANGED, targeId, data);
     }
 
     /**

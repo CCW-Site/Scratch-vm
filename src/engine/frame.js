@@ -48,19 +48,29 @@ class Frames {
         if (typeof e !== 'object' || typeof e.frameId !== 'string') {
             return;
         }
-
+        const currTarget = this.runtime.getEditingTarget();
+        if (!currTarget) return;
         // Frame create/update/destroy
         switch (e.type) {
         case 'frame_create':
-            this.createFrame(e);
+            if (this.createFrame(e)) {
+                this.runtime.emitTargetFramesChanged(currTarget.id, ['add', e.frameId, this._frames[e.frameId]]);
+            }
             break;
         case 'frame_delete':
-            this.deleteFrame(e.frameId);
+            if (this.deleteFrame(e.frameId)) {
+                this.runtime.emitTargetFramesChanged(currTarget.id, ['delete', e.frameId]);
+            }
             break;
         case 'frame_retitle':
-            this.retitleFrame(e.frameId, e.newTitle);
+            if (this.retitleFrame(e.frameId, e.newTitle)) {
+                this.runtime.emitTargetFramesChanged(currTarget.id, ['update', e.frameId, {title: e.newTitle}]);
+            }
             break;
         case 'frame_change':
+            if (this.changeFrame(e.frameId, e.element, e.newValue)) {
+                this.runtime.emitTargetFramesChanged(currTarget.id, ['update', e.frameId, {...e.newValue}]);
+            }
             this.changeFrame(e.frameId, e.element, e.newValue);
             break;
         }
@@ -75,19 +85,6 @@ class Frames {
     }
 
     /**
-     * Frame management: create/delete/change/move frame;
-     * @param {!object} e Blockly move event to be processed
-     */
-    updateFrame (frame) {
-        // Maybe the frame already exists, but we need to update it anyway
-        this._frames[frame.id] = frame;
-
-        // A new frame was actually added to the frame container or updated
-        // emit a project changed event
-        this.emitProjectChanged();
-    }
-
-    /**
      * Frame management: create frames from a `create` event
      * @param {!object} e Blockly create event to be processed
      */
@@ -95,7 +92,7 @@ class Frames {
         // Does the frame already exist?
         // Could happen, e.g., for an unobscured shadow.
         if (this._frames.hasOwnProperty(e.frameId)) {
-            return;
+            return false;
         }
         // Create new frame.
         this._frames[e.frameId] = {
@@ -107,6 +104,7 @@ class Frames {
             width: e.width,
             height: e.height
         };
+        return true;
     }
 
     /**
@@ -118,13 +116,13 @@ class Frames {
         const frame = this._frames[frameId];
         if (!frame) {
             // No frame with the given ID exists
-            return;
+            return false;
         }
     
         // Delete frame itself.
         delete this._frames[frameId];
-    
         this.emitProjectChanged();
+        return true;
     }
 
     /**
@@ -137,13 +135,13 @@ class Frames {
         const frame = this._frames[frameId];
         if (!frame) {
             // No frame with the given ID exists
-            return;
+            return false;
         }
     
         // Retitle this frame
         this._frames[frameId].title = newTitle;
-    
         this.emitProjectChanged();
+        return true;
     }
 
     /**
@@ -155,11 +153,12 @@ class Frames {
     changeFrame (frameId, element, value) {
         const frame = this._frames[frameId];
         let didChange = false;
-        if (typeof frame === 'undefined') return;
+        if (typeof frame === 'undefined') return didChange;
         switch (element) {
         case 'blocks':
-            didChange = true;
-            frame.blocks = value;
+            didChange = value.blocks.length !== frame.blocks.length ||
+                !value.blocks.every(ele => frame.blocks.includes(ele));
+            frame.blocks = value.blocks;
             break;
         case 'rect':
             didChange = (frame.x !== value.x) || (frame.y !== value.y) ||
@@ -173,6 +172,7 @@ class Frames {
             break;
         }
         if (didChange) this.emitProjectChanged();
+        return didChange;
     }
 
     /**

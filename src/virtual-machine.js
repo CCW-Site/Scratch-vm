@@ -185,6 +185,9 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.TARGET_COMMENTS_CHANGED, (targetId, data) => {
             this.emit(Runtime.TARGET_COMMENTS_CHANGED, targetId, data);
         });
+        this.runtime.on(Runtime.TARGET_FRAMES_CHANGED, (targetId, data) => {
+            this.emit(Runtime.TARGET_FRAMES_CHANGED, targetId, data);
+        });
         this.runtime.on(Runtime.TARGET_COSTUME_CHANGED, (id, data) => {
             this.emit(Runtime.TARGET_COSTUME_CHANGED, id, data);
         });
