@@ -2761,6 +2761,13 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * @param {boolean} isPlayerOnly
+     */
+    setIsPlayerOnly (isPlayerOnly) {
+        this.isPlayerOnly = isPlayerOnly;
+    }
+
+    /**
      * tw: Reset the cache of all block containers.
      */
     resetAllCaches () {

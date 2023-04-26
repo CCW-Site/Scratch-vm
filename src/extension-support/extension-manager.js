@@ -248,15 +248,18 @@ class ExtensionManager {
         log.warn(`ccw: [${extensionURL}] not found in remote extensions library,try load as URL`);
 
 
-        // customExtension.
-        await this.loadCustomExtensionsLibrary(null, extensionURL);
-        if (customExtension[extensionURL]) {
-            extension = await this.getCustomExtension(extensionURL);
-            if (extension) {
-                return registExt(extension.default || extension);
+        if (!this.runtime.isPlayerOnly) {
+            // customExtension.
+            await this.loadCustomExtensionsLibrary(null, extensionURL);
+            if (customExtension[extensionURL]) {
+                extension = await this.getCustomExtension(extensionURL);
+                if (extension) {
+                    return registExt(extension.default || extension);
+                }
+                this.runtime.emit('EXTENSION_DATA_LOADING', true); // ccw start loading remote extension event
             }
-            this.runtime.emit('EXTENSION_DATA_LOADING', true); // ccw start loading remote extension event
         }
+
         // TW
         this.loadingAsyncExtensions++;
         return new Promise((resolve, reject) => {

@@ -399,6 +399,10 @@ class VirtualMachine extends EventEmitter {
         this.runtime.setCompilerOptions(compilerOptions);
     }
 
+    setIsPlayerOnly (isPlayerOnly) {
+        this.runtime.setIsPlayerOnly(isPlayerOnly);
+    }
+
     addAddonBlock (options) {
         this.runtime.addAddonBlock(options);
     }
