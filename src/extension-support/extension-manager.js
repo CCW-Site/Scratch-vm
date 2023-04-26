@@ -235,6 +235,19 @@ class ExtensionManager {
             return registExt(extension);
         }
 
+        // officialExtension
+        await this.loadOfficialExtensionsLibrary();
+        if (officialExtension[extensionURL]) {
+            extension = await this.getOfficialExtension(extensionURL);
+            if (extension) {
+                this.runtime.emit('EXTENSION_DATA_LOADING', false);
+                return registExt(extension.default || extension);
+            }
+        }
+
+        log.warn(`ccw: [${extensionURL}] not found in remote extensions library,try load as URL`);
+
+
         // customExtension.
         await this.loadCustomExtensionsLibrary(null, extensionURL);
         if (customExtension[extensionURL]) {
@@ -244,18 +257,6 @@ class ExtensionManager {
             }
             this.runtime.emit('EXTENSION_DATA_LOADING', true); // ccw start loading remote extension event
         }
-
-        // officialExtension
-        await this.loadOfficialExtensionsLibrary();
-        if (officialExtension[extensionURL]) {
-            extension = await this.getOfficialExtension(extensionURL);
-            if (extension) {
-                this.runtime.emit('EXTENSION_DATA_LOADING', false);
-                return registExt(extension.default);
-            }
-        }
-
-        log.warn(`ccw: [${extensionURL}] not found in remote extensions library,try load as URL`);
         // TW
         this.loadingAsyncExtensions++;
         return new Promise((resolve, reject) => {
@@ -746,6 +747,7 @@ class ExtensionManager {
                 qa: '-qa',
                 prod: ''
             }[ENV];
+            // const staticName = '-qa';
             // https://static-dev.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m/static/js/
             const scriptHost = staticName === void 0 ? '' : `https://static${staticName}.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m`;
 
@@ -775,13 +777,13 @@ class ExtensionManager {
     loadCustomExtensionsLibrary (url, id) {
         return new Promise((resolve, reject) => {
             if (this._customlExtensionInfo[id]) {
-                resolve(this._customlExtensionInfo);
+                return resolve(this._customlExtensionInfo);
             }
             if (!url) {
                 url = this.runtime.gandi?.wildExtensions?.[id]?.url;
             }
             if (!url) {
-                resolve(this._customlExtensionInfo);
+                return resolve(this._customlExtensionInfo);
             }
             this.loadRemoteExtensionWithURL(url, url, async () => {
                 if (window.ExtensionLib) {
