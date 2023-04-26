@@ -820,6 +820,10 @@ class Runtime extends EventEmitter {
         return 'GANDI_ASSET_UPDATE';
     }
 
+    static get GANDI_WILD_EXTENSIONS_UPDATE () {
+        return 'GANDI_WILD_EXTENSIONS_UPDATE';
+    }
+
     /**
      * Event name for monitors update.
      * @const {string}
@@ -3231,6 +3235,10 @@ class Runtime extends EventEmitter {
 
     emitGandiAssetsUpdate (action) {
         this.emit(Runtime.GANDI_ASSET_UPDATE, action);
+    }
+
+    emitGandiWildExtensionsUpdate (action) {
+        this.emit(Runtime.GANDI_WILD_EXTENSIONS_UPDATE, action);
     }
 
     /**

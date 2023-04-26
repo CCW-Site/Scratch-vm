@@ -1346,20 +1346,25 @@ const replaceUnsafeCharsInVariableIds = function (targets) {
 
 const parseGandiObject = (gandiObject, runtime) => {
     runtime.gandi = {assets: [], wildExtensions: {}};
-    const filePromises = (gandiObject.assets || []).map(file => {
-        const gandiAsset = {
-            asset: null,
-            uid: file.uid || uid(),
-            assetId: file.assetId,
-            name: file.name,
-            md5: file.md5ext,
-            dataFormat: file.dataFormat
-        };
-        return loadGandiAsset(file.md5ext, gandiAsset, runtime);
-    });
-    Promise.all(filePromises).then(gandiAssets => {
-        runtime.gandi = {assets: gandiAssets, wildExtensions: gandiObject.wildExtensions};
-    });
+    if (gandiObject.assets && isArray(gandiObject.assets)) {
+        const filePromises = (gandiObject.assets || []).map(file => {
+            const gandiAsset = {
+                asset: null,
+                uid: file.uid || uid(),
+                assetId: file.assetId,
+                name: file.name,
+                md5: file.md5ext,
+                dataFormat: file.dataFormat
+            };
+            return loadGandiAsset(file.md5ext, gandiAsset, runtime);
+        });
+        Promise.all(filePromises).then(gandiAssets => {
+            runtime.gandi.assets = gandiAssets;
+        });
+    }
+    if (gandiObject.wildExtensions) {
+        runtime.gandi.wildExtensions = gandiObject.wildExtensions;
+    }
 };
 
 /**
@@ -1395,14 +1400,21 @@ const deserialize = function (json, runtime, zip, isSingleSprite) {
 
     // Gandi: extended project.json to include global assets such as python files
     const gandiObjects = json.gandi;
-    if (gandiObjects && gandiObjects.assets && isArray(gandiObjects.assets)) {
-        // find extension need to load
-        gandiObjects.assets.forEach(asset => {
-            if (asset.dataFormat === 'py' || asset.dataFormat === 'json') {
-                // py and json file need GandiPython extension to run
-                extensions.extensionIDs.add('GandiPython');
-            }
-        });
+    if (gandiObjects) {
+        if (gandiObjects.assets && isArray(gandiObjects.assets)) {
+            // find extension need to load
+            gandiObjects.assets.forEach(asset => {
+                if (asset.dataFormat === 'py' || asset.dataFormat === 'json') {
+                    // py and json file need GandiPython extension to run
+                    extensions.extensionIDs.add('GandiPython');
+                }
+            });
+        }
+        if (gandiObjects.wildExtensions) {
+            Object.values(gandiObjects.wildExtensions).forEach(extension => {
+                extensions.extensionIDs.add(extension.id);
+            });
+        }
         parseGandiObject(gandiObjects, runtime);
     }
 

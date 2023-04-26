@@ -997,7 +997,6 @@ class VirtualMachine extends EventEmitter {
         await this.extensionManager.allAsyncExtensionsLoaded();
 
         const extensionPromises = [];
-
         extensions.extensionIDs.forEach(extensionID => {
             if (!this.extensionManager.isExtensionLoaded(extensionID)) {
                 const extensionURL =

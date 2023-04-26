@@ -77,8 +77,14 @@
       }
     ],
     "wildExtensions": {
-      "unitTestExt1": "https://unitTestExt1.js",
-      "unitTestExt2": "https://unitTestExt2.js"
+      "unitTestExt1": {
+        "id": "unitTestExt1",
+        "url": "https://unitTestExt1.js"
+      },
+      "unitTestExt2": {
+        "id": "unitTestExt2",
+        "url": "https://unitTestExt2.js"
+      }
     }
   },
   "meta": { "semver": "3.0.0", "vm": "1.4.11", "agent": "" }

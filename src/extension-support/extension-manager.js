@@ -104,6 +104,8 @@ class ExtensionManager {
          */
         this.nextExtensionWorker = 0;
 
+        this._customlExtensionInfo = {};
+
         /**
          * FIFO queue of extensions which have been requested but not yet loaded in a worker,
          * along with promise resolution functions to call once the worker is ready or failed.
@@ -233,17 +235,20 @@ class ExtensionManager {
             return registExt(extension);
         }
 
-        extension = await this.getRemoteExtension(extensionURL);
-        if (extension) {
-            return registExt(extension.default || extension);
+        // customExtension
+        await this.loadCustomExtensionsLibrary(null, extensionURL);
+        if (customExtension[extensionURL]) {
+            extension = await this.getCustomExtension(extensionURL);
+            if (extension) {
+                return registExt(extension.default || extension);
+            }
+            this.runtime.emit('EXTENSION_DATA_LOADING', true); // ccw start loading remote extension event
         }
 
-        this.runtime.emit('EXTENSION_DATA_LOADING', true); // ccw start loading remote extension event
-
+        // officialExtension
         await this.loadOfficialExtensionsLibrary();
-
         if (officialExtension[extensionURL]) {
-            extension = await this.getRemoteExtension(extensionURL);
+            extension = await this.getOfficialExtension(extensionURL);
             if (extension) {
                 this.runtime.emit('EXTENSION_DATA_LOADING', false);
                 return registExt(extension.default);
@@ -661,6 +666,30 @@ class ExtensionManager {
 
     // powered by xigua start
 
+
+    /**
+     * @description register gandi extension when developer load custom extension
+     * @param {string} id extension id
+     * @param {string} url extension url
+     * @param {?boolean} isRemoteOperation Whether this is a remote operation
+     */
+    registerGandiWildExtensions (id, url, isRemoteOperation) {
+        if (!this.runtime.gandi) {
+            this.runtime.gandi = {assets: [], wildExtensions: {}};
+        }
+        if (this.runtime.gandi.wildExtensions[id]) {
+            this.runtime.logSystem.warn(`registerGandiWildExtensions: extension id:${id} registered，will be replaced`);
+        }
+        if (!isRemoteOperation) {
+            this.runtime.emitGandiWildExtensionsUpdate({data: {id, url}, type: 'add'});
+        }
+        this.runtime.gandi.wildExtensions[id] = {
+            id,
+            url
+        };
+
+    }
+
     shouldReplaceExtension (extensionId) {
         if (
             builtinExtensions.hasOwnProperty(extensionId) ||
@@ -695,8 +724,13 @@ class ExtensionManager {
         return func && func();
     }
 
-    async getRemoteExtension (extensionId) {
-        const func = customExtension[extensionId] || officialExtension[extensionId];
+    async getOfficialExtension (extensionId) {
+        const func = officialExtension[extensionId];
+        return func && await Promise.resolve(func());
+    }
+
+    async getCustomExtension (extensionId) {
+        const func = customExtension[extensionId];
         return func && await Promise.resolve(func());
     }
 
@@ -723,6 +757,7 @@ class ExtensionManager {
         }
         // use 'OfficialExtensions' as script tag dom id
         // make load remote script file only once
+
         return new Promise((resolve, reject) => this.loadRemoteExtensionWithURL('OfficialExtensions', onlineScriptUrl, async () => {
             if (window.scratchExtensions) {
                 const {default: lib} = await window.scratchExtensions.default();
@@ -737,21 +772,33 @@ class ExtensionManager {
         }, reject));
     }
 
-    loadCustomExtensionsLibrary (url) {
-        return new Promise((resolve, reject) => this.loadRemoteExtensionWithURL(url, url, async () => {
-            if (window.ExtensionLib) {
+    loadCustomExtensionsLibrary (url, id) {
+        return new Promise((resolve, reject) => {
+            if (this._customlExtensionInfo[id]) {
+                resolve(this._customlExtensionInfo);
+            }
+            if (!url) {
+                url = this.runtime.gandi?.wildExtensions?.[id]?.url;
+            }
+            if (!url) {
+                reject('url cannot be empty');
+            }
+            this.loadRemoteExtensionWithURL(url, url, async () => {
+                if (window.ExtensionLib) {
                 // where is ExtensionLib?
                 // window.ExtensionLib is defined in CCW-Custom-Extension project which host is argument [url] in this function
-                const lib = await window.ExtensionLib;
-                Object.keys(lib).forEach(key => {
-                    const obj = lib[key];
-                    const id = (obj.info && obj.info.extensionId) || key;
-                    this.registCustomExtensions(id, obj.Extension);
-                });
-                this._customlExtensionInfo = {...this._customlExtensionInfo, ...lib};
-            }
-            resolve(this._customlExtensionInfo);
-        }, reject));
+                    const lib = await window.ExtensionLib;
+                    Object.keys(lib).forEach(key => {
+                        const obj = lib[key];
+                        const extensionId = (obj.info && obj.info.extensionId) || key;
+                        this.registCustomExtensions(extensionId, obj.Extension);
+                        this.registerGandiWildExtensions(extensionId, url);
+                        this._customlExtensionInfo = {...this._customlExtensionInfo, [extensionId]: obj};
+                    });
+                }
+                resolve(this._customlExtensionInfo);
+            }, reject);
+        });
     }
 
     loadRemoteExtensionWithURL (uniqueId, url, onLoadSuccess, onLoadError) {
@@ -786,7 +833,7 @@ class ExtensionManager {
             document.body.removeChild(script);
         };
         script.onerror = e => {
-            script.failedCallBack.forEach(cb => cb(e));
+            script.failedCallBack.forEach(cb => cb?.(e));
             script.failedCallBack = [];
             document.body.removeChild(script);
         };
