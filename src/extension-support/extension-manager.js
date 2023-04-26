@@ -235,7 +235,7 @@ class ExtensionManager {
             return registExt(extension);
         }
 
-        // customExtension
+        // customExtension.
         await this.loadCustomExtensionsLibrary(null, extensionURL);
         if (customExtension[extensionURL]) {
             extension = await this.getCustomExtension(extensionURL);
@@ -781,7 +781,7 @@ class ExtensionManager {
                 url = this.runtime.gandi?.wildExtensions?.[id]?.url;
             }
             if (!url) {
-                reject('url cannot be empty');
+                resolve(this._customlExtensionInfo);
             }
             this.loadRemoteExtensionWithURL(url, url, async () => {
                 if (window.ExtensionLib) {
