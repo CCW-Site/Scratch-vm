@@ -882,8 +882,9 @@ class Blocks {
     /**
      * Block management: change block field values
      * @param {!object} args Blockly change event to be processed
+     * @param {boolean} isRuntimeOp Whether it is an operation at run time
      */
-    changeBlock (args) {
+    changeBlock (args, isRuntimeOp) {
         // Validate
         if (['field', 'mutation', 'checkbox'].indexOf(args.element) === -1) return;
         let block = this._blocks[args.id];
@@ -986,10 +987,10 @@ class Blocks {
             }
 
             if (wasMonitored && !block.isMonitored) {
-                this.runtime.requestHideMonitor(block.id);
+                this.runtime.requestHideMonitor(block.id, isRuntimeOp);
             } else if (!wasMonitored && block.isMonitored) {
                 // Tries to show the monitor for specified block. If it doesn't exist, add the monitor.
-                if (!this.runtime.requestShowMonitor(block.id)) {
+                if (!this.runtime.requestShowMonitor(block.id, isRuntimeOp)) {
                     this.runtime.requestAddMonitor(MonitorRecord({
                         id: block.id,
                         targetId: block.targetId,

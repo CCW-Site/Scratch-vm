@@ -3125,11 +3125,13 @@ class Runtime extends EventEmitter {
     /**
      * Hides a monitor and returns success/failure of action.
      * @param {!string} monitorId ID of the monitor to hide.
+     * @param {boolean} isRuntimeOp Whether it is an operation at run time
      * @return {boolean} true if monitor exists and was updated, false otherwise
      */
-    requestHideMonitor (monitorId) {
-        if (this._monitorState.get(monitorId) && this._monitorState.get(monitorId).visible) {
-            this.emitMonitorsChanged(['update', monitorId, {visible: false}]);
+    requestHideMonitor (monitorId, isRuntimeOp) {
+        const monitor = this._monitorState.get(monitorId);
+        if (!isRuntimeOp && monitor && monitor.visible) {
+            this.emitMonitorsChanged(['update', monitorId, {visible: !monitor.visible}]);
         }
         return this.requestUpdateMonitor(new Map([
             ['id', monitorId],
@@ -3141,11 +3143,13 @@ class Runtime extends EventEmitter {
      * Shows a monitor and returns success/failure of action.
      * not exist in the state.
      * @param {!string} monitorId ID of the monitor to show.
+     * @param {boolean} isRuntimeOp Whether it is an operation at run time
      * @return {boolean} true if monitor exists and was updated, false otherwise
      */
-    requestShowMonitor (monitorId) {
-        if (!this._monitorState.get(monitorId) || !this._monitorState.get(monitorId).visible) {
-            this.emitMonitorsChanged(['update', monitorId, {visible: true}]);
+    requestShowMonitor (monitorId, isRuntimeOp) {
+        const monitor = this._monitorState.get(monitorId);
+        if (!isRuntimeOp && monitor && !monitor.visible) {
+            this.emitMonitorsChanged(['update', monitorId, {visible: !monitor.visible}]);
         }
         return this.requestUpdateMonitor(new Map([
             ['id', monitorId],
