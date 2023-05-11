@@ -2454,16 +2454,15 @@ class VirtualMachine extends EventEmitter {
                                 ${globalVariables.map(v => v.toXML()).join()}
                                 ${localVariables.map(v => v.toXML(true)).join()}
                             </variables>
-                            <frames>
-                                ${frames.map(i => this.editingTarget.frames.frameToXML(i)).join()}
-                            </frames>
+
                             <procedures>
                                 ${this.getWorkspaceGlobalProcedures().join()}
                             </procedures>
                             ${workspaceComments.map(c => c.toXML()).join()}
-                            ${this.editingTarget.blocks.toXML(
-        this.editingTarget.comments
-    )}
+                            ${this.editingTarget.blocks.toXML(this.editingTarget.comments)}
+                            <frames>
+                                ${frames.map(i => this.editingTarget.frames.frameToXML(i)).join()}
+                            </frames>
                         </xml>`;
 
         this.emit('workspaceUpdate', {xml: xmlString});

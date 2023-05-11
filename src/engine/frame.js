@@ -72,7 +72,6 @@ class Frames {
             if (this.changeFrame(e.frameId, e.element, e.newValue)) {
                 this.runtime.emitTargetFramesChanged(currTarget.id, ['update', e.frameId, {...e.newValue}]);
             }
-            this.changeFrame(e.frameId, e.element, e.newValue);
             break;
         }
     }
@@ -99,6 +98,8 @@ class Frames {
         this._frames[e.frameId] = {
             id: e.frameId,
             title: e.title,
+            color: e.color,
+            locked: e.locked,
             blocks: e.blocks,
             x: e.x,
             y: e.y,
@@ -169,6 +170,14 @@ class Frames {
             frame.width = value.width;
             frame.height = value.height;
             break;
+        case 'color':
+            didChange = frame.color !== value;
+            frame.color = value;
+            break;
+        case 'locked':
+            didChange = frame.locked !== value;
+            frame.locked = value;
+            break;
         default:
             break;
         }
@@ -189,6 +198,8 @@ class Frames {
         if (!frame) return;
         return `<frame
                 id="${frame.id}"
+                color="${frame.color}"
+                locked="${frame.locked}"
                 ${frame.blocks ? `blocks="${JSON.stringify(frame.blocks)}"` : ''}
                 x="${frame.x}"
                 y="${frame.y}"
@@ -200,6 +211,8 @@ class Frames {
     frameToXML (frame) {
         return `<frame
                 id="${frame.id}"
+                color="${frame.color}"
+                locked="${frame.locked}"
                 ${frame.blocks ? `blocks="${frame.blocks.join(' ')}"` : ''}
                 x="${frame.x}"
                 y="${frame.y}"
