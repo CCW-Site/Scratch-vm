@@ -1,5 +1,6 @@
 const Clone = require('../util/clone');
 const xmlEscape = require('../util/xml-escape');
+const adapter = require('./adapter');
 
 /**
  * @fileoverview
@@ -50,30 +51,44 @@ class Frames {
             return;
         }
         const currTarget = this.runtime.getEditingTarget();
-        if (!currTarget) return;
-        // Frame create/update/destroy
-        switch (e.type) {
-        case 'frame_create':
-            if (this.createFrame(e)) {
-                this.runtime.emitTargetFramesChanged(currTarget.id, ['add', e.frameId, this._frames[e.frameId]]);
+        if (currTarget) {
+            switch (e.type) {
+            case 'frame_end_drag':
+                this.runtime.emitFrameDragUpdate(false /* areBlocksOverGui */);
+                // Drag frame into another sprite
+                if (e.isOutside) {
+                    const newFrame = adapter(e);
+                    const newBatchFrame = e.batchFramesXml.map(xml => adapter({xml: xml}));
+                    this.runtime.emitFrameEndDrag(newFrame[0], newBatchFrame);
+                }
+                break;
+            case 'frame_drag_outside':
+                this.runtime.emitFrameDragUpdate(e.isOutside);
+                break;
+            case 'frame_create':
+                if (this.createFrame(e)) {
+                    this.runtime.emitTargetFramesChanged(currTarget.id, ['add', e.frameId, this._frames[e.frameId]]);
+                }
+                break;
+            case 'frame_delete':
+                if (this.deleteFrame(e.frameId)) {
+                    this.runtime.emitTargetFramesChanged(currTarget.id, ['delete', e.frameId]);
+                }
+                break;
+            case 'frame_retitle':
+                if (this.retitleFrame(e.frameId, e.newTitle)) {
+                    this.runtime.emitTargetFramesChanged(currTarget.id, ['update', e.frameId, {title: e.newTitle}]);
+                }
+                break;
+            case 'frame_change':
+                if (this.changeFrame(e.frameId, e.element, e.newValue)) {
+                    this.runtime.emitTargetFramesChanged(currTarget.id, ['update', e.frameId, {...e.newValue}]);
+                }
+                break;
             }
-            break;
-        case 'frame_delete':
-            if (this.deleteFrame(e.frameId)) {
-                this.runtime.emitTargetFramesChanged(currTarget.id, ['delete', e.frameId]);
-            }
-            break;
-        case 'frame_retitle':
-            if (this.retitleFrame(e.frameId, e.newTitle)) {
-                this.runtime.emitTargetFramesChanged(currTarget.id, ['update', e.frameId, {title: e.newTitle}]);
-            }
-            break;
-        case 'frame_change':
-            if (this.changeFrame(e.frameId, e.element, e.newValue)) {
-                this.runtime.emitTargetFramesChanged(currTarget.id, ['update', e.frameId, {...e.newValue}]);
-            }
-            break;
         }
+
+
     }
 
     /**
@@ -106,6 +121,7 @@ class Frames {
             width: e.width,
             height: e.height
         };
+        this.emitProjectChanged();
         return true;
     }
 
@@ -196,7 +212,7 @@ class Frames {
         // to a frameId for non-existent frames. Until we track down that behavior,
         // this early exit allows the project to load.
         if (!frame) return;
-        return `<frame
+        return `<custom-frame
                 id="${frame.id}"
                 color="${frame.color}"
                 locked="${frame.locked}"
@@ -205,11 +221,11 @@ class Frames {
                 y="${frame.y}"
                 width="${frame.width}"
                 height="${frame.height}"
-            >${xmlEscape(frame.title)}</frame>`;
+            >${xmlEscape(frame.title)}</custom-frame>`;
     }
 
     frameToXML (frame) {
-        return `<frame
+        return `<custom-frame
                 id="${frame.id}"
                 color="${frame.color}"
                 locked="${frame.locked}"
@@ -218,7 +234,7 @@ class Frames {
                 y="${frame.y}"
                 width="${frame.width}"
                 height="${frame.height}"
-            >${xmlEscape(frame.title)}</frame>`;
+            >${xmlEscape(frame.title)}</custom-frame>`;
     }
 }
 

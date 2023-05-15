@@ -857,6 +857,22 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for frame drag update.
+     * @const {string}
+     */
+    static get FRAME_DRAG_UPDATE () {
+        return 'FRAME_DRAG_UPDATE';
+    }
+
+    /**
+     * Event name for frame drag update.
+     * @const {string}
+     */
+    static get FRAME_DRAG_END () {
+        return 'FRAME_DRAG_END';
+    }
+
+    /**
      * Event name for block drag end.
      * @const {string}
      */
@@ -3059,6 +3075,14 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Emit whether frame are being dragged over gui
+     * @param {boolean} areBlocksOverGui True if frame are dragged out of the workspace, false otherwise
+     */
+    emitFrameDragUpdate (areBlocksOverGui) {
+        this.emit(Runtime.FRAME_DRAG_UPDATE, areBlocksOverGui);
+    }
+
+    /**
      * Emit event to indicate that the block drag has ended with the blocks outside the blocks workspace
      * @param {Array.<object>} blocks The set of blocks dragged to the GUI
      * @param {string} topBlockId The original id of the top block being dragged
@@ -3066,6 +3090,15 @@ class Runtime extends EventEmitter {
      */
     emitBlockEndDrag (blocks, topBlockId, newBatchBlocks) {
         this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId, newBatchBlocks);
+    }
+
+    /**
+     * Emit event to indicate that the frame drag has ended with the blocks outside the blocks workspace
+     * @param {Array.<object>} frame The frame dragged to the GUI
+     * @param {Array.<object>=} batchFrames The set of batch selected blocks head block
+     */
+    emitFrameEndDrag (frame, batchFrames) {
+        this.emit(Runtime.FRAME_DRAG_END, frame, batchFrames);
     }
 
     /**

@@ -218,8 +218,14 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.BLOCK_DRAG_UPDATE, areBlocksOverGui => {
             this.emit(Runtime.BLOCK_DRAG_UPDATE, areBlocksOverGui);
         });
+        this.runtime.on(Runtime.FRAME_DRAG_UPDATE, areBlocksOverGui => {
+            this.emit(Runtime.FRAME_DRAG_UPDATE, areBlocksOverGui);
+        });
         this.runtime.on(Runtime.BLOCK_DRAG_END, (blocks, topBlockId, newBatchBlocks) => {
             this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId, newBatchBlocks);
+        });
+        this.runtime.on(Runtime.FRAME_DRAG_END, (frame, batchFrames) => {
+            this.emit(Runtime.FRAME_DRAG_END, frame, batchFrames);
         });
         this.runtime.on(Runtime.EXTENSION_ADDED, categoryInfo => {
             this.emit(Runtime.EXTENSION_ADDED, categoryInfo);
@@ -2294,7 +2300,34 @@ class VirtualMachine extends EventEmitter {
                 {type: 'delete_next_create', blockId: copiedBlocks[0].id}
             );
             target.blocks.updateTargetSpecificBlocks(target.isStage);
+            return copiedBlocks;
         });
+    }
+
+    /**
+     * Called when frame are dragged from one sprite to another. Adds the frame to the
+     * workspace of the given target.
+     * @param {!Array<object>} frame Frame to add.
+     * @param {!string} targetId Id of target to add frame to.
+     * @param {?string} optFromTargetId Optional target id indicating that frame are being
+     * shared from that target. This is needed for resolving any potential variable conflicts.
+     * @return {!Promise} Promise that resolves when the extensions and frame have been added.
+     */
+    async shareFrameToTarget (frame, targetId, optFromTargetId) {
+        const copiedFrame = JSON.parse(JSON.stringify(frame));
+        const blocks = copiedFrame.blockElements;
+        const target = this.runtime.getTargetById(targetId);
+        if (Object.keys(blocks).length > 0) {
+            const copiedBlocks = await this.shareBlocksToTarget(Object.values(blocks), targetId, optFromTargetId);
+            copiedFrame.blocks = copiedBlocks.reduce((acc, block) => {
+                if (block.shadow) {
+                    return acc;
+                }
+                return acc.concat(block.id);
+            }, []);
+        }
+        target.createFrame(copiedFrame);
+        target.blocks.updateTargetSpecificBlocks(target.isStage);
     }
 
     /**
@@ -2460,9 +2493,9 @@ class VirtualMachine extends EventEmitter {
                             </procedures>
                             ${workspaceComments.map(c => c.toXML()).join()}
                             ${this.editingTarget.blocks.toXML(this.editingTarget.comments)}
-                            <frames>
+                            <custom-frameset>
                                 ${frames.map(i => this.editingTarget.frames.frameToXML(i)).join()}
-                            </frames>
+                            </custom-frameset>
                         </xml>`;
 
         this.emit('workspaceUpdate', {xml: xmlString});

@@ -135,32 +135,69 @@ const domToBlock = function (blockDOM, blocks, isTopBlock, parent) {
 };
 
 /**
- * Convert outer blocks DOM from a Blockly CREATE event
- * to a usable form for the Scratch runtime.
- * This structure is based on Blockly xml.js:`domToWorkspace` and `domToBlock`.
- * @param {Element} blocksDOM DOM tree for this event.
- * @return {Array.<object>} Usable list of blocks from this CREATE event.
+ * Convert and an individual frame DOM to the representation tree.
+ * @param {Element} frameDOM DOM tree for an individual frame.
+ * @param {object} frames Collection of frames to add to.
+ * @return {undefined}
  */
-const domToBlocks = function (blocksDOM) {
-    // At this level, there could be multiple blocks adjacent in the DOM tree.
-    const blocks = {};
-    for (let i = 0; i < blocksDOM.length; i++) {
-        const block = blocksDOM[i];
-        if (!block.name || !block.attribs) {
+const domToFrame = function (frameDOM, frames) {
+    if (!frameDOM.attribs.id) {
+        frameDOM.attribs.id = uid();
+    }
+    const frame = {
+        id: frameDOM.attribs.id,
+        title: frameDOM.attribs.title,
+        color: frameDOM.attribs.color,
+        locked: frameDOM.attribs.locked === 'true',
+        blocks: frameDOM.attribs.blocks.split(' '),
+        width: frameDOM.attribs.width,
+        height: frameDOM.attribs.height,
+        x: frameDOM.attribs.x,
+        y: frameDOM.attribs.y,
+        blockElements: {}
+    };
+
+    for (let i = 0; i < frameDOM.children.length; i++) {
+        const element = frameDOM.children[i];
+        const tagName = element.name.toLowerCase();
+        if (tagName === 'block' || tagName === 'shadow') {
+            domToBlock(element, frame.blockElements, true, null);
+        }
+    }
+
+    // Add the block to the representation tree.
+    frames[frame.id] = frame;
+};
+
+/**
+ * Convert outer elements DOM from a Blockly CREATE event
+ * to a usable form for the Scratch runtime.
+ * This structure is based on Blockly xml.js:`domToFrame` and `domToBlock`.
+ * @param {Element} elementsDOM DOM tree for this event.
+ * @return {Array.<object>} Usable list of elements from this CREATE event.
+ */
+const domToBlocksOrFrames = function (elementsDOM) {
+    // At this level, there could be multiple elements adjacent in the DOM tree.
+    const elements = {};
+    for (let i = 0; i < elementsDOM.length; i++) {
+        const element = elementsDOM[i];
+        if (!element.name || !element.attribs) {
             continue;
         }
-        const tagName = block.name.toLowerCase();
+        const tagName = element.name.toLowerCase();
         if (tagName === 'block' || tagName === 'shadow') {
-            domToBlock(block, blocks, true, null);
+            domToBlock(element, elements, true, null);
+        } else if (tagName === 'custom-frame') {
+            domToFrame(element, elements);
         }
     }
-    // Flatten blocks object into a list.
-    const blocksList = [];
-    for (const b in blocks) {
-        if (!blocks.hasOwnProperty(b)) continue;
-        blocksList.push(blocks[b]);
+    // Flatten elements object into a list.
+    const elementsList = [];
+    for (const b in elements) {
+        if (!elements.hasOwnProperty(b)) continue;
+        elementsList.push(elements[b]);
     }
-    return blocksList;
+    return elementsList;
 };
 
 /**
@@ -174,7 +211,7 @@ const adapter = function (e) {
     if (typeof e !== 'object') return;
     if (typeof e.xml !== 'object') return;
 
-    return domToBlocks(html.parseDOM(e.xml.outerHTML, {decodeEntities: true}));
+    return domToBlocksOrFrames(html.parseDOM(e.xml.outerHTML, {decodeEntities: true}));
 };
 
 module.exports = adapter;
