@@ -144,12 +144,21 @@ class Sprite {
 
     duplicate () {
         const newSprite = new Sprite(null, this.runtime);
+
         const blocksContainer = this.blocks._blocks;
         const originalBlocks = Object.keys(blocksContainer).map(key => blocksContainer[key]);
         const copiedBlocks = JSON.parse(JSON.stringify(originalBlocks));
-        newBlockIds(copiedBlocks);
+        const blockIdOldToNewMap = newBlockIds(copiedBlocks);
         copiedBlocks.forEach(block => {
             newSprite.blocks.createBlock(block);
+        });
+    
+        const framesContainer = this.frames._frames;
+        const originalFrames = Object.keys(framesContainer).map(key => framesContainer[key]);
+        const copiedFrames = JSON.parse(JSON.stringify(originalFrames));
+        copiedFrames.forEach(frame => {
+            frame.blocks = frame.blocks.map(blockId => blockIdOldToNewMap[blockId]);
+            newSprite.frames.createFrame(frame);
         });
 
 

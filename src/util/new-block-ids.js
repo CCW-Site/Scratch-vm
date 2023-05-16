@@ -7,11 +7,13 @@ const uid = require('./uid');
  */
 module.exports = blocks => {
     const oldToNew = {};
+    const map = {};
 
     // First update all top-level IDs and create old-to-new mapping
     for (let i = 0; i < blocks.length; i++) {
         const newId = uid();
         const oldId = blocks[i].id;
+        map[oldId] = newId;
         blocks[i].id = oldToNew[oldId] = newId;
     }
 
@@ -30,4 +32,6 @@ module.exports = blocks => {
             blocks[i].next = oldToNew[blocks[i].next];
         }
     }
+
+    return map;
 };

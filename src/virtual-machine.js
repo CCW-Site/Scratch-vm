@@ -2316,6 +2316,7 @@ class VirtualMachine extends EventEmitter {
     async shareFrameToTarget (frame, targetId, optFromTargetId) {
         const copiedFrame = JSON.parse(JSON.stringify(frame));
         const blocks = copiedFrame.blockElements;
+        copiedFrame.id = generateUid();
         const target = this.runtime.getTargetById(targetId);
         if (Object.keys(blocks).length > 0) {
             const copiedBlocks = await this.shareBlocksToTarget(Object.values(blocks), targetId, optFromTargetId);

@@ -214,6 +214,7 @@ class Frames {
         if (!frame) return;
         return `<custom-frame
                 id="${frame.id}"
+                title="${frame.title}"
                 color="${frame.color}"
                 locked="${frame.locked}"
                 ${frame.blocks ? `blocks="${JSON.stringify(frame.blocks)}"` : ''}
@@ -227,6 +228,7 @@ class Frames {
     frameToXML (frame) {
         return `<custom-frame
                 id="${frame.id}"
+                title="${frame.title}"
                 color="${frame.color}"
                 locked="${frame.locked}"
                 ${frame.blocks ? `blocks="${frame.blocks.join(' ')}"` : ''}
