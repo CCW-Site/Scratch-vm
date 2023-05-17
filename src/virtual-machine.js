@@ -221,11 +221,11 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.FRAME_DRAG_UPDATE, areBlocksOverGui => {
             this.emit(Runtime.FRAME_DRAG_UPDATE, areBlocksOverGui);
         });
-        this.runtime.on(Runtime.BLOCK_DRAG_END, (blocks, topBlockId, newBatchBlocks) => {
-            this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId, newBatchBlocks);
+        this.runtime.on(Runtime.BLOCK_DRAG_END, (blocks, newBatchElements) => {
+            this.emit(Runtime.BLOCK_DRAG_END, blocks, newBatchElements);
         });
-        this.runtime.on(Runtime.FRAME_DRAG_END, (frame, batchFrames) => {
-            this.emit(Runtime.FRAME_DRAG_END, frame, batchFrames);
+        this.runtime.on(Runtime.FRAME_DRAG_END, (frame, newBatchElements) => {
+            this.emit(Runtime.FRAME_DRAG_END, frame, newBatchElements);
         });
         this.runtime.on(Runtime.EXTENSION_ADDED, categoryInfo => {
             this.emit(Runtime.EXTENSION_ADDED, categoryInfo);
@@ -2266,7 +2266,7 @@ class VirtualMachine extends EventEmitter {
         const sb3 = require('./serialization/sb3');
 
         const copiedBlocks = JSON.parse(JSON.stringify(blocks));
-        newBlockIds(copiedBlocks);
+        const blockIdOldToNewMap = newBlockIds(copiedBlocks);
         const target = this.runtime.getTargetById(targetId);
 
         if (optFromTargetId) {
@@ -2300,7 +2300,7 @@ class VirtualMachine extends EventEmitter {
                 {type: 'delete_next_create', blockId: copiedBlocks[0].id}
             );
             target.blocks.updateTargetSpecificBlocks(target.isStage);
-            return copiedBlocks;
+            return blockIdOldToNewMap;
         });
     }
 
@@ -2319,13 +2319,8 @@ class VirtualMachine extends EventEmitter {
         copiedFrame.id = generateUid();
         const target = this.runtime.getTargetById(targetId);
         if (Object.keys(blocks).length > 0) {
-            const copiedBlocks = await this.shareBlocksToTarget(Object.values(blocks), targetId, optFromTargetId);
-            copiedFrame.blocks = copiedBlocks.reduce((acc, block) => {
-                if (block.shadow) {
-                    return acc;
-                }
-                return acc.concat(block.id);
-            }, []);
+            const blockIdOldToNewMap = await this.shareBlocksToTarget(Object.values(blocks), targetId, optFromTargetId);
+            copiedFrame.blocks = copiedFrame.blocks.map(blockId => blockIdOldToNewMap[blockId]);
         }
         target.createFrame(copiedFrame);
         target.blocks.updateTargetSpecificBlocks(target.isStage);

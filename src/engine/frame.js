@@ -58,8 +58,8 @@ class Frames {
                 // Drag frame into another sprite
                 if (e.isOutside) {
                     const newFrame = adapter(e);
-                    const newBatchFrame = e.batchFramesXml.map(xml => adapter({xml: xml}));
-                    this.runtime.emitFrameEndDrag(newFrame[0], newBatchFrame);
+                    const newBatchElements = e.batchElements.map(elements => elements.map(xml => adapter({xml: xml})));
+                    this.runtime.emitFrameEndDrag(newFrame[0], newBatchElements);
                 }
                 break;
             case 'frame_drag_outside':

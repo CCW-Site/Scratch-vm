@@ -3085,20 +3085,19 @@ class Runtime extends EventEmitter {
     /**
      * Emit event to indicate that the block drag has ended with the blocks outside the blocks workspace
      * @param {Array.<object>} blocks The set of blocks dragged to the GUI
-     * @param {string} topBlockId The original id of the top block being dragged
-     * @param {Array.<object>} newBatchBlocks The set of batch selected blocks head block
+     * @param {Array.<object>} newBatchElements The set of batch selected blocks or frames
      */
-    emitBlockEndDrag (blocks, topBlockId, newBatchBlocks) {
-        this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId, newBatchBlocks);
+    emitBlockEndDrag (blocks, newBatchElements) {
+        this.emit(Runtime.BLOCK_DRAG_END, blocks, newBatchElements);
     }
 
     /**
      * Emit event to indicate that the frame drag has ended with the blocks outside the blocks workspace
      * @param {Array.<object>} frame The frame dragged to the GUI
-     * @param {Array.<object>=} batchFrames The set of batch selected blocks head block
+     * @param {Array.<object>=} newBatchElements The set of batch selected blocks or frames
      */
-    emitFrameEndDrag (frame, batchFrames) {
-        this.emit(Runtime.FRAME_DRAG_END, frame, batchFrames);
+    emitFrameEndDrag (frame, newBatchElements) {
+        this.emit(Runtime.FRAME_DRAG_END, frame, newBatchElements);
     }
 
     /**
