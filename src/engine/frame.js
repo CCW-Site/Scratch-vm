@@ -188,11 +188,11 @@ class Frames {
             break;
         case 'color':
             didChange = frame.color !== value;
-            frame.color = value;
+            frame.color = value.color;
             break;
         case 'locked':
             didChange = frame.locked !== value;
-            frame.locked = value;
+            frame.locked = value.locked;
             break;
         default:
             break;
