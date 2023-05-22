@@ -1113,7 +1113,6 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
     if (object.hasOwnProperty('frames')) {
         for (const frameId in object.frames) {
             const frameJSON = object.frames[frameId];
-            frameJSON.frameId = frameId;
             target.createFrame(frameJSON);
         }
     }

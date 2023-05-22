@@ -330,12 +330,7 @@ class Target extends EventEmitter {
      * @param {number} height The height of the frame when it is full size
      */
     createFrame (frame) {
-        if (!this.frames.getFrame(frame.id)) {
-            this.frames.createFrame({
-                frameId: frame.id,
-                ...frame
-            });
-        }
+        return this.frames.createFrame(frame);
     }
 
     /**

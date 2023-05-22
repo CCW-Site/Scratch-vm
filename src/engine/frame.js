@@ -50,6 +50,9 @@ class Frames {
         if (typeof e !== 'object' || typeof e.frameId !== 'string') {
             return;
         }
+
+        e.id = e.frameId;
+
         const currTarget = this.runtime.getEditingTarget();
         if (currTarget) {
             switch (e.type) {
@@ -67,22 +70,22 @@ class Frames {
                 break;
             case 'frame_create':
                 if (this.createFrame(e)) {
-                    this.runtime.emitTargetFramesChanged(currTarget.id, ['add', e.frameId, this._frames[e.frameId]]);
+                    this.runtime.emitTargetFramesChanged(currTarget.id, ['add', e.id, this._frames[e.id]]);
                 }
                 break;
             case 'frame_delete':
-                if (this.deleteFrame(e.frameId)) {
-                    this.runtime.emitTargetFramesChanged(currTarget.id, ['delete', e.frameId]);
+                if (this.deleteFrame(e.id)) {
+                    this.runtime.emitTargetFramesChanged(currTarget.id, ['delete', e.id]);
                 }
                 break;
             case 'frame_retitle':
-                if (this.retitleFrame(e.frameId, e.newTitle)) {
-                    this.runtime.emitTargetFramesChanged(currTarget.id, ['update', e.frameId, {title: e.newTitle}]);
+                if (this.retitleFrame(e.id, e.newTitle)) {
+                    this.runtime.emitTargetFramesChanged(currTarget.id, ['update', e.id, {title: e.newTitle}]);
                 }
                 break;
             case 'frame_change':
-                if (this.changeFrame(e.frameId, e.element, e.newValue)) {
-                    this.runtime.emitTargetFramesChanged(currTarget.id, ['update', e.frameId, {...e.newValue}]);
+                if (this.changeFrame(e.id, e.element, e.newValue)) {
+                    this.runtime.emitTargetFramesChanged(currTarget.id, ['update', e.id, {...e.newValue}]);
                 }
                 break;
             }
@@ -106,12 +109,12 @@ class Frames {
     createFrame (e) {
         // Does the frame already exist?
         // Could happen, e.g., for an unobscured shadow.
-        if (this._frames.hasOwnProperty(e.frameId)) {
+        if (this._frames.hasOwnProperty(e.id)) {
             return false;
         }
         // Create new frame.
-        this._frames[e.frameId] = {
-            id: e.frameId,
+        this._frames[e.id] = {
+            id: e.id,
             title: e.title,
             color: e.color,
             locked: e.locked,
@@ -127,49 +130,49 @@ class Frames {
 
     /**
      * Frame management: delete frame. Does nothing if a frame with the given ID does not exist.
-     * @param {!string} frameId Id of frame to delete
+     * @param {!string} id Id of frame to delete
      */
-    deleteFrame (frameId) {
+    deleteFrame (id) {
         // Get frame
-        const frame = this._frames[frameId];
+        const frame = this._frames[id];
         if (!frame) {
             // No frame with the given ID exists
             return false;
         }
     
         // Delete frame itself.
-        delete this._frames[frameId];
+        delete this._frames[id];
         this.emitProjectChanged();
         return true;
     }
 
     /**
      * Frame management: delete frame. Does nothing if a frame with the given ID does not exist.
-     * @param {!string} frameId Id of frame to delete
+     * @param {!string} id Id of frame to delete
      * @param {!string} newTitle New title
      */
-    retitleFrame (frameId, newTitle) {
+    retitleFrame (id, newTitle) {
         // Get frame
-        const frame = this._frames[frameId];
+        const frame = this._frames[id];
         if (!frame) {
             // No frame with the given ID exists
             return false;
         }
     
         // Retitle this frame
-        this._frames[frameId].title = newTitle;
+        this._frames[id].title = newTitle;
         this.emitProjectChanged();
         return true;
     }
 
     /**
      * Frame management: change frame field values
-     * @param {!string} frameId Id of the frame
+     * @param {!string} id Id of the frame
      * @param {string} element One of 'rect', 'blocks', 'disabled', etc.
      * @param {*} value Previous value of element.
      */
-    changeFrame (frameId, element, value) {
-        const frame = this._frames[frameId];
+    changeFrame (id, element, value) {
+        const frame = this._frames[id];
         let didChange = false;
         if (typeof frame === 'undefined') return didChange;
         switch (element) {
@@ -203,11 +206,11 @@ class Frames {
 
     /**
      * Recursively encode an individual frame into a Blockly/scratch-block XML string.
-     * @param {!string} frameId ID of frame to encode.
+     * @param {!string} id ID of frame to encode.
      * @return {string} String of XML representing this frame.
      */
-    toXML (frameId) {
-        const frame = this._frames[frameId];
+    toXML (id) {
+        const frame = this._frames[id];
         // frame should exist, but currently some frames' next property point
         // to a frameId for non-existent frames. Until we track down that behavior,
         // this early exit allows the project to load.
