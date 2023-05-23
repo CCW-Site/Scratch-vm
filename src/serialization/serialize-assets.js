@@ -13,6 +13,11 @@ const serializeAssets = function (runtime, assetType, optTargetId) {
     const assetDescs = [];
     for (let i = 0; i < targets.length; i++) {
         const currTarget = targets[i];
+        // Got error report that cuurTarget may undefined sometimes
+        // Possible cause: cuurTarget get a cloned target, and the clone was deleted in same time.
+        // unlimited clone max number may cause this problem.
+        // make sure currTarget is not undefined
+        if (!currTarget) continue;
         const currAssets = currTarget.sprite[assetType];
         for (let j = 0; j < currAssets.length; j++) {
             const currAsset = currAssets[j];
