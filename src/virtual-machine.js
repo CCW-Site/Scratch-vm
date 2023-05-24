@@ -2323,6 +2323,7 @@ class VirtualMachine extends EventEmitter {
             copiedFrame.blocks = copiedFrame.blocks.map(blockId => blockIdOldToNewMap[blockId]);
         }
         target.createFrame(copiedFrame);
+        this.runtime.emitTargetFramesChanged(targetId, ['add', copiedFrame.id, copiedFrame]);
         target.blocks.updateTargetSpecificBlocks(target.isStage);
     }
 
