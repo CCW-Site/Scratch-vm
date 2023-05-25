@@ -217,7 +217,7 @@ class Frames {
         if (!frame) return;
         return `<custom-frame
                 id="${frame.id}"
-                title="${frame.title}"
+                title="${xmlEscape(frame.title)}"
                 color="${frame.color}"
                 locked="${frame.locked}"
                 ${frame.blocks ? `blocks="${JSON.stringify(frame.blocks)}"` : ''}
@@ -225,13 +225,13 @@ class Frames {
                 y="${frame.y}"
                 width="${frame.width}"
                 height="${frame.height}"
-            >${xmlEscape(frame.title)}</custom-frame>`;
+            ></custom-frame>`;
     }
 
     frameToXML (frame) {
         return `<custom-frame
                 id="${frame.id}"
-                title="${frame.title}"
+                title="${xmlEscape(frame.title)}"
                 color="${frame.color}"
                 locked="${frame.locked}"
                 ${frame.blocks ? `blocks="${frame.blocks.join(' ')}"` : ''}
@@ -239,7 +239,7 @@ class Frames {
                 y="${frame.y}"
                 width="${frame.width}"
                 height="${frame.height}"
-            >${xmlEscape(frame.title)}</custom-frame>`;
+            ></custom-frame>`;
     }
 }
 
