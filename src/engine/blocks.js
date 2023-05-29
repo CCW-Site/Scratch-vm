@@ -567,7 +567,7 @@ class Blocks {
             if (e.isOutside) {
                 const newBlocks = adapter(e);
                 const newBatchElements = e.batchElements.map(elements => elements.map(xml => adapter({xml: xml})));
-                this.runtime.emitBlockEndDrag(newBlocks, newBatchElements);
+                this.runtime.emitBlockEndDrag(newBlocks, e.blockId, newBatchElements);
             }
             break;
         case 'delete':

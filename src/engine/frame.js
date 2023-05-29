@@ -62,7 +62,7 @@ class Frames {
                 if (e.isOutside) {
                     const newFrame = adapter(e);
                     const newBatchElements = e.batchElements.map(elements => elements.map(xml => adapter({xml: xml})));
-                    this.runtime.emitFrameEndDrag(newFrame[0], newBatchElements);
+                    this.runtime.emitFrameEndDrag(newFrame[0], e.id, newBatchElements);
                 }
                 break;
             case 'frame_drag_outside':
