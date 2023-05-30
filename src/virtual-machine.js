@@ -191,8 +191,8 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.TARGET_COSTUME_CHANGED, (id, data) => {
             this.emit(Runtime.TARGET_COSTUME_CHANGED, id, data);
         });
-        this.runtime.on(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index => {
-            this.emit(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index);
+        this.runtime.on(Runtime.TARGET_CURRENT_COSTUME_CHANGED, index => {
+            this.emit(Runtime.TARGET_CURRENT_COSTUME_CHANGED, index);
         });
         this.runtime.on(Runtime.TARGET_VARIABLES_CHANGED, (id, data) => {
             this.emit(Runtime.TARGET_VARIABLES_CHANGED, id, data);
@@ -200,8 +200,8 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.MONITORS_CHANGED, data => {
             this.emit(Runtime.MONITORS_CHANGED, data);
         });
-        this.runtime.on(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, (order, data) => {
-            this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, order, data);
+        this.runtime.on(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, data => {
+            this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, data);
         });
         this.runtime.on(Runtime.VISUAL_REPORT, visualReport => {
             this.emit(Runtime.VISUAL_REPORT, visualReport);

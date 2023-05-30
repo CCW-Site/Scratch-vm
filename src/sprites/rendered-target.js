@@ -718,7 +718,7 @@ class RenderedTarget extends Target {
         this.sprite.deleteCostumeAt(costumeIndex);
         this.addCostume(costume, newIndex, true);
         this.currentCostume = this.getCostumeIndexByName(currentCostume.name);
-        this.runtime.emitTargetSimplePropertyChanged(this.id, {currentCostume: this.currentCostume});
+        this.runtime.emitTargetSimplePropertyChanged([[this.id, {currentCostume: this.currentCostume}]]);
         this.runtime.emitTargetCostumeChanged(this.id,
             ['costumes', costumeIndex, 'reorder', [costumeIndex, newIndex]]
         );

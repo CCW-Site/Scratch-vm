@@ -775,8 +775,8 @@ class Runtime extends EventEmitter {
      * Event name for editing target's currentCostome was changed.
      * @const {string}
      */
-    static get TARGET_CURRENT_COSTOME_CHANGED () {
-        return 'TARGET_CURRENT_COSTOME_CHANGED';
+    static get TARGET_CURRENT_COSTUME_CHANGED () {
+        return 'TARGET_CURRENT_COSTUME_CHANGED';
     }
 
     /**
@@ -3328,9 +3328,10 @@ class Runtime extends EventEmitter {
 
     /**
      * Report that the target has changed in a way that would affect serialization
+     * @param {Array<Array<string, object>>} data - An array consisting of roles that have undergone changes.
      */
-    emitTargetSimplePropertyChanged (order, data) {
-        this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, order, data);
+    emitTargetSimplePropertyChanged (data) {
+        this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, data);
     }
 
     /**
@@ -3357,8 +3358,8 @@ class Runtime extends EventEmitter {
     /**
      * Report that the target has changed in a way that would affect serialization
      */
-    emitTargetCurrentCostomeChanged (index) {
-        this.emit(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index);
+    emitTargetCurrentCostumeChanged (index) {
+        this.emit(Runtime.TARGET_CURRENT_COSTUME_CHANGED, index);
     }
 
     /**
