@@ -2561,22 +2561,23 @@ class VirtualMachine extends EventEmitter {
      * @returns {boolean} Whether a target was reordered.
      */
     reorderTarget (targetIndex, newIndex, isRemoteOperation) {
-        let targets = this.runtime.targets;
-        targetIndex = MathUtil.clamp(targetIndex, 0, targets.length - 1);
-        newIndex = MathUtil.clamp(newIndex, 0, targets.length - 1);
-        if (targetIndex === newIndex) return false;
-        const target = targets[targetIndex];
-        targets = targets
-            .slice(0, targetIndex)
-            .concat(targets.slice(targetIndex + 1));
-        targets.splice(newIndex, 0, target);
-        this.runtime.targets = targets;
+        const targets = [...this.runtime.targets];
+        const originalTargets = targets.filter(t => t.isOriginal);
+        const processedData = MathUtil.moveArrayElement(originalTargets, targetIndex, newIndex);
+        if (processedData.array === originalTargets) return false;
+
+        const target = originalTargets[processedData.fromIndex];
+        const newIndexTarget = originalTargets[processedData.toIndex];
+        const fromIndex = targets.findIndex(t => t.id === target.id);
+        const toIndex = targets.findIndex(t => t.id === newIndexTarget.id);
+        this.runtime.targets = MathUtil.moveArrayElement(targets, fromIndex, toIndex).array;
+
         if (!isRemoteOperation) {
-            const max = Math.max(targetIndex, newIndex) + 1;
-            const min = Math.min(targetIndex, newIndex);
+            const max = Math.max(processedData.fromIndex, processedData.toIndex) + 1;
+            const min = Math.min(processedData.fromIndex, processedData.toIndex);
             const list = [];
             for (let index = min; index < max; index++) {
-                const _target = targets[index];
+                const _target = originalTargets[index];
                 list.push([_target.id, {order: index}]);
             }
             this.runtime.emitTargetSimplePropertyChanged(list);
