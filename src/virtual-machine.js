@@ -2577,7 +2577,7 @@ class VirtualMachine extends EventEmitter {
             const min = Math.min(processedData.fromIndex, processedData.toIndex);
             const list = [];
             for (let index = min; index < max; index++) {
-                const _target = originalTargets[index];
+                const _target = processedData.array[index];
                 list.push([_target.id, {order: index}]);
             }
             this.runtime.emitTargetSimplePropertyChanged(list);
