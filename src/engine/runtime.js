@@ -27,10 +27,12 @@ const Mouse = require('../io/mouse');
 const MouseWheel = require('../io/mouseWheel');
 const UserData = require('../io/userData');
 const Video = require('../io/video');
+const Joystick = require('../io/joystick');
 
 const CallbackListGenerator = require('../util/callback-list-generator');
 const StringUtil = require('../util/string-util');
 const LogSystem = require('../util/log-system');
+const Gandi = require('../util/gandi');
 const uid = require('../util/uid');
 
 const defaultBlockPackages = {
@@ -382,6 +384,7 @@ class Runtime extends EventEmitter {
         // I/O related data.
         /** @type {Object.<string, Object>} */
         this.ioDevices = {
+            joystick: new Joystick(this),
             clock: new Clock(this),
             cloud: new Cloud(this),
             keyboard: new Keyboard(this),
@@ -456,6 +459,12 @@ class Runtime extends EventEmitter {
          * @type {LogSystem}
          */
         this.logSystem = new LogSystem();
+
+        /**
+         * New data structure in Gandi editor.
+         * @type {Gandi}
+         */
+        this.gandi = new Gandi(this);
 
         this._stageTarget = null;
 
@@ -732,11 +741,19 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * Event name for editing target's blocks was changed.
+     * Event name for mobile buttons visible was changed.
      * @const {string}
      */
     static get TARGET_BLOCKS_CHANGED () {
         return 'TARGET_BLOCKS_CHANGED';
+    }
+
+    /**
+     * Event name for editing target's blocks was changed.
+     * @const {string}
+     */
+    static get MOBILE_BUTTONS_VISIBLE_CHANGED () {
+        return 'MOBILE_BUTTONS_VISIBLE_CHANGED';
     }
 
     /**
@@ -3319,6 +3336,10 @@ class Runtime extends EventEmitter {
         this.emit(Runtime.EXTENSIONS_CHANGED);
     }
 
+    emitMobileButtonsVisibleChanged (value) {
+        this.emit(Runtime.MOBILE_BUTTONS_VISIBLE_CHANGED, value);
+    }
+
     /**
      * Report that the target has changed in a way that would affect serialization
      */
@@ -3589,15 +3610,12 @@ class Runtime extends EventEmitter {
     }
 
     getGandiAssetsList (type) {
-        if (this.gandi && this.gandi.assets) {
-            return this.gandi.assets.filter(obj => {
-                if (type) {
-                    return obj.dataFormat === type;
-                }
-                return true;
-            });
-        }
-        return [];
+        return this.gandi.assets.filter(obj => {
+            if (type) {
+                return obj.dataFormat === type;
+            }
+            return true;
+        });
     }
 
     getGandiAssetContent (fileName) {
@@ -3609,26 +3627,17 @@ class Runtime extends EventEmitter {
     }
 
     getGandiAssetsFileList (type) {
-        if (this.gandi && this.gandi.assets) {
-            const res = this.gandi.assets.filter(obj => {
-                if (type) {
-                    return obj.dataFormat === type;
-                }
-                return true;
-            });
-            return res.map(obj => ({name: `${obj.name}.${obj.dataFormat}`, dataFormat: obj.dataFormat}));
-        }
-        return [];
+        const res = this.gandi.assets.filter(obj => {
+            if (type) {
+                return obj.dataFormat === type;
+            }
+            return true;
+        });
+        return res.map(obj => ({name: `${obj.name}.${obj.dataFormat}`, dataFormat: obj.dataFormat}));
     }
 
     getGandiAssetFile (fileName) {
-        if (this.gandi && this.gandi.assets) {
-            const file = this.gandi.assets.find(obj => `${obj.name}.${obj.dataFormat}` === fileName);
-            if (file) {
-                return file;
-            }
-        }
-        return null;
+        return this.gandi.assets.find(obj => `${obj.name}.${obj.dataFormat}` === fileName);
     }
 
     addWaitingLoadCallback (callback) {

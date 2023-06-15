@@ -179,6 +179,9 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.PROJECT_CHANGED, () => {
             this.emit(Runtime.PROJECT_CHANGED);
         });
+        this.runtime.on(Runtime.MOBILE_BUTTONS_VISIBLE_CHANGED, value => {
+            this.emit(Runtime.MOBILE_BUTTONS_VISIBLE_CHANGED, value);
+        });
         this.runtime.on(Runtime.TARGET_BLOCKS_CHANGED, (targetId, blocks, ext) => {
             this.emit(Runtime.TARGET_BLOCKS_CHANGED, targetId, blocks, ext);
         });
@@ -806,12 +809,6 @@ class VirtualMachine extends EventEmitter {
         const fileName = `${name}.${assetType.runtimeFormat}`;
         if (this.getGandiAssetFile(fileName)) {
             throw new Error(`Asset with name ${fileName} already exists`);
-        }
-        if (!this.runtime.gandi) {
-            this.runtime.gandi = {};
-        }
-        if (!this.runtime.gandi.assets) {
-            this.runtime.gandi.assets = [];
         }
         const storage = this.runtime.storage;
         const obj = {name};
@@ -1463,6 +1460,35 @@ class VirtualMachine extends EventEmitter {
         return null;
     }
 
+    setVirtualControlConfig (config) {
+        this.runtime.gandi.virtualControlConfig = config;
+        this.runtime.emitProjectChanged();
+    }
+
+    getVirtualControlConfig () {
+        return this.runtime.gandi.virtualControlConfig;
+    }
+
+    getMonitoredKeys () {
+        const opcodes = new Set(
+            ['event_whenkeypressed', 'sensing_keyoptions', 'GandiMobileButtonConfig_whenJoystickMoved']
+        );
+        const keys = new Set();
+        const targets = [...this.runtime.targets];
+        for (let i = 0; i < targets.length; i++) {
+            if (!targets[i].isOriginal) continue;
+            const blocks = Object.values(targets[i].blocks._blocks);
+            for (let j = 0; j < blocks.length; j++) {
+                const block = blocks[j];
+                if (opcodes.has(block.opcode)) {
+                    const field = block.fields.KEY_OPTION || block.fields.JOYSTICK;
+                    keys.add(field.value);
+                }
+            }
+        }
+        return [...keys];
+    }
+
     /**
      * Update a sound buffer.
      * @param {int} soundIndex - the index of the sound to be updated.
@@ -1716,9 +1742,6 @@ class VirtualMachine extends EventEmitter {
     }
 
     updateGandiAssetFromRemote (uid, newAsset) {
-        if (!this.runtime.gandi) {
-            this.runtime.gandi = {assets: [], wildExtensions: {}};
-        }
         const file = {
             asset: null,
             uid,
@@ -1740,9 +1763,6 @@ class VirtualMachine extends EventEmitter {
     }
 
     addGandiAssetFromRemote (uid, newAsset) {
-        if (!this.runtime.gandi) {
-            this.runtime.gandi = {assets: [], wildExtensions: {}};
-        }
         const file = {
             asset: null,
             uid,
@@ -1758,9 +1778,6 @@ class VirtualMachine extends EventEmitter {
     }
 
     deleteGandiAssetFromRemote (uid) {
-        if (!this.runtime.gandi) {
-            this.runtime.gandi = {assets: [], wildExtensions: {}};
-        }
         if (uid && this.runtime.gandi.assets.length > 0) {
             const index = this.runtime.gandi.assets.findIndex(asset => asset.uid === uid);
             if (index > -1) {
@@ -1783,9 +1800,9 @@ class VirtualMachine extends EventEmitter {
      */
     renameGandiAsset (fileName, newName) {
         const file = this.getGandiAssetFile(fileName);
-        const newfileName = `${newName}.${file.dataFormat}`;
-        if (this.getGandiAssetFile(newfileName)) {
-            throw new Error(`Asset with name ${newfileName} already exists`);
+        const newFileName = `${newName}.${file.dataFormat}`;
+        if (this.getGandiAssetFile(newFileName)) {
+            throw new Error(`Asset with name ${newFileName} already exists`);
         }
         file.name = newName;
         this.emitGandiAssetsUpdate({type: 'update', data: file});

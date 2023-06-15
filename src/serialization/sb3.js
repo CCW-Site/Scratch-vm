@@ -631,28 +631,7 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
         obj.monitors = serializeMonitors(runtime.getMonitorState(), runtime);
     }
 
-    // Assemble Gandi Asset
-    if (runtime.gandi) {
-        const gandiAssetsList = runtime.gandi.assets.map(gandiAsset => {
-            const item = Object.create(null);
-            item.uid = gandiAsset.uid;
-            item.assetId = gandiAsset.assetId;
-            item.name = gandiAsset.name;
-            item.md5ext = gandiAsset.md5;
-            item.dataFormat = gandiAsset.dataFormat.toLowerCase();
-            if (item.dataFormat === 'py' || item.dataFormat === 'json') {
-                // py and json file need GandiPython extension to run
-                extensions.add('GandiPython');
-            }
-            return item;
-        });
-        obj.gandi = {
-            assets: runtime.isTeamworkMode ?
-                gandiAssetsList.reduce((a, asset) => ({...a, [asset.assetId]: asset}), {}) :
-                gandiAssetsList,
-            wildExtensions: runtime.gandi.wildExtensions || {}
-        };
-    }
+    runtime.gandi.serialize(obj, extensions);
 
     // Assemble extension list
     obj.extensions = Array.from(extensions);
@@ -1381,7 +1360,6 @@ const replaceUnsafeCharsInVariableIds = function (targets) {
 };
 
 const parseGandiObject = (gandiObject, runtime) => {
-    runtime.gandi = {assets: [], wildExtensions: {}};
     if (gandiObject.assets && isArray(gandiObject.assets)) {
         const filePromises = (gandiObject.assets || []).map(file => {
             const gandiAsset = {
@@ -1397,6 +1375,9 @@ const parseGandiObject = (gandiObject, runtime) => {
         Promise.all(filePromises).then(gandiAssets => {
             runtime.gandi.assets = gandiAssets;
         });
+    }
+    if (gandiObject.virtualControlConfig) {
+        runtime.gandi.virtualControlConfig = gandiObject.virtualControlConfig;
     }
     if (gandiObject.wildExtensions) {
         runtime.gandi.wildExtensions = gandiObject.wildExtensions;
