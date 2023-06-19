@@ -22,6 +22,10 @@ class Gandi {
         return this.properties.every(key => this.isEmptyObject(this[key]));
     }
 
+    istPropertyEmpty (propertyName) {
+        return this.isEmptyObject(this[propertyName]);
+    }
+
     serializeAssets (extensions) {
         return this.assets.reduce((acc, gandiAsset) => {
             const item = Object.create(null);
@@ -39,7 +43,7 @@ class Gandi {
     }
 
     isEmptyObject (object) {
-        return typeof object === 'object' ? Object.keys(object).length === 0 : false;
+        return typeof object === 'object' ? Object.keys(object).length === 0 : Boolean(object);
     }
 
     serialize (object, extensions) {
