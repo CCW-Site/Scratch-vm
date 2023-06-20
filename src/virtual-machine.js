@@ -1471,7 +1471,13 @@ class VirtualMachine extends EventEmitter {
 
     getMonitoredKeys () {
         const opcodes = new Set(
-            ['event_whenkeypressed', 'sensing_keyoptions', 'GandiJoystick_whenJoystickMoved']
+            [
+                'event_whenkeypressed',
+                'sensing_keyoptions',
+                'GandiJoystick_whenJoystickMoved',
+                'GandiJoystick_getJoystickDistance',
+                'GandiJoystick_getJoystickDirection'
+            ]
         );
         const keys = new Set();
         const targets = [...this.runtime.targets];
