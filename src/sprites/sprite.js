@@ -5,6 +5,7 @@ const {loadCostumeFromAsset} = require('../import/load-costume');
 const newBlockIds = require('../util/new-block-ids');
 const StringUtil = require('../util/string-util');
 const StageLayering = require('../engine/stage-layering');
+const Frames = require('../engine/frame');
 
 class Sprite {
     /**
@@ -13,15 +14,21 @@ class Sprite {
      * shared sounds, etc.
      * @param {?Blocks} blocks Shared blocks object for all clones of sprite.
      * @param {Runtime} runtime Reference to the runtime.
+     * @param {?Frames} frames Shared frames object for all clones of sprite.
      * @constructor
      */
-    constructor (blocks, runtime) {
+    constructor (blocks, runtime, frames) {
         this.runtime = runtime;
         if (!blocks) {
             // Shared set of blocks for all clones.
             blocks = new Blocks(runtime);
         }
         this.blocks = blocks;
+        if (!frames) {
+            // Shared set of frames for all clones.
+            frames = new Frames(runtime);
+        }
+        this.frames = frames;
         /**
          * Human-readable name for this sprite (and all clones).
          * @type {string}
@@ -137,12 +144,21 @@ class Sprite {
 
     duplicate () {
         const newSprite = new Sprite(null, this.runtime);
+
         const blocksContainer = this.blocks._blocks;
         const originalBlocks = Object.keys(blocksContainer).map(key => blocksContainer[key]);
         const copiedBlocks = JSON.parse(JSON.stringify(originalBlocks));
-        newBlockIds(copiedBlocks);
+        const blockIdOldToNewMap = newBlockIds(copiedBlocks);
         copiedBlocks.forEach(block => {
             newSprite.blocks.createBlock(block);
+        });
+    
+        const framesContainer = this.frames._frames;
+        const originalFrames = Object.keys(framesContainer).map(key => framesContainer[key]);
+        const copiedFrames = JSON.parse(JSON.stringify(originalFrames));
+        copiedFrames.forEach(frame => {
+            frame.blocks = frame.blocks.map(blockId => blockIdOldToNewMap[blockId]);
+            newSprite.frames.createFrame(frame);
         });
 
 

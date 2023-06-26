@@ -756,6 +756,14 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for editing target's frames was changed.
+     * @const {string}
+     */
+    static get TARGET_FRAMES_CHANGED () {
+        return 'TARGET_FRAMES_CHANGED';
+    }
+
+    /**
      * Event name for editing target's costome was changed.
      * @const {string}
      */
@@ -767,8 +775,8 @@ class Runtime extends EventEmitter {
      * Event name for editing target's currentCostome was changed.
      * @const {string}
      */
-    static get TARGET_CURRENT_COSTOME_CHANGED () {
-        return 'TARGET_CURRENT_COSTOME_CHANGED';
+    static get TARGET_CURRENT_COSTUME_CHANGED () {
+        return 'TARGET_CURRENT_COSTUME_CHANGED';
     }
 
     /**
@@ -846,6 +854,22 @@ class Runtime extends EventEmitter {
      */
     static get BLOCK_DRAG_UPDATE () {
         return 'BLOCK_DRAG_UPDATE';
+    }
+
+    /**
+     * Event name for frame drag update.
+     * @const {string}
+     */
+    static get FRAME_DRAG_UPDATE () {
+        return 'FRAME_DRAG_UPDATE';
+    }
+
+    /**
+     * Event name for frame drag update.
+     * @const {string}
+     */
+    static get FRAME_DRAG_END () {
+        return 'FRAME_DRAG_END';
     }
 
     /**
@@ -3051,13 +3075,31 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Emit whether frame are being dragged over gui
+     * @param {boolean} areBlocksOverGui True if frame are dragged out of the workspace, false otherwise
+     */
+    emitFrameDragUpdate (areBlocksOverGui) {
+        this.emit(Runtime.FRAME_DRAG_UPDATE, areBlocksOverGui);
+    }
+
+    /**
      * Emit event to indicate that the block drag has ended with the blocks outside the blocks workspace
      * @param {Array.<object>} blocks The set of blocks dragged to the GUI
      * @param {string} topBlockId The original id of the top block being dragged
-     * @param {Array.<object>} newBatchBlocks The set of batch selected blocks head block
+     * @param {Array.<object>} newBatchElements The set of batch selected blocks or frames
      */
-    emitBlockEndDrag (blocks, topBlockId, newBatchBlocks) {
-        this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId, newBatchBlocks);
+    emitBlockEndDrag (blocks, topBlockId, newBatchElements) {
+        this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId, newBatchElements);
+    }
+
+    /**
+     * Emit event to indicate that the frame drag has ended with the blocks outside the blocks workspace
+     * @param {Array.<object>} frame The frame dragged to the GUI
+     * @param {string} frameId The original id of the frame being dragged
+     * @param {Array.<object>=} newBatchElements The set of batch selected blocks or frames
+     */
+    emitFrameEndDrag (frame, frameId, newBatchElements) {
+        this.emit(Runtime.FRAME_DRAG_END, frame, frameId, newBatchElements);
     }
 
     /**
@@ -3286,9 +3328,10 @@ class Runtime extends EventEmitter {
 
     /**
      * Report that the target has changed in a way that would affect serialization
+     * @param {Array<Array<string, object>>} data - An array consisting of roles that have undergone changes.
      */
-    emitTargetSimplePropertyChanged (order, data) {
-        this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, order, data);
+    emitTargetSimplePropertyChanged (data) {
+        this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, data);
     }
 
     /**
@@ -3301,6 +3344,13 @@ class Runtime extends EventEmitter {
     /**
      * Report that the target has changed in a way that would affect serialization
      */
+    emitTargetFramesChanged (targeId, data) {
+        this.emit(Runtime.TARGET_FRAMES_CHANGED, targeId, data);
+    }
+
+    /**
+     * Report that the target has changed in a way that would affect serialization
+     */
     emitTargetCostumeChanged (id, data) {
         this.emit(Runtime.TARGET_COSTUME_CHANGED, id, data);
     }
@@ -3308,8 +3358,8 @@ class Runtime extends EventEmitter {
     /**
      * Report that the target has changed in a way that would affect serialization
      */
-    emitTargetCurrentCostomeChanged (index) {
-        this.emit(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index);
+    emitTargetCurrentCostumeChanged (index) {
+        this.emit(Runtime.TARGET_CURRENT_COSTUME_CHANGED, index);
     }
 
     /**

@@ -65,6 +65,24 @@ class MathUtil {
     }
 
     /**
+     * Removes an element from the given array at the specified index and inserts it at a new index.
+     * @param {Array} array - The index of the element to remove.
+     * @param {number} fromIndex - The original index of the element to be swapped.
+     * @param {number} toIndex - The index to insert the removed element into.
+     */
+    static moveArrayElement (array, fromIndex, toIndex) {
+        fromIndex = MathUtil.clamp(fromIndex, 0, array.length - 1);
+        toIndex = MathUtil.clamp(toIndex, 0, array.length - 1);
+        if (fromIndex === toIndex) {
+            return {array, item: array[fromIndex], fromIndex, toIndex};
+        }
+        const newArr = [...array];
+        const deletedItem = newArr.splice(fromIndex, 1);
+        newArr.splice(toIndex, 0, deletedItem[0]);
+        return {array: newArr, item: deletedItem[0], fromIndex, toIndex};
+    }
+
+    /**
      * Given an array of unique numbers,
      * returns a reduced array such that each element of the reduced array
      * represents the position of that element in a sorted version of the

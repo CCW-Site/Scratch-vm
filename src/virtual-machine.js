@@ -185,11 +185,14 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.TARGET_COMMENTS_CHANGED, (targetId, data) => {
             this.emit(Runtime.TARGET_COMMENTS_CHANGED, targetId, data);
         });
+        this.runtime.on(Runtime.TARGET_FRAMES_CHANGED, (targetId, data) => {
+            this.emit(Runtime.TARGET_FRAMES_CHANGED, targetId, data);
+        });
         this.runtime.on(Runtime.TARGET_COSTUME_CHANGED, (id, data) => {
             this.emit(Runtime.TARGET_COSTUME_CHANGED, id, data);
         });
-        this.runtime.on(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index => {
-            this.emit(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index);
+        this.runtime.on(Runtime.TARGET_CURRENT_COSTUME_CHANGED, index => {
+            this.emit(Runtime.TARGET_CURRENT_COSTUME_CHANGED, index);
         });
         this.runtime.on(Runtime.TARGET_VARIABLES_CHANGED, (id, data) => {
             this.emit(Runtime.TARGET_VARIABLES_CHANGED, id, data);
@@ -197,8 +200,8 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.MONITORS_CHANGED, data => {
             this.emit(Runtime.MONITORS_CHANGED, data);
         });
-        this.runtime.on(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, (order, data) => {
-            this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, order, data);
+        this.runtime.on(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, data => {
+            this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, data);
         });
         this.runtime.on(Runtime.VISUAL_REPORT, visualReport => {
             this.emit(Runtime.VISUAL_REPORT, visualReport);
@@ -215,8 +218,14 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.BLOCK_DRAG_UPDATE, areBlocksOverGui => {
             this.emit(Runtime.BLOCK_DRAG_UPDATE, areBlocksOverGui);
         });
-        this.runtime.on(Runtime.BLOCK_DRAG_END, (blocks, topBlockId, newBatchBlocks) => {
-            this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId, newBatchBlocks);
+        this.runtime.on(Runtime.FRAME_DRAG_UPDATE, areBlocksOverGui => {
+            this.emit(Runtime.FRAME_DRAG_UPDATE, areBlocksOverGui);
+        });
+        this.runtime.on(Runtime.BLOCK_DRAG_END, (blocks, topBlockId, newBatchElements) => {
+            this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId, newBatchElements);
+        });
+        this.runtime.on(Runtime.FRAME_DRAG_END, (frame, frameId, newBatchElements) => {
+            this.emit(Runtime.FRAME_DRAG_END, frame, frameId, newBatchElements);
         });
         this.runtime.on(Runtime.EXTENSION_ADDED, categoryInfo => {
             this.emit(Runtime.EXTENSION_ADDED, categoryInfo);
@@ -309,6 +318,7 @@ class VirtualMachine extends EventEmitter {
         }
 
         this.blockListener = this.blockListener.bind(this);
+        this.frameListener = this.frameListener.bind(this);
         this.flyoutBlockListener = this.flyoutBlockListener.bind(this);
         this.monitorBlockListener = this.monitorBlockListener.bind(this);
         this.variableListener = this.variableListener.bind(this);
@@ -1214,7 +1224,7 @@ class VirtualMachine extends EventEmitter {
      * @property {number} [bitmapResolution] - the resolution scale for a bitmap costume.
      * @param {string} optTargetId - the id of the target to add to, if not the editing target.
      * @param {string} optVersion - if this is 2, load costume as sb2, otherwise load costume as sb3.
-     * * @param {boolean} isRemoteOperation Whether this is a remote operation.
+     * @param {boolean} isRemoteOperation Whether this is a remote operation.
      * @returns {?Promise} - a promise that resolves when the costume has been added
      */
     addCostume (md5ext, costumeObject, optTargetId, optVersion, isRemoteOperation) {
@@ -2019,6 +2029,16 @@ class VirtualMachine extends EventEmitter {
      * Handle a Blockly event for the current editing target.
      * @param {!Blockly.Event} e Any Blockly event.
      */
+    frameListener (e) {
+        if (this.editingTarget && typeof e === 'object' && e.type.startsWith('frame_')) {
+            this.editingTarget.frames.blocklyListen(e);
+        }
+    }
+
+    /**
+     * Handle a Blockly event for the current editing target.
+     * @param {!Blockly.Event} e Any Blockly event.
+     */
     blockListener (e) {
         if (this.editingTarget) {
             this.editingTarget.blocks.blocklyListen(e, 'default');
@@ -2246,7 +2266,7 @@ class VirtualMachine extends EventEmitter {
         const sb3 = require('./serialization/sb3');
 
         const copiedBlocks = JSON.parse(JSON.stringify(blocks));
-        newBlockIds(copiedBlocks);
+        const blockIdOldToNewMap = newBlockIds(copiedBlocks);
         const target = this.runtime.getTargetById(targetId);
 
         if (optFromTargetId) {
@@ -2280,7 +2300,31 @@ class VirtualMachine extends EventEmitter {
                 {type: 'delete_next_create', blockId: copiedBlocks[0].id}
             );
             target.blocks.updateTargetSpecificBlocks(target.isStage);
+            return blockIdOldToNewMap;
         });
+    }
+
+    /**
+     * Called when frame are dragged from one sprite to another. Adds the frame to the
+     * workspace of the given target.
+     * @param {!Array<object>} frame Frame to add.
+     * @param {!string} targetId Id of target to add frame to.
+     * @param {?string} optFromTargetId Optional target id indicating that frame are being
+     * shared from that target. This is needed for resolving any potential variable conflicts.
+     * @return {!Promise} Promise that resolves when the extensions and frame have been added.
+     */
+    async shareFrameToTarget (frame, targetId, optFromTargetId) {
+        const copiedFrame = JSON.parse(JSON.stringify(frame));
+        const blocks = copiedFrame.blockElements;
+        copiedFrame.id = generateUid();
+        const target = this.runtime.getTargetById(targetId);
+        if (Object.keys(blocks).length > 0) {
+            const blockIdOldToNewMap = await this.shareBlocksToTarget(Object.values(blocks), targetId, optFromTargetId);
+            copiedFrame.blocks = copiedFrame.blocks.map(blockId => blockIdOldToNewMap[blockId]);
+        }
+        target.createFrame(copiedFrame);
+        this.runtime.emitTargetFramesChanged(targetId, ['add', copiedFrame.id, copiedFrame]);
+        target.blocks.updateTargetSpecificBlocks(target.isStage);
     }
 
     /**
@@ -2429,6 +2473,7 @@ class VirtualMachine extends EventEmitter {
         const localVariables = Object.keys(localVarMap).map(
             k => localVarMap[k]
         );
+        const frames = Object.values(this.editingTarget.frames._frames);
 
         const workspaceComments = Object.keys(this.editingTarget.comments)
             .map(k => this.editingTarget.comments[k])
@@ -2439,13 +2484,15 @@ class VirtualMachine extends EventEmitter {
                                 ${globalVariables.map(v => v.toXML()).join()}
                                 ${localVariables.map(v => v.toXML(true)).join()}
                             </variables>
+
                             <procedures>
                                 ${this.getWorkspaceGlobalProcedures().join()}
                             </procedures>
                             ${workspaceComments.map(c => c.toXML()).join()}
-                            ${this.editingTarget.blocks.toXML(
-        this.editingTarget.comments
-    )}
+                            ${this.editingTarget.blocks.toXML(this.editingTarget.comments)}
+                            <custom-frameset>
+                                ${frames.map(i => this.editingTarget.frames.frameToXML(i)).join()}
+                            </custom-frameset>
                         </xml>`;
 
         this.emit('workspaceUpdate', {xml: xmlString});
@@ -2514,22 +2561,23 @@ class VirtualMachine extends EventEmitter {
      * @returns {boolean} Whether a target was reordered.
      */
     reorderTarget (targetIndex, newIndex, isRemoteOperation) {
-        let targets = this.runtime.targets;
-        targetIndex = MathUtil.clamp(targetIndex, 0, targets.length - 1);
-        newIndex = MathUtil.clamp(newIndex, 0, targets.length - 1);
-        if (targetIndex === newIndex) return false;
-        const target = targets[targetIndex];
-        targets = targets
-            .slice(0, targetIndex)
-            .concat(targets.slice(targetIndex + 1));
-        targets.splice(newIndex, 0, target);
-        this.runtime.targets = targets;
+        const targets = [...this.runtime.targets];
+        const originalTargets = targets.filter(t => t.isOriginal);
+        const processedData = MathUtil.moveArrayElement(originalTargets, targetIndex, newIndex);
+        if (processedData.array === originalTargets) return false;
+
+        const target = originalTargets[processedData.fromIndex];
+        const newIndexTarget = originalTargets[processedData.toIndex];
+        const fromIndex = targets.findIndex(t => t.id === target.id);
+        const toIndex = targets.findIndex(t => t.id === newIndexTarget.id);
+        this.runtime.targets = MathUtil.moveArrayElement(targets, fromIndex, toIndex).array;
+
         if (!isRemoteOperation) {
-            const max = Math.max(targetIndex, newIndex) + 1;
-            const min = Math.min(targetIndex, newIndex);
+            const max = Math.max(processedData.fromIndex, processedData.toIndex) + 1;
+            const min = Math.min(processedData.fromIndex, processedData.toIndex);
             const list = [];
             for (let index = min; index < max; index++) {
-                const _target = targets[index];
+                const _target = processedData.array[index];
                 list.push([_target.id, {order: index}]);
             }
             this.runtime.emitTargetSimplePropertyChanged(list);

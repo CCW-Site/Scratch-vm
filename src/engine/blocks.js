@@ -566,8 +566,8 @@ class Blocks {
             // Drag blocks onto another sprite
             if (e.isOutside) {
                 const newBlocks = adapter(e);
-                const newBatchBlocks = (e.batchHeadBlocksXml || []).map(xml => adapter({xml: xml}));
-                this.runtime.emitBlockEndDrag(newBlocks, e.blockId, newBatchBlocks);
+                const newBatchElements = e.batchElements.map(elements => elements.map(xml => adapter({xml: xml})));
+                this.runtime.emitBlockEndDrag(newBlocks, e.blockId, newBatchElements);
             }
             break;
         case 'delete':

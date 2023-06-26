@@ -15,8 +15,7 @@ class RenderedTarget extends Target {
      * @constructor
      */
     constructor (sprite, runtime) {
-        super(runtime, sprite.blocks, sprite.id);
-
+        super(runtime, sprite.blocks, sprite.frames, sprite.id);
         /**
          * Reference to the sprite that this is a render of.
          * @type {!Sprite}
@@ -719,7 +718,7 @@ class RenderedTarget extends Target {
         this.sprite.deleteCostumeAt(costumeIndex);
         this.addCostume(costume, newIndex, true);
         this.currentCostume = this.getCostumeIndexByName(currentCostume.name);
-        this.runtime.emitTargetSimplePropertyChanged(this.id, {currentCostume: this.currentCostume});
+        this.runtime.emitTargetSimplePropertyChanged([[this.id, {currentCostume: this.currentCostume}]]);
         this.runtime.emitTargetCostumeChanged(this.id,
             ['costumes', costumeIndex, 'reorder', [costumeIndex, newIndex]]
         );
@@ -1158,6 +1157,7 @@ class RenderedTarget extends Target {
             size: this.size,
             direction: this.direction,
             draggable: this.draggable,
+            frames: this.frames._frames,
             currentCostume: this.currentCostume,
             costume: costumes[this.currentCostume],
             costumeCount: costumes.length,
