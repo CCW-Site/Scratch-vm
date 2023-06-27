@@ -1376,8 +1376,8 @@ const parseGandiObject = (gandiObject, runtime) => {
             runtime.gandi.assets = gandiAssets;
         });
     }
-    if (gandiObject.virtualControlConfig) {
-        runtime.gandi.virtualControlConfig = gandiObject.virtualControlConfig;
+    if (gandiObject.configs) {
+        runtime.gandi.configs = gandiObject.configs;
     }
     if (gandiObject.wildExtensions) {
         runtime.gandi.wildExtensions = gandiObject.wildExtensions;

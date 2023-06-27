@@ -7,7 +7,7 @@ class Gandi {
         this.initProperties([
             ['assets', []],
             ['wildExtensions', {}],
-            ['virtualControlConfig', {}]
+            ['configs', {}]
         ]);
     }
 
@@ -51,7 +51,7 @@ class Gandi {
             object.gandi = {
                 assets: this.serializeAssets(extensions),
                 wildExtensions: this.wildExtensions,
-                virtualControlConfig: this.virtualControlConfig
+                configs: this.configs
             };
         }
     }

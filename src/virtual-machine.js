@@ -1460,13 +1460,13 @@ class VirtualMachine extends EventEmitter {
         return null;
     }
 
-    setVirtualControlConfig (config) {
-        this.runtime.gandi.virtualControlConfig = config;
+    setGandiConfigProperty (key, value) {
+        this.runtime.gandi.configs[key] = value;
         this.runtime.emitProjectChanged();
     }
 
-    getVirtualControlConfig () {
-        return this.runtime.gandi.virtualControlConfig;
+    getGandiConfigProperty (key) {
+        return this.runtime.gandi.configs[key];
     }
 
     getMonitoredKeys () {
