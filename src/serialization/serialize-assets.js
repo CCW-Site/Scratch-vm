@@ -9,7 +9,7 @@
  * @returns {Array<object>} An array of file descriptors for each asset
  */
 const serializeAssets = function (runtime, assetType, optTargetId) {
-    const targets = optTargetId ? [runtime.getTargetById(optTargetId)] : runtime.targets;
+    const targets = optTargetId ? [runtime.getTargetById(optTargetId)] : runtime.targets.filter(t => t.isOriginal);
     const assetDescs = [];
     for (let i = 0; i < targets.length; i++) {
         const currTarget = targets[i];
