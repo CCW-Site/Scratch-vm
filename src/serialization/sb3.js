@@ -587,10 +587,14 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
     const obj = Object.create(null);
     // Create extension set to hold extension ids found while serializing targets
     const extensions = new Set();
-
-    const originalTargetsToSerialize = targetId ?
-        [runtime.getTargetById(targetId)] :
-        runtime.targets.filter(target => target.isOriginal);
+    let originalTargetsToSerialize;
+    if (targetId) {
+        const target = runtime.getTargetById(targetId);
+        // The target may not exist.
+        originalTargetsToSerialize = target ? [] : [target];
+    } else {
+        originalTargetsToSerialize = runtime.targets.filter(target => target.isOriginal);
+    }
 
     const layerOrdering = getSimplifiedLayerOrdering(originalTargetsToSerialize);
 

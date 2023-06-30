@@ -9,8 +9,16 @@
  * @returns {Array<object>} An array of file descriptors for each asset
  */
 const serializeAssets = function (runtime, assetType, optTargetId) {
-    const targets = optTargetId ? [runtime.getTargetById(optTargetId)] : runtime.targets;
     const assetDescs = [];
+    let targets;
+    if (optTargetId) {
+        const target = runtime.getTargetById(optTargetId);
+        // The target may not exist.
+        if (!target) return assetDescs;
+        targets = [target];
+    } else {
+        targets = [...runtime.targets];
+    }
     for (let i = 0; i < targets.length; i++) {
         const currTarget = targets[i];
         if (!currTarget || !currTarget.isOriginal) continue;
