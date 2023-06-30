@@ -26,7 +26,7 @@ class Gandi {
         return this.isEmptyObject(this[propertyName]);
     }
 
-    serializeAssets (extensions) {
+    serializeGandiAssets (extensions) {
         return this.assets.reduce((acc, gandiAsset) => {
             const item = Object.create(null);
             item.uid = gandiAsset.uid;
@@ -49,7 +49,7 @@ class Gandi {
     serialize (object, extensions) {
         if (!this.isEmpty()) {
             object.gandi = {
-                assets: this.serializeAssets(extensions),
+                assets: this.serializeGandiAssets(extensions),
                 wildExtensions: this.wildExtensions,
                 configs: this.configs
             };
