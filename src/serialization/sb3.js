@@ -591,7 +591,7 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
     if (targetId) {
         const target = runtime.getTargetById(targetId);
         // The target may not exist.
-        originalTargetsToSerialize = target ? [] : [target];
+        originalTargetsToSerialize = target ? [target] : [];
     } else {
         originalTargetsToSerialize = runtime.targets.filter(target => target.isOriginal);
     }
