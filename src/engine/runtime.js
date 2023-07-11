@@ -3664,7 +3664,7 @@ class Runtime extends EventEmitter {
                     (acc, res) => res.status === 'fulfilled' ? [...acc, res.value] : acc, [])
                 );
 
-                const stepLoadAssets = () => {
+                const stepLoadAssets = async () => {
                     // Report progress
                     this.emitProjectAssetsAsyncLoadingProgressChange({total, completed});
                     completed++;
@@ -3678,6 +3678,7 @@ class Runtime extends EventEmitter {
                         this.asyncLoadingProjectAssets = false;
                         this.emitProjectAssetsAsyncLoadingDone();
                     } else if (this.firingWaitingLoadCallbackQueue) {
+                        await callbackList.next().value;
                         this.requestAnimationFrameId = _requestAnimationFrame(stepLoadAssets);
                     } else {
                         callbackList = null;
