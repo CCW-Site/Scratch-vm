@@ -363,7 +363,7 @@ const loadCostume = function (md5ext, costume, runtime, optVersion) {
                 costume.textLayerAsset = assetArray[1];
             }
             if (asyncLoading) {
-                return async () => await loadCostumeFromAsset(costume, runtime, optVersion);
+                return () => loadCostumeFromAsset(costume, runtime, optVersion);
             }
             return loadCostumeFromAsset(costume, runtime, optVersion);
         });

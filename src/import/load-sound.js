@@ -67,7 +67,7 @@ const loadSound = function (sound, runtime, soundBank) {
         sound.asset = soundAsset;
         sound.assetUnInit = false;
         if (asyncLoading) {
-            return async () => await loadSoundFromAsset(sound, soundAsset, runtime, soundBank);
+            return () => loadSoundFromAsset(sound, soundAsset, runtime, soundBank);
         }
         return loadSoundFromAsset(sound, soundAsset, runtime, soundBank);
     });
