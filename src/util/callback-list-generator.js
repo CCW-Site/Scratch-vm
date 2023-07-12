@@ -3,9 +3,9 @@
  * A generator function that generates a callback list for each;
  * @param {Array} list callback list
  */
-function* CallbackListGenerator (list) {
+async function* CallbackListGenerator (list) {
     for (let i = 0; i < list.length; i++) {
-        yield list[i]();
+        yield await list[i]();
     }
 }
 

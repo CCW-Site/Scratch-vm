@@ -3668,7 +3668,8 @@ class Runtime extends EventEmitter {
                     // Report progress
                     this.emitProjectAssetsAsyncLoadingProgressChange({total, completed});
                     completed++;
-                    if (callbackList.next().done) {
+                    const result = await callbackList.next();
+                    if (result.done) {
                         this.targets.forEach(target => {
                             if (target.isOriginal) {
                                 target.updateAllDrawableProperties();
@@ -3678,7 +3679,6 @@ class Runtime extends EventEmitter {
                         this.asyncLoadingProjectAssets = false;
                         this.emitProjectAssetsAsyncLoadingDone();
                     } else if (this.firingWaitingLoadCallbackQueue) {
-                        await callbackList.next().value;
                         this.requestAnimationFrameId = _requestAnimationFrame(stepLoadAssets);
                     } else {
                         callbackList = null;
