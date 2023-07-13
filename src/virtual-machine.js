@@ -1860,8 +1860,9 @@ class VirtualMachine extends EventEmitter {
      * Rename a sprite.
      * @param {string} targetId ID of a target whose sprite to rename.
      * @param {string} newName New name of the sprite.
+     * @param {boolean} isRemoteOperation Whether this is a remote operation.
      */
-    renameSprite (targetId, newName) {
+    renameSprite (targetId, newName, isRemoteOperation) {
         const target = this.runtime.getTargetById(targetId);
         if (target) {
             if (!target.isSprite()) {
@@ -1894,8 +1895,12 @@ class VirtualMachine extends EventEmitter {
                         'sprite'
                     );
                 }
-
-                if (newUnusedName !== oldName) this.emitTargetsUpdate();
+                if (newUnusedName !== oldName) {
+                    if (!isRemoteOperation) {
+                        this.runtime.emitTargetSimplePropertyChanged([[targetId, {name: newName}]]);
+                    }
+                    this.emitTargetsUpdate();
+                }
             }
         } else {
             throw new Error('No target with the provided id.');
