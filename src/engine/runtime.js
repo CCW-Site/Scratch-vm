@@ -233,8 +233,6 @@ class Runtime extends EventEmitter {
          */
         this.executableTargets = [];
 
-        this.gandi = null;
-
         /**
          * A list of threads that are currently running in the VM.
          * Threads are added when execution starts and pruned when execution ends.

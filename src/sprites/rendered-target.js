@@ -198,6 +198,10 @@ class RenderedTarget extends Target {
         this._y = y;
     }
 
+    get originalTargetId () {
+        return this.isOriginal ? this.id : this.sprite.clones[0].id;
+    }
+
     /**
      * Create a drawable with the this.renderer.
      * @param {boolean} layerGroup The layer group this drawable should be added to
@@ -518,7 +522,7 @@ class RenderedTarget extends Target {
                 rotationCenterX,
                 rotationCenterY
             } = costumeObject;
-            this.runtime.emitTargetCostumeChanged(this.id, ['costumes', index, 'add',
+            this.runtime.emitTargetCostumeChanged(this.originalTargetId, ['costumes', index, 'add',
                 {
                     uid,
                     assetId,
@@ -547,7 +551,7 @@ class RenderedTarget extends Target {
         const newUnusedName = StringUtil.unusedName(newName, usedNames);
         this.getCostumes()[costumeIndex].name = newUnusedName;
         if (!isRemoteOperation) {
-            this.runtime.emitTargetCostumeChanged(this.id, ['costumes', costumeIndex, 'update', {name: newUnusedName}]);
+            this.runtime.emitTargetCostumeChanged(this.originalTargetId, ['costumes', costumeIndex, 'update', {name: newUnusedName}]);
         }
 
         if (this.isStage) {
@@ -580,7 +584,7 @@ class RenderedTarget extends Target {
             return null;
         }
         if (!isRemoteOperation) {
-            this.runtime.emitTargetCostumeChanged(this.id, ['costumes', index, 'delete']);
+            this.runtime.emitTargetCostumeChanged(this.originalTargetId, ['costumes', index, 'delete']);
         }
 
         const deletedCostume = this.sprite.deleteCostumeAt(index);
@@ -718,8 +722,8 @@ class RenderedTarget extends Target {
         this.sprite.deleteCostumeAt(costumeIndex);
         this.addCostume(costume, newIndex, true);
         this.currentCostume = this.getCostumeIndexByName(currentCostume.name);
-        this.runtime.emitTargetSimplePropertyChanged([[this.id, {currentCostume: this.currentCostume}]]);
-        this.runtime.emitTargetCostumeChanged(this.id,
+        this.runtime.emitTargetSimplePropertyChanged([[this.originalTargetId, {currentCostume: this.currentCostume}]]);
+        this.runtime.emitTargetCostumeChanged(this.originalTargetId,
             ['costumes', costumeIndex, 'reorder', [costumeIndex, newIndex]]
         );
         return true;
@@ -740,6 +744,7 @@ class RenderedTarget extends Target {
         const sound = this.sprite.sounds[soundIndex];
         this.deleteSound(soundIndex);
         this.addSound(sound, newIndex);
+        this.runtime.emitTargetSoundsChanged(this.originalTargetId, [soundIndex, 'reorder', [soundIndex, newIndex]]);
         return true;
     }
 

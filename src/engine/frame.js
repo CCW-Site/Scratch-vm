@@ -55,6 +55,7 @@ class Frames {
 
         const currTarget = this.runtime.getEditingTarget();
         if (currTarget) {
+            const targetId = currTarget.originalTargetId;
             switch (e.type) {
             case 'frame_end_drag':
                 this.runtime.emitFrameDragUpdate(false /* areBlocksOverGui */);
@@ -70,22 +71,22 @@ class Frames {
                 break;
             case 'frame_create':
                 if (this.createFrame(e)) {
-                    this.runtime.emitTargetFramesChanged(currTarget.id, ['add', e.id, this._frames[e.id]]);
+                    this.runtime.emitTargetFramesChanged(targetId, ['add', e.id, this._frames[e.id]]);
                 }
                 break;
             case 'frame_delete':
                 if (this.deleteFrame(e.id)) {
-                    this.runtime.emitTargetFramesChanged(currTarget.id, ['delete', e.id]);
+                    this.runtime.emitTargetFramesChanged(targetId, ['delete', e.id]);
                 }
                 break;
             case 'frame_retitle':
                 if (this.retitleFrame(e.id, e.newTitle)) {
-                    this.runtime.emitTargetFramesChanged(currTarget.id, ['update', e.id, {title: e.newTitle}]);
+                    this.runtime.emitTargetFramesChanged(targetId, ['update', e.id, {title: e.newTitle}]);
                 }
                 break;
             case 'frame_change':
                 if (this.changeFrame(e.id, e.element, e.newValue)) {
-                    this.runtime.emitTargetFramesChanged(currTarget.id, ['update', e.id, {...e.newValue}]);
+                    this.runtime.emitTargetFramesChanged(targetId, ['update', e.id, {...e.newValue}]);
                 }
                 break;
             }
