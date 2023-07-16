@@ -3,4 +3,7 @@ module.exports = {
     globals: {
         process: true
     },
+    rules: {
+        'max-len': ["error", { "code": 200 }]
+      }
 };
