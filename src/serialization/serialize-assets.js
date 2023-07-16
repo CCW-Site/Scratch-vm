@@ -9,15 +9,23 @@
  * @returns {Array<object>} An array of file descriptors for each asset
  */
 const serializeAssets = function (runtime, assetType, optTargetId) {
-    const targets = optTargetId ? [runtime.getTargetById(optTargetId)] : runtime.targets;
     const assetDescs = [];
+    let targets;
+    if (optTargetId) {
+        const target = runtime.getTargetById(optTargetId);
+        // The target may not exist.
+        if (!target) return assetDescs;
+        targets = [target];
+    } else {
+        targets = [...runtime.targets];
+    }
     for (let i = 0; i < targets.length; i++) {
         const currTarget = targets[i];
-        // Got error report that cuurTarget may undefined sometimes
-        // Possible cause: cuurTarget get a cloned target, and the clone was deleted in same time.
+        if (!currTarget || !currTarget.isOriginal) continue;
+        // Got error report that currTarget may undefined sometimes
+        // Possible cause: currTarget get a cloned target, and the clone was deleted in same time.
         // unlimited clone max number may cause this problem.
         // make sure currTarget is not undefined
-        if (!currTarget) continue;
         const currAssets = currTarget.sprite[assetType];
         for (let j = 0; j < currAssets.length; j++) {
             const currAsset = currAssets[j];

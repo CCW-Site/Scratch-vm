@@ -524,7 +524,7 @@ class Blocks {
         }
 
         if (source === 'default' && e.blockId && e.type !== 'delete') {
-            this.runtime.emitTargetBlocksChanged(editingTarget.id, this._blocks, {
+            this.runtime.emitTargetBlocksChanged(editingTarget.originalTargetId, this._blocks, {
                 blockId: e.blockId,
                 type: e.type
             });
@@ -566,8 +566,11 @@ class Blocks {
             // Drag blocks onto another sprite
             if (e.isOutside) {
                 const newBlocks = adapter(e);
-                const newBatchBlocks = (e.batchHeadBlocksXml || []).map(xml => adapter({xml: xml}));
-                this.runtime.emitBlockEndDrag(newBlocks, e.blockId, newBatchBlocks);
+                let newBatchElements = [[], []];
+                if (e.batchElements) {
+                    newBatchElements = e.batchElements.map(elements => elements.map(xml => adapter({xml: xml})));
+                }
+                this.runtime.emitBlockEndDrag(newBlocks, e.blockId, newBatchElements);
             }
             break;
         case 'delete':
@@ -582,7 +585,7 @@ class Blocks {
                 this.runtime.quietGlow(e.blockId);
             }
             if (source === 'default' && e.blockId && e.recordUndo) {
-                this.runtime.emitTargetBlocksChanged(editingTarget.id, this._blocks, {
+                this.runtime.emitTargetBlocksChanged(editingTarget.originalTargetId, this._blocks, {
                     blockId: e.blockId,
                     type: e.type
                 });
@@ -602,7 +605,7 @@ class Blocks {
                 if (!editingTarget.lookupVariableById(e.varId)) {
                     editingTarget.createVariable(e.varId, e.varName, e.varType);
                     this.emitProjectChanged();
-                    this.runtime.emitTargetVariablesChanged(editingTarget.id,
+                    this.runtime.emitTargetVariablesChanged(editingTarget.originalTargetId,
                         [e.varId, e.varType, 'add', [e.varName, 0]]
                     );
                 }
@@ -639,10 +642,10 @@ class Blocks {
                 // this variable
                 const affectedBlocks = editingTarget.blocks.updateBlocksAfterVarRename(e.varId, e.newName);
                 if (affectedBlocks.length) {
-                    this.runtime.affectedBlocksAfterVarRename = {[editingTarget.id]: affectedBlocks};
+                    this.runtime.affectedBlocksAfterVarRename = {[editingTarget.originalTargetId]: affectedBlocks};
                 }
                 this.emitProjectChanged();
-                this.runtime.emitTargetVariablesChanged(editingTarget.id,
+                this.runtime.emitTargetVariablesChanged(editingTarget.originalTargetId,
                     [e.varId, e.varType, 'update', [0, e.newName]]
                 );
                 this.runtime.emitMonitorsChanged(['update', e.varId, {name: e.newName}]);
@@ -698,7 +701,7 @@ class Blocks {
                     currTarget.comments[e.commentId].x = e.xy.x;
                     currTarget.comments[e.commentId].y = e.xy.y;
                 }
-                this.runtime.emitTargetCommentsChanged(currTarget.id,
+                this.runtime.emitTargetCommentsChanged(currTarget.originalTargetId,
                     ['add', e.commentId, currTarget.comments[e.commentId]]
                 );
             }
@@ -730,7 +733,7 @@ class Blocks {
                     comment.text = change.text;
                     changedData.text = comment.text;
                 }
-                this.runtime.emitTargetCommentsChanged(currTarget.id,
+                this.runtime.emitTargetCommentsChanged(currTarget.originalTargetId,
                     ['update', e.commentId, changedData]
                 );
                 this.emitProjectChanged();
@@ -747,7 +750,7 @@ class Blocks {
                 const newCoord = e.newCoordinate_;
                 comment.x = newCoord.x;
                 comment.y = newCoord.y;
-                this.runtime.emitTargetCommentsChanged(currTarget.id,
+                this.runtime.emitTargetCommentsChanged(currTarget.originalTargetId,
                     ['update', e.commentId, {x: comment.x, y: comment.y}]
                 );
                 this.emitProjectChanged();
@@ -773,7 +776,7 @@ class Blocks {
                     }
                     delete block.comment;
                 }
-                this.runtime.emitTargetCommentsChanged(currTarget.id, ['delete', e.commentId]);
+                this.runtime.emitTargetCommentsChanged(currTarget.originalTargetId, ['delete', e.commentId]);
                 this.emitProjectChanged();
             }
             break;

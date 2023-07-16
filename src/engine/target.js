@@ -1,5 +1,6 @@
 const EventEmitter = require('events');
 
+const Frames = require('./frame');
 const Blocks = require('./blocks');
 const Variable = require('../engine/variable');
 const Comment = require('../engine/comment');
@@ -22,14 +23,19 @@ class Target extends EventEmitter {
     /**
      * @param {Runtime} runtime Reference to the runtime.
      * @param {?Blocks} blocks Blocks instance for the blocks owned by this target.
+     * @param {?Frames} frames Shared frames object for all clones of sprite.
      * @param {?id} id Target id.
      * @constructor
      */
-    constructor (runtime, blocks, id) {
+    constructor (runtime, blocks, frames, id) {
         super();
 
         if (!blocks) {
             blocks = new Blocks(runtime);
+        }
+
+        if (!frames) {
+            frames = new Frames(runtime);
         }
 
         /**
@@ -59,6 +65,11 @@ class Target extends EventEmitter {
          * @type {Object.<string,*>}
          */
         this.comments = {};
+        /**
+         * All frames that this target contains.
+         * @type {!Frames}
+         */
+        this.frames = frames;
         /**
          * Dictionary of custom state for this target.
          * This can be used to store target-specific custom state for blocks which need it.
@@ -307,6 +318,27 @@ class Target extends EventEmitter {
             }
             this.comments[id] = newComment;
         }
+    }
+
+    /**
+     * Creates a frame with the given properties.
+     * @param {string} id Id of the frame.
+     * @param {string} title The text the frame contains.
+     * @param {number} x The x coordinate of the frame on the workspace.
+     * @param {number} y The y coordinate of the frame on the workspace.
+     * @param {number} width The width of the frame when it is full size
+     * @param {number} height The height of the frame when it is full size
+     */
+    createFrame (frame) {
+        return this.frames.createFrame(frame);
+    }
+
+    /**
+     * Removes the frame with the given id from the dictionary of frames.
+     * @param {string} id Id of frame to delete.
+     */
+    deleteFrame (id) {
+        this.frames.deleteFrame(id);
     }
 
     /**

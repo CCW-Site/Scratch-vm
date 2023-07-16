@@ -27,10 +27,12 @@ const Mouse = require('../io/mouse');
 const MouseWheel = require('../io/mouseWheel');
 const UserData = require('../io/userData');
 const Video = require('../io/video');
+const Joystick = require('../io/joystick');
 
 const CallbackListGenerator = require('../util/callback-list-generator');
 const StringUtil = require('../util/string-util');
 const LogSystem = require('../util/log-system');
+const Gandi = require('../util/gandi');
 const uid = require('../util/uid');
 
 const defaultBlockPackages = {
@@ -231,8 +233,6 @@ class Runtime extends EventEmitter {
          */
         this.executableTargets = [];
 
-        this.gandi = null;
-
         /**
          * A list of threads that are currently running in the VM.
          * Threads are added when execution starts and pruned when execution ends.
@@ -382,6 +382,7 @@ class Runtime extends EventEmitter {
         // I/O related data.
         /** @type {Object.<string, Object>} */
         this.ioDevices = {
+            joystick: new Joystick(this),
             clock: new Clock(this),
             cloud: new Cloud(this),
             keyboard: new Keyboard(this),
@@ -456,6 +457,12 @@ class Runtime extends EventEmitter {
          * @type {LogSystem}
          */
         this.logSystem = new LogSystem();
+
+        /**
+         * New data structure in Gandi editor.
+         * @type {Gandi}
+         */
+        this.gandi = new Gandi(this);
 
         this._stageTarget = null;
 
@@ -732,11 +739,19 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * Event name for editing target's blocks was changed.
+     * Event name for mobile buttons visible was changed.
      * @const {string}
      */
     static get TARGET_BLOCKS_CHANGED () {
         return 'TARGET_BLOCKS_CHANGED';
+    }
+
+    /**
+     * Event name for editing target's blocks was changed.
+     * @const {string}
+     */
+    static get MOBILE_BUTTONS_VISIBLE_CHANGED () {
+        return 'MOBILE_BUTTONS_VISIBLE_CHANGED';
     }
 
     /**
@@ -756,6 +771,14 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for editing target's frames was changed.
+     * @const {string}
+     */
+    static get TARGET_FRAMES_CHANGED () {
+        return 'TARGET_FRAMES_CHANGED';
+    }
+
+    /**
      * Event name for editing target's costome was changed.
      * @const {string}
      */
@@ -767,8 +790,8 @@ class Runtime extends EventEmitter {
      * Event name for editing target's currentCostome was changed.
      * @const {string}
      */
-    static get TARGET_CURRENT_COSTOME_CHANGED () {
-        return 'TARGET_CURRENT_COSTOME_CHANGED';
+    static get TARGET_CURRENT_COSTUME_CHANGED () {
+        return 'TARGET_CURRENT_COSTUME_CHANGED';
     }
 
     /**
@@ -846,6 +869,22 @@ class Runtime extends EventEmitter {
      */
     static get BLOCK_DRAG_UPDATE () {
         return 'BLOCK_DRAG_UPDATE';
+    }
+
+    /**
+     * Event name for frame drag update.
+     * @const {string}
+     */
+    static get FRAME_DRAG_UPDATE () {
+        return 'FRAME_DRAG_UPDATE';
+    }
+
+    /**
+     * Event name for frame drag update.
+     * @const {string}
+     */
+    static get FRAME_DRAG_END () {
+        return 'FRAME_DRAG_END';
     }
 
     /**
@@ -3051,13 +3090,31 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Emit whether frame are being dragged over gui
+     * @param {boolean} areBlocksOverGui True if frame are dragged out of the workspace, false otherwise
+     */
+    emitFrameDragUpdate (areBlocksOverGui) {
+        this.emit(Runtime.FRAME_DRAG_UPDATE, areBlocksOverGui);
+    }
+
+    /**
      * Emit event to indicate that the block drag has ended with the blocks outside the blocks workspace
      * @param {Array.<object>} blocks The set of blocks dragged to the GUI
      * @param {string} topBlockId The original id of the top block being dragged
-     * @param {Array.<object>} newBatchBlocks The set of batch selected blocks head block
+     * @param {Array.<object>} newBatchElements The set of batch selected blocks or frames
      */
-    emitBlockEndDrag (blocks, topBlockId, newBatchBlocks) {
-        this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId, newBatchBlocks);
+    emitBlockEndDrag (blocks, topBlockId, newBatchElements) {
+        this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId, newBatchElements);
+    }
+
+    /**
+     * Emit event to indicate that the frame drag has ended with the blocks outside the blocks workspace
+     * @param {Array.<object>} frame The frame dragged to the GUI
+     * @param {string} frameId The original id of the frame being dragged
+     * @param {Array.<object>=} newBatchElements The set of batch selected blocks or frames
+     */
+    emitFrameEndDrag (frame, frameId, newBatchElements) {
+        this.emit(Runtime.FRAME_DRAG_END, frame, frameId, newBatchElements);
     }
 
     /**
@@ -3277,6 +3334,10 @@ class Runtime extends EventEmitter {
         this.emit(Runtime.EXTENSIONS_CHANGED);
     }
 
+    emitMobileButtonsVisibleChanged (value) {
+        this.emit(Runtime.MOBILE_BUTTONS_VISIBLE_CHANGED, value);
+    }
+
     /**
      * Report that the target has changed in a way that would affect serialization
      */
@@ -3286,9 +3347,10 @@ class Runtime extends EventEmitter {
 
     /**
      * Report that the target has changed in a way that would affect serialization
+     * @param {Array<Array<string, object>>} data - An array consisting of roles that have undergone changes.
      */
-    emitTargetSimplePropertyChanged (order, data) {
-        this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, order, data);
+    emitTargetSimplePropertyChanged (data) {
+        this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, data);
     }
 
     /**
@@ -3301,6 +3363,13 @@ class Runtime extends EventEmitter {
     /**
      * Report that the target has changed in a way that would affect serialization
      */
+    emitTargetFramesChanged (targeId, data) {
+        this.emit(Runtime.TARGET_FRAMES_CHANGED, targeId, data);
+    }
+
+    /**
+     * Report that the target has changed in a way that would affect serialization
+     */
     emitTargetCostumeChanged (id, data) {
         this.emit(Runtime.TARGET_COSTUME_CHANGED, id, data);
     }
@@ -3308,8 +3377,8 @@ class Runtime extends EventEmitter {
     /**
      * Report that the target has changed in a way that would affect serialization
      */
-    emitTargetCurrentCostomeChanged (index) {
-        this.emit(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index);
+    emitTargetCurrentCostumeChanged (index) {
+        this.emit(Runtime.TARGET_CURRENT_COSTUME_CHANGED, index);
     }
 
     /**
@@ -3539,15 +3608,12 @@ class Runtime extends EventEmitter {
     }
 
     getGandiAssetsList (type) {
-        if (this.gandi && this.gandi.assets) {
-            return this.gandi.assets.filter(obj => {
-                if (type) {
-                    return obj.dataFormat === type;
-                }
-                return true;
-            });
-        }
-        return [];
+        return this.gandi.assets.filter(obj => {
+            if (type) {
+                return obj.dataFormat === type;
+            }
+            return true;
+        });
     }
 
     getGandiAssetContent (fileName) {
@@ -3559,26 +3625,17 @@ class Runtime extends EventEmitter {
     }
 
     getGandiAssetsFileList (type) {
-        if (this.gandi && this.gandi.assets) {
-            const res = this.gandi.assets.filter(obj => {
-                if (type) {
-                    return obj.dataFormat === type;
-                }
-                return true;
-            });
-            return res.map(obj => ({name: `${obj.name}.${obj.dataFormat}`, dataFormat: obj.dataFormat}));
-        }
-        return [];
+        const res = this.gandi.assets.filter(obj => {
+            if (type) {
+                return obj.dataFormat === type;
+            }
+            return true;
+        });
+        return res.map(obj => ({name: `${obj.name}.${obj.dataFormat}`, dataFormat: obj.dataFormat}));
     }
 
     getGandiAssetFile (fileName) {
-        if (this.gandi && this.gandi.assets) {
-            const file = this.gandi.assets.find(obj => `${obj.name}.${obj.dataFormat}` === fileName);
-            if (file) {
-                return file;
-            }
-        }
-        return null;
+        return this.gandi.assets.find(obj => `${obj.name}.${obj.dataFormat}` === fileName);
     }
 
     addWaitingLoadCallback (callback) {
@@ -3605,11 +3662,12 @@ class Runtime extends EventEmitter {
                     (acc, res) => res.status === 'fulfilled' ? [...acc, res.value] : acc, [])
                 );
 
-                const stepLoadAssets = () => {
+                const stepLoadAssets = async () => {
                     // Report progress
                     this.emitProjectAssetsAsyncLoadingProgressChange({total, completed});
                     completed++;
-                    if (callbackList.next().done) {
+                    const result = callbackList.next();
+                    if (result.done) {
                         this.targets.forEach(target => {
                             if (target.isOriginal) {
                                 target.updateAllDrawableProperties();
@@ -3619,6 +3677,7 @@ class Runtime extends EventEmitter {
                         this.asyncLoadingProjectAssets = false;
                         this.emitProjectAssetsAsyncLoadingDone();
                     } else if (this.firingWaitingLoadCallbackQueue) {
+                        await result.value;
                         this.requestAnimationFrameId = _requestAnimationFrame(stepLoadAssets);
                     } else {
                         callbackList = null;

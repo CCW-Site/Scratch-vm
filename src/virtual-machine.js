@@ -179,17 +179,23 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.PROJECT_CHANGED, () => {
             this.emit(Runtime.PROJECT_CHANGED);
         });
+        this.runtime.on(Runtime.MOBILE_BUTTONS_VISIBLE_CHANGED, value => {
+            this.emit(Runtime.MOBILE_BUTTONS_VISIBLE_CHANGED, value);
+        });
         this.runtime.on(Runtime.TARGET_BLOCKS_CHANGED, (targetId, blocks, ext) => {
             this.emit(Runtime.TARGET_BLOCKS_CHANGED, targetId, blocks, ext);
         });
         this.runtime.on(Runtime.TARGET_COMMENTS_CHANGED, (targetId, data) => {
             this.emit(Runtime.TARGET_COMMENTS_CHANGED, targetId, data);
         });
+        this.runtime.on(Runtime.TARGET_FRAMES_CHANGED, (targetId, data) => {
+            this.emit(Runtime.TARGET_FRAMES_CHANGED, targetId, data);
+        });
         this.runtime.on(Runtime.TARGET_COSTUME_CHANGED, (id, data) => {
             this.emit(Runtime.TARGET_COSTUME_CHANGED, id, data);
         });
-        this.runtime.on(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index => {
-            this.emit(Runtime.TARGET_CURRENT_COSTOME_CHANGED, index);
+        this.runtime.on(Runtime.TARGET_CURRENT_COSTUME_CHANGED, index => {
+            this.emit(Runtime.TARGET_CURRENT_COSTUME_CHANGED, index);
         });
         this.runtime.on(Runtime.TARGET_VARIABLES_CHANGED, (id, data) => {
             this.emit(Runtime.TARGET_VARIABLES_CHANGED, id, data);
@@ -197,8 +203,8 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.MONITORS_CHANGED, data => {
             this.emit(Runtime.MONITORS_CHANGED, data);
         });
-        this.runtime.on(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, (order, data) => {
-            this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, order, data);
+        this.runtime.on(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, data => {
+            this.emit(Runtime.TARGET_SIMPLE_PROPERTY_CHANGED, data);
         });
         this.runtime.on(Runtime.VISUAL_REPORT, visualReport => {
             this.emit(Runtime.VISUAL_REPORT, visualReport);
@@ -215,8 +221,14 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.BLOCK_DRAG_UPDATE, areBlocksOverGui => {
             this.emit(Runtime.BLOCK_DRAG_UPDATE, areBlocksOverGui);
         });
-        this.runtime.on(Runtime.BLOCK_DRAG_END, (blocks, topBlockId, newBatchBlocks) => {
-            this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId, newBatchBlocks);
+        this.runtime.on(Runtime.FRAME_DRAG_UPDATE, areBlocksOverGui => {
+            this.emit(Runtime.FRAME_DRAG_UPDATE, areBlocksOverGui);
+        });
+        this.runtime.on(Runtime.BLOCK_DRAG_END, (blocks, topBlockId, newBatchElements) => {
+            this.emit(Runtime.BLOCK_DRAG_END, blocks, topBlockId, newBatchElements);
+        });
+        this.runtime.on(Runtime.FRAME_DRAG_END, (frame, frameId, newBatchElements) => {
+            this.emit(Runtime.FRAME_DRAG_END, frame, frameId, newBatchElements);
         });
         this.runtime.on(Runtime.EXTENSION_ADDED, categoryInfo => {
             this.emit(Runtime.EXTENSION_ADDED, categoryInfo);
@@ -309,6 +321,7 @@ class VirtualMachine extends EventEmitter {
         }
 
         this.blockListener = this.blockListener.bind(this);
+        this.frameListener = this.frameListener.bind(this);
         this.flyoutBlockListener = this.flyoutBlockListener.bind(this);
         this.monitorBlockListener = this.monitorBlockListener.bind(this);
         this.variableListener = this.variableListener.bind(this);
@@ -797,12 +810,6 @@ class VirtualMachine extends EventEmitter {
         if (this.getGandiAssetFile(fileName)) {
             throw new Error(`Asset with name ${fileName} already exists`);
         }
-        if (!this.runtime.gandi) {
-            this.runtime.gandi = {};
-        }
-        if (!this.runtime.gandi.assets) {
-            this.runtime.gandi.assets = [];
-        }
         const storage = this.runtime.storage;
         const obj = {name};
         obj.dataFormat = assetType.runtimeFormat;
@@ -1214,7 +1221,7 @@ class VirtualMachine extends EventEmitter {
      * @property {number} [bitmapResolution] - the resolution scale for a bitmap costume.
      * @param {string} optTargetId - the id of the target to add to, if not the editing target.
      * @param {string} optVersion - if this is 2, load costume as sb2, otherwise load costume as sb3.
-     * * @param {boolean} isRemoteOperation Whether this is a remote operation.
+     * @param {boolean} isRemoteOperation Whether this is a remote operation.
      * @returns {?Promise} - a promise that resolves when the costume has been added
      */
     addCostume (md5ext, costumeObject, optTargetId, optVersion, isRemoteOperation) {
@@ -1293,7 +1300,7 @@ class VirtualMachine extends EventEmitter {
             target.addSound(clone, index);
 
             this.runtime.emitTargetSoundsChanged(
-                target.id, [index, 'add', target.sprite.sounds[index]]
+                target.originalTargetId, [index, 'add', target.sprite.sounds[index]]
             );
             this.emitTargetsUpdate();
         });
@@ -1420,7 +1427,8 @@ class VirtualMachine extends EventEmitter {
             ).then(() => {
                 target.addSound(soundObject);
                 const sounds = target.getSounds();
-                this.runtime.emitTargetSoundsChanged(target.id, [sounds.length - 1, 'add', sounds[sounds.length - 1]]);
+                const length = sounds.length;
+                this.runtime.emitTargetSoundsChanged(target.originalTargetId, [length - 1, 'add', sounds[length - 1]]);
                 this.emitTargetsUpdate();
             });
         }
@@ -1435,7 +1443,10 @@ class VirtualMachine extends EventEmitter {
      */
     renameSound (soundIndex, newName) {
         const newUnusedName = this.editingTarget.renameSound(soundIndex, newName);
-        this.runtime.emitTargetSoundsChanged(this.editingTarget.id, [soundIndex, 'update', {name: newUnusedName}]);
+        this.runtime.emitTargetSoundsChanged(
+            this.editingTarget.originalTargetId,
+            [soundIndex, 'update', {name: newUnusedName}]
+        );
         this.emitTargetsUpdate();
     }
 
@@ -1451,6 +1462,41 @@ class VirtualMachine extends EventEmitter {
                 .buffer;
         }
         return null;
+    }
+
+    setGandiConfigProperty (key, value) {
+        this.runtime.gandi.configs[key] = value;
+        this.runtime.emitProjectChanged();
+    }
+
+    getGandiConfigProperty (key) {
+        return this.runtime.gandi.configs[key];
+    }
+
+    getMonitoredKeys () {
+        const opcodes = new Set(
+            [
+                'event_whenkeypressed',
+                'sensing_keyoptions',
+                'GandiJoystick_whenJoystickMoved',
+                'GandiJoystick_getJoystickDistance',
+                'GandiJoystick_getJoystickDirection'
+            ]
+        );
+        const keys = new Set();
+        const targets = [...this.runtime.targets];
+        for (let i = 0; i < targets.length; i++) {
+            if (!targets[i].isOriginal) continue;
+            const blocks = Object.values(targets[i].blocks._blocks);
+            for (let j = 0; j < blocks.length; j++) {
+                const block = blocks[j];
+                if (opcodes.has(block.opcode)) {
+                    const field = block.fields.KEY_OPTION || block.fields.JOYSTICK;
+                    keys.add(field.value);
+                }
+            }
+        }
+        return [...keys];
     }
 
     /**
@@ -1489,7 +1535,7 @@ class VirtualMachine extends EventEmitter {
             sound.sampleCount = newBuffer.length;
             sound.rate = newBuffer.sampleRate;
         }
-        this.runtime.emitTargetSoundsChanged(this.editingTarget.id, [soundIndex, 'update', sound]);
+        this.runtime.emitTargetSoundsChanged(this.editingTarget.originalTargetId, [soundIndex, 'update', sound]);
         // If soundEncoding is null, it's because gui had a problem
         // encoding the updated sound. We don't want to store anything in this
         // case, and gui should have logged an error.
@@ -1507,13 +1553,13 @@ class VirtualMachine extends EventEmitter {
         const target = this.editingTarget;
         const deletedSound = this.editingTarget.deleteSound(soundIndex);
         if (deletedSound) {
-            this.runtime.emitTargetSoundsChanged(target.id, [soundIndex, 'delete']);
+            this.runtime.emitTargetSoundsChanged(target.originalTargetId, [soundIndex, 'delete']);
 
             this.runtime.emitProjectChanged();
             const restoreFun = () => {
                 target.addSound(deletedSound);
                 const sounds = target.getSounds();
-                this.runtime.emitTargetSoundsChanged(target.id, [sounds.length - 1, 'add', sounds[sounds.length - 1]]);
+                this.runtime.emitTargetSoundsChanged(target.originalTargetId, [sounds.length - 1, 'add', sounds[sounds.length - 1]]);
                 this.emitTargetsUpdate();
             };
             return restoreFun;
@@ -1624,7 +1670,7 @@ class VirtualMachine extends EventEmitter {
                 costume.uid = generateUid();
                 costume.assetId = costume.asset.assetId;
                 costume.md5 = `${costume.assetId}.${costume.dataFormat}`;
-                this.runtime.emitTargetCostumeChanged(this.editingTarget.id,
+                this.runtime.emitTargetCostumeChanged(this.editingTarget.originalTargetId,
                     ['costumes', costumeIndex, 'update', {
                         assetId: costume.assetId,
                         bitmapResolution: costume.bitmapResolution,
@@ -1677,7 +1723,8 @@ class VirtualMachine extends EventEmitter {
         costume.assetId = costume.asset.assetId;
         costume.md5 = `${costume.assetId}.${costume.dataFormat}`;
         const {assetId, bitmapResolution, dataFormat, md5, name} = costume;
-        this.runtime.emitTargetCostumeChanged(this.editingTarget.id, ['costumes', costumeIndex, 'update', {
+        const targetId = this.editingTarget.originalTargetId;
+        this.runtime.emitTargetCostumeChanged(targetId, ['costumes', costumeIndex, 'update', {
             assetId,
             bitmapResolution,
             dataFormat,
@@ -1706,9 +1753,6 @@ class VirtualMachine extends EventEmitter {
     }
 
     updateGandiAssetFromRemote (uid, newAsset) {
-        if (!this.runtime.gandi) {
-            this.runtime.gandi = {assets: [], wildExtensions: {}};
-        }
         const file = {
             asset: null,
             uid,
@@ -1730,9 +1774,6 @@ class VirtualMachine extends EventEmitter {
     }
 
     addGandiAssetFromRemote (uid, newAsset) {
-        if (!this.runtime.gandi) {
-            this.runtime.gandi = {assets: [], wildExtensions: {}};
-        }
         const file = {
             asset: null,
             uid,
@@ -1748,9 +1789,6 @@ class VirtualMachine extends EventEmitter {
     }
 
     deleteGandiAssetFromRemote (uid) {
-        if (!this.runtime.gandi) {
-            this.runtime.gandi = {assets: [], wildExtensions: {}};
-        }
         if (uid && this.runtime.gandi.assets.length > 0) {
             const index = this.runtime.gandi.assets.findIndex(asset => asset.uid === uid);
             if (index > -1) {
@@ -1773,9 +1811,9 @@ class VirtualMachine extends EventEmitter {
      */
     renameGandiAsset (fileName, newName) {
         const file = this.getGandiAssetFile(fileName);
-        const newfileName = `${newName}.${file.dataFormat}`;
-        if (this.getGandiAssetFile(newfileName)) {
-            throw new Error(`Asset with name ${newfileName} already exists`);
+        const newFileName = `${newName}.${file.dataFormat}`;
+        if (this.getGandiAssetFile(newFileName)) {
+            throw new Error(`Asset with name ${newFileName} already exists`);
         }
         file.name = newName;
         this.emitGandiAssetsUpdate({type: 'update', data: file});
@@ -1890,10 +1928,11 @@ class VirtualMachine extends EventEmitter {
             // target-specific monitored blocks (e.g. local variables)
             target.deleteMonitors();
             const currentEditingTarget = this.editingTarget;
-            for (let i = 0; i < sprite.clones.length; i++) {
-                const clone = sprite.clones[i];
-                this.runtime.stopForTarget(sprite.clones[i]);
-                this.runtime.disposeTarget(sprite.clones[i]);
+            const spriteClones = [...sprite.clones];
+            for (let i = 0; i < spriteClones.length; i++) {
+                const clone = spriteClones[i];
+                this.runtime.stopForTarget(spriteClones[i]);
+                this.runtime.disposeTarget(spriteClones[i]);
                 // Ensure editing target is switched if we are deleting it.
                 if (clone === currentEditingTarget) {
                     const nextTargetIndex = Math.min(
@@ -2013,6 +2052,16 @@ class VirtualMachine extends EventEmitter {
      */
     getLocale () {
         return formatMessage.setup().locale;
+    }
+
+    /**
+     * Handle a Blockly event for the current editing target.
+     * @param {!Blockly.Event} e Any Blockly event.
+     */
+    frameListener (e) {
+        if (this.editingTarget && typeof e === 'object' && e.type.startsWith('frame_')) {
+            this.editingTarget.frames.blocklyListen(e);
+        }
     }
 
     /**
@@ -2246,7 +2295,7 @@ class VirtualMachine extends EventEmitter {
         const sb3 = require('./serialization/sb3');
 
         const copiedBlocks = JSON.parse(JSON.stringify(blocks));
-        newBlockIds(copiedBlocks);
+        const blockIdOldToNewMap = newBlockIds(copiedBlocks);
         const target = this.runtime.getTargetById(targetId);
 
         if (optFromTargetId) {
@@ -2280,7 +2329,31 @@ class VirtualMachine extends EventEmitter {
                 {type: 'delete_next_create', blockId: copiedBlocks[0].id}
             );
             target.blocks.updateTargetSpecificBlocks(target.isStage);
+            return blockIdOldToNewMap;
         });
+    }
+
+    /**
+     * Called when frame are dragged from one sprite to another. Adds the frame to the
+     * workspace of the given target.
+     * @param {!Array<object>} frame Frame to add.
+     * @param {!string} targetId Id of target to add frame to.
+     * @param {?string} optFromTargetId Optional target id indicating that frame are being
+     * shared from that target. This is needed for resolving any potential variable conflicts.
+     * @return {!Promise} Promise that resolves when the extensions and frame have been added.
+     */
+    async shareFrameToTarget (frame, targetId, optFromTargetId) {
+        const copiedFrame = JSON.parse(JSON.stringify(frame));
+        const blocks = copiedFrame.blockElements;
+        copiedFrame.id = generateUid();
+        const target = this.runtime.getTargetById(targetId);
+        if (Object.keys(blocks).length > 0) {
+            const blockIdOldToNewMap = await this.shareBlocksToTarget(Object.values(blocks), targetId, optFromTargetId);
+            copiedFrame.blocks = copiedFrame.blocks.map(blockId => blockIdOldToNewMap[blockId]);
+        }
+        target.createFrame(copiedFrame);
+        this.runtime.emitTargetFramesChanged(targetId, ['add', copiedFrame.id, copiedFrame]);
+        target.blocks.updateTargetSpecificBlocks(target.isStage);
     }
 
     /**
@@ -2318,7 +2391,7 @@ class VirtualMachine extends EventEmitter {
                 if (target) {
                     target.addSound(clone);
                     const sounds = target.getSounds();
-                    this.runtime.emitTargetSoundsChanged(target.id,
+                    this.runtime.emitTargetSoundsChanged(target.originalTargetId,
                         [sounds.length - 1, 'add', sounds[sounds.length - 1]]
                     );
                     this.emitTargetsUpdate();
@@ -2429,6 +2502,7 @@ class VirtualMachine extends EventEmitter {
         const localVariables = Object.keys(localVarMap).map(
             k => localVarMap[k]
         );
+        const frames = Object.values(this.editingTarget.frames._frames);
 
         const workspaceComments = Object.keys(this.editingTarget.comments)
             .map(k => this.editingTarget.comments[k])
@@ -2439,13 +2513,15 @@ class VirtualMachine extends EventEmitter {
                                 ${globalVariables.map(v => v.toXML()).join()}
                                 ${localVariables.map(v => v.toXML(true)).join()}
                             </variables>
+
                             <procedures>
                                 ${this.getWorkspaceGlobalProcedures().join()}
                             </procedures>
                             ${workspaceComments.map(c => c.toXML()).join()}
-                            ${this.editingTarget.blocks.toXML(
-        this.editingTarget.comments
-    )}
+                            ${this.editingTarget.blocks.toXML(this.editingTarget.comments)}
+                            <custom-frameset>
+                                ${frames.map(i => this.editingTarget.frames.frameToXML(i)).join()}
+                            </custom-frameset>
                         </xml>`;
 
         this.emit('workspaceUpdate', {xml: xmlString});
@@ -2514,22 +2590,23 @@ class VirtualMachine extends EventEmitter {
      * @returns {boolean} Whether a target was reordered.
      */
     reorderTarget (targetIndex, newIndex, isRemoteOperation) {
-        let targets = this.runtime.targets;
-        targetIndex = MathUtil.clamp(targetIndex, 0, targets.length - 1);
-        newIndex = MathUtil.clamp(newIndex, 0, targets.length - 1);
-        if (targetIndex === newIndex) return false;
-        const target = targets[targetIndex];
-        targets = targets
-            .slice(0, targetIndex)
-            .concat(targets.slice(targetIndex + 1));
-        targets.splice(newIndex, 0, target);
-        this.runtime.targets = targets;
+        const targets = [...this.runtime.targets];
+        const originalTargets = targets.filter(t => t.isOriginal);
+        const processedData = MathUtil.moveArrayElement(originalTargets, targetIndex, newIndex);
+        if (processedData.array === originalTargets) return false;
+
+        const target = originalTargets[processedData.fromIndex];
+        const newIndexTarget = originalTargets[processedData.toIndex];
+        const fromIndex = targets.findIndex(t => t.id === target.id);
+        const toIndex = targets.findIndex(t => t.id === newIndexTarget.id);
+        this.runtime.targets = MathUtil.moveArrayElement(targets, fromIndex, toIndex).array;
+
         if (!isRemoteOperation) {
-            const max = Math.max(targetIndex, newIndex) + 1;
-            const min = Math.min(targetIndex, newIndex);
+            const max = Math.max(processedData.fromIndex, processedData.toIndex) + 1;
+            const min = Math.min(processedData.fromIndex, processedData.toIndex);
             const list = [];
             for (let index = min; index < max; index++) {
-                const _target = targets[index];
+                const _target = processedData.array[index];
                 list.push([_target.id, {order: index}]);
             }
             this.runtime.emitTargetSimplePropertyChanged(list);
@@ -2572,7 +2649,6 @@ class VirtualMachine extends EventEmitter {
         if (target) {
             const reorderSuccessful = target.reorderSound(soundIndex, newIndex);
             if (reorderSuccessful) {
-                this.runtime.emitTargetSoundsChanged(target.id, [soundIndex, 'reorder', [soundIndex, newIndex]]);
                 this.runtime.emitProjectChanged();
             }
             return reorderSuccessful;

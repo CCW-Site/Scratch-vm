@@ -5,6 +5,7 @@
  */
 
 const vmPackage = require('../../package.json');
+const Frames = require('../engine/frame');
 const Blocks = require('../engine/blocks');
 const Sprite = require('../sprites/sprite');
 const Variable = require('../engine/variable');
@@ -232,6 +233,25 @@ const serializeBlock = function (block, saveVarId) {
     if (block.comment) {
         obj.comment = block.comment;
     }
+    return obj;
+};
+
+/**
+ * Serialize the given frame.
+ * @param {object} frame The frame to serialize
+ * @return {object} A serialized representation of the frame.
+ */
+const serializeFrame = function (frame) {
+    const obj = Object.create(null);
+    obj.id = frame.id;
+    obj.title = frame.title;
+    obj.color = frame.color;
+    obj.locked = frame.locked;
+    obj.blocks = frame.blocks;
+    obj.width = frame.width;
+    obj.height = frame.height;
+    obj.x = frame.x;
+    obj.y = frame.y;
     return obj;
 };
 
@@ -483,6 +503,14 @@ const serializeTarget = function (target, extensions, saveVarId) {
     [obj.blocks, targetExtensions] = serializeBlocks(target.blocks, saveVarId);
     obj.comments = serializeComments(target.comments);
 
+    if (target.hasOwnProperty('frames')) {
+        const frames = Object.create(null);
+        for (const frameId in target.frames) {
+            frames[frameId] = serializeFrame(target.frames[frameId]);
+        }
+        obj.frames = frames;
+    }
+
     // TODO remove this check/patch when (#1901) is fixed
     if (target.currentCostume < 0 || target.currentCostume >= target.costumes.length) {
         log.warn(`currentCostume property for target ${target.name} is out of range`);
@@ -559,10 +587,14 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
     const obj = Object.create(null);
     // Create extension set to hold extension ids found while serializing targets
     const extensions = new Set();
-
-    const originalTargetsToSerialize = targetId ?
-        [runtime.getTargetById(targetId)] :
-        runtime.targets.filter(target => target.isOriginal);
+    let originalTargetsToSerialize;
+    if (targetId) {
+        const target = runtime.getTargetById(targetId);
+        // The target may not exist.
+        originalTargetsToSerialize = target ? [target] : [];
+    } else {
+        originalTargetsToSerialize = runtime.targets.filter(target => target.isOriginal);
+    }
 
     const layerOrdering = getSimplifiedLayerOrdering(originalTargetsToSerialize);
 
@@ -603,28 +635,7 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
         obj.monitors = serializeMonitors(runtime.getMonitorState(), runtime);
     }
 
-    // Assemble Gandi Asset
-    if (runtime.gandi) {
-        const gandiAssetsList = runtime.gandi.assets.map(gandiAsset => {
-            const item = Object.create(null);
-            item.uid = gandiAsset.uid;
-            item.assetId = gandiAsset.assetId;
-            item.name = gandiAsset.name;
-            item.md5ext = gandiAsset.md5;
-            item.dataFormat = gandiAsset.dataFormat.toLowerCase();
-            if (item.dataFormat === 'py' || item.dataFormat === 'json') {
-                // py and json file need GandiPython extension to run
-                extensions.add('GandiPython');
-            }
-            return item;
-        });
-        obj.gandi = {
-            assets: runtime.isTeamworkMode ?
-                gandiAssetsList.reduce((a, asset) => ({...a, [asset.assetId]: asset}), {}) :
-                gandiAssetsList,
-            wildExtensions: runtime.gandi.wildExtensions || {}
-        };
-    }
+    runtime.gandi.serialize(obj, extensions);
 
     // Assemble extension list
     obj.extensions = Array.from(extensions);
@@ -918,7 +929,6 @@ const deserializeBlocks = function (blocks) {
     return blocks;
 };
 
-
 /**
  * Parse the assets of a single "Scratch object" and load them. This
  * preprocesses objects to support loading the data for those assets over a
@@ -1024,10 +1034,12 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
         return Promise.resolve(null);
     }
     // Blocks container for this object.
-    const blocks = new Blocks(runtime, false, object.id);
+    const blocks = new Blocks(runtime, false);
+    
+    const frames = new Frames(runtime);
 
     // @todo: For now, load all Scratch objects (stage/sprites) as a Sprite.
-    const sprite = new Sprite(blocks, runtime);
+    const sprite = new Sprite(blocks, runtime, frames);
 
     // Sprite/stage name from JSON.
     if (object.hasOwnProperty('name')) {
@@ -1053,6 +1065,7 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
             }
         }
     }
+    
     // Costumes from JSON.
     const {costumePromises} = assets;
     // Sounds from JSON
@@ -1079,6 +1092,12 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
     }
     if (object.hasOwnProperty('textToSpeechLanguage')) {
         target.textToSpeechLanguage = object.textToSpeechLanguage;
+    }
+    if (object.hasOwnProperty('frames')) {
+        for (const frameId in object.frames) {
+            const frameJSON = object.frames[frameId];
+            target.createFrame(frameJSON);
+        }
     }
     if (object.hasOwnProperty('variables')) {
         for (const varId in object.variables) {
@@ -1345,7 +1364,6 @@ const replaceUnsafeCharsInVariableIds = function (targets) {
 };
 
 const parseGandiObject = (gandiObject, runtime) => {
-    runtime.gandi = {assets: [], wildExtensions: {}};
     if (gandiObject.assets && isArray(gandiObject.assets)) {
         const filePromises = (gandiObject.assets || []).map(file => {
             const gandiAsset = {
@@ -1361,6 +1379,9 @@ const parseGandiObject = (gandiObject, runtime) => {
         Promise.all(filePromises).then(gandiAssets => {
             runtime.gandi.assets = gandiAssets;
         });
+    }
+    if (gandiObject.configs) {
+        runtime.gandi.configs = gandiObject.configs;
     }
     if (gandiObject.wildExtensions) {
         runtime.gandi.wildExtensions = gandiObject.wildExtensions;

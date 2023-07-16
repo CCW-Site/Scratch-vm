@@ -713,9 +713,6 @@ class ExtensionManager {
      * @param {?boolean} isRemoteOperation Whether this is a remote operation
      */
     registerGandiWildExtensions (id, url, isRemoteOperation) {
-        if (!this.runtime.gandi) {
-            this.runtime.gandi = {assets: [], wildExtensions: {}};
-        }
         if (this.runtime.gandi.wildExtensions[id]) {
             this.runtime.logSystem.warn(`registerGandiWildExtensions: extension id:${id} registered，will be replaced`);
         }
@@ -818,7 +815,7 @@ class ExtensionManager {
                 return resolve(this._customlExtensionInfo);
             }
             if (!url) {
-                url = this.runtime.gandi?.wildExtensions?.[id]?.url;
+                url = this.runtime.gandi.wildExtensions[id]?.url;
             }
             if (!url) {
                 return resolve(this._customlExtensionInfo);
