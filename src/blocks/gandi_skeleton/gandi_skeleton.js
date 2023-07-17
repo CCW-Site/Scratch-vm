@@ -30,7 +30,7 @@ class GandiSpineSkeletonExtension {
         const assetHost = 'https://m.ccw.site/gandi/spine_test/';
         // const assetHost = 'http://127.0.0.1:8868/assets/';
         this.runtime.renderer.initSpineManager(assetHost);
-        this.NS = 'GandiSkeleton';
+        this.NS = 'GandiSpineSkeleton';
         runtime.on('PROJECT_STOP_ALL', this._handleProjectStop.bind(this));
         // runtime.on('PROJECT_RUN_STOP', this._handleProjectStop.bind(this));
     }
@@ -322,6 +322,13 @@ class GandiSpineSkeletonExtension {
     }
 
     getInfo () {
+        const documentBlock = {
+            blockType: 'button',
+            text: 'Documentation/必读',
+            onClick: () => {
+                window.open('https://ccw-site.feishu.cn/docx/EI9wdkeTgolCm5xNlEucdPUGn0e', '_blank');
+            }
+        };
 
         // const blockUpdateSkeletonAnimation = {
         //     opcode: 'updateSkeletonAnimation',
@@ -633,8 +640,9 @@ class GandiSpineSkeletonExtension {
 
         return {
             id: this.NS,
-            name: 'GandiSkeleton',
+            name: 'GandiSpineSkeleton',
             blocks: [
+                documentBlock,
                 '--- 加载',
                 blockLoadAsset,
                 blockSetSkeletonJSON,
@@ -646,7 +654,7 @@ class GandiSpineSkeletonExtension {
                 blockShowAnimation,
                 // blockAddAnimation,
                 blockPlaySkeletonAnimationOnce,
-                blockSetIdleAnimation,
+                // blockSetIdleAnimation,
                 blockAnimationEventHat,
                 blockStopAnimation,
                 '--- 皮肤',
@@ -655,10 +663,10 @@ class GandiSpineSkeletonExtension {
                 blockGetBoneAttribute,
                 '--- 位置',
                 blockGetAABB,
-                blockSetRotation,
+                // blockSetRotation,
                 '--- 调试',
-                blockDebug,
-                showUniForms
+                blockDebug
+                // showUniForms
                 //   blockUpdateSkeletonAnimation,
                 //    blockSetPosition
             ],
