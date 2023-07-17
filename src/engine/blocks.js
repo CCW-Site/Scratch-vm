@@ -545,7 +545,8 @@ class Blocks {
                 id: e.blockId,
                 element: e.element,
                 name: e.name,
-                value: e.newValue
+                value: e.newValue,
+                recordUndo: e.recordUndo
             });
             break;
         case 'move':
@@ -1022,12 +1023,18 @@ class Blocks {
         // Verify if the parameter blocks in inputs are being used.
         if (block.opcode.startsWith('procedures_prototype')) {
             const argumentIds = JSON.parse(block.mutation.argumentids);
+            let hasUnusedArguments = false;
             Object.keys(block.inputs).forEach(name => {
                 if (!argumentIds.includes(name)) {
                     this.deleteBlock(block.inputs[name].block);
                     delete block.inputs[name];
+                    hasUnusedArguments = true;
                 }
             });
+            // If there are unused parameter blocks, the state of the toolbox needs to be updated.
+            if (!args.recordUndo && hasUnusedArguments) {
+                this.emitCustomBlocksLengthChanged();
+            }
         }
 
         this.emitProjectChanged();
