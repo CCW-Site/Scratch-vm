@@ -536,7 +536,7 @@ class Blocks {
             const newBlocks = adapter(e);
             // A create event can create many blocks. Add them all.
             for (let i = 0; i < newBlocks.length; i++) {
-                this.createBlock(newBlocks[i]);
+                this.createBlock(newBlocks[i], source);
             }
             break;
         }
@@ -590,7 +590,7 @@ class Blocks {
                     type: e.type
                 });
             }
-            this.deleteBlock(e.blockId);
+            this.deleteBlock(e.blockId, source);
             break;
         case 'var_create':
             this.resetCache(); // tw: more aggressive cache resetting
@@ -832,6 +832,10 @@ class Blocks {
         }
     }
 
+    emitCustomBlocksLengthChanged () {
+        this.runtime.emitCustomBlocksLengthChanged();
+    }
+
     /**
      * Block management: create/delete/change/move block;
      * @param {!object} e Blockly move event to be processed
@@ -857,7 +861,7 @@ class Blocks {
      * Block management: create blocks and scripts from a `create` event
      * @param {!object} block Blockly create event to be processed
      */
-    createBlock (block) {
+    createBlock (block, source) {
         // Does the block already exist?
         // Could happen, e.g., for an unobscured shadow.
         if (this._blocks.hasOwnProperty(block.id)) {
@@ -873,6 +877,11 @@ class Blocks {
         }
 
         this.resetCache();
+
+        // When custom blocks are added or deleted, it may be necessary to update the toolbox
+        if (source === 'default' && block.opcode === 'procedures_definition') {
+            this.emitCustomBlocksLengthChanged();
+        }
 
         // A new block was actually added to the block container,
         // emit a project changed event
@@ -1010,6 +1019,17 @@ class Blocks {
         }
         }
 
+        // Verify if the parameter blocks in inputs are being used.
+        if (block.opcode.startsWith('procedures_prototype')) {
+            const argumentIds = JSON.parse(block.mutation.argumentids);
+            Object.keys(block.inputs).forEach(name => {
+                if (!argumentIds.includes(name)) {
+                    this.deleteBlock(block.inputs[name].block);
+                    delete block.inputs[name];
+                }
+            });
+        }
+
         this.emitProjectChanged();
 
         this.resetCache();
@@ -1121,7 +1141,7 @@ class Blocks {
      * with the given ID does not exist.
      * @param {!string} blockId Id of block to delete
      */
-    deleteBlock (blockId) {
+    deleteBlock (blockId, source) {
         // @todo In runtime, stop threads running on this script.
 
         // Get block
@@ -1154,6 +1174,11 @@ class Blocks {
 
         // Delete block itself.
         delete this._blocks[blockId];
+
+        // When custom blocks are added or deleted, it may be necessary to update the toolbox
+        if (source === 'default' && block.opcode === 'procedures_definition') {
+            this.emitCustomBlocksLengthChanged();
+        }
 
         this.resetCache();
         this.emitProjectChanged();

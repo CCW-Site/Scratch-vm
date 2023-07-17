@@ -983,6 +983,14 @@ class Runtime extends EventEmitter {
         return 'MIC_LISTENING';
     }
 
+    /**
+     * Event name to indicate that the custom blocks have been added or deleted.
+     * @const {string}
+     */
+    static get CUSTOM_BLOCKS_LENGTH_CHANGED () {
+        return 'CUSTOM_BLOCKS_LENGTH_CHANGED';
+    }
+
     // powered by xigua start
     static get EXTENSION_DATA_LOADING () {
         return 'EXTENSION_DATA_LOADING';
@@ -3299,6 +3307,10 @@ class Runtime extends EventEmitter {
      */
     emitProjectChanged () {
         this.emit(Runtime.PROJECT_CHANGED);
+    }
+
+    emitCustomBlocksLengthChanged () {
+        this.emit(Runtime.CUSTOM_BLOCKS_LENGTH_CHANGED);
     }
 
     emitGandiAssetsUpdate (action) {
