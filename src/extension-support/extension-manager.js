@@ -32,11 +32,6 @@ const builtinExtensions = {
     tw: () => require('../extensions/tw')
 };
 
-// const ENV = typeof DEPLOY_ENV === 'undefined' ? 'dev' : DEPLOY_ENV;
-// if (ENV === 'dev' || ENV === 'qa') {
-//     builtinExtensions.GandiSpineSkeleton = () => require('../blocks/gandi_skeleton/gandi_skeleton');
-// }
-
 const scratchExtension = [
     'music',
     'pen',
@@ -165,36 +160,6 @@ class ExtensionManager {
                     )}`
                 );
             });
-    }
-
-    getPreviewExtension () {
-        const GandiSpineSkeleton = {
-            Extension: () => require('../blocks/gandi_skeleton/gandi_skeleton'),
-            info: {
-                name: 'GandiSpineSkeleton.extensionName',
-                extensionId: 'GandiSpineSkeleton',
-                iconURL: 'musicIconURL',
-                insetIconURL: 'musicInsetIconURL',
-                description: 'GandiSpineSkeleton.description',
-                featured: true,
-                tags: ['In Development']
-                // doc: 'GandiSpineSkeleton.doc',
-            },
-            l10n: {
-                'zh-cn': {
-                    'GandiSpineSkeleton.extensionName': 'spine骨骼动画【开发中】',
-                    'GandiSpineSkeleton.description': 'v0.01 仅供预览和反馈'
-                //   'GandiSpineSkeleton.doc': 'https://dev.ccw.site/extensions/async_asset?minimal',
-                },
-                'en': {
-                    'GandiSpineSkeleton.extensionName': 'spine skeleton animation【In Development】',
-                    'GandiSpineSkeleton.description': 'v0.01 only for preview and feedback'
-                //   'GandiSpineSkeleton.doc': 'https://getgandi.com/extensions/async_asset?minimal',
-                }
-            }
-        };
-        builtinExtensions.GandiSpineSkeleton = () => require('../blocks/gandi_skeleton/gandi_skeleton');
-        return {GandiSpineSkeleton};
     }
 
     /**
