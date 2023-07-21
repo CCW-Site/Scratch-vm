@@ -1036,7 +1036,9 @@ class VirtualMachine extends EventEmitter {
                 /** @type RenderedTarget */ target.updateAllDrawableProperties();
                 // Ensure unique sprite name
                 if (target.isSprite()) {
-                    this.renameSprite(target.id, target.getName());
+                    // Do not send the 'name changed' event here
+                    // because the target has not completed installation yet.
+                    this.renameSprite(target.id, target.getName(), false);
                 }
             });
             // Sort the executable targets by layerOrder.
@@ -1860,9 +1862,9 @@ class VirtualMachine extends EventEmitter {
      * Rename a sprite.
      * @param {string} targetId ID of a target whose sprite to rename.
      * @param {string} newName New name of the sprite.
-     * @param {boolean} isRemoteOperation Whether this is a remote operation.
+     * @param {boolean} [sendSpriteNameChangedEvent = true] whether to send an event when the sprite name changes.
      */
-    renameSprite (targetId, newName, isRemoteOperation) {
+    renameSprite (targetId, newName, sendSpriteNameChangedEvent = true) {
         const target = this.runtime.getTargetById(targetId);
         if (target) {
             if (!target.isSprite()) {
@@ -1896,7 +1898,7 @@ class VirtualMachine extends EventEmitter {
                     );
                 }
                 if (newUnusedName !== oldName) {
-                    if (!isRemoteOperation) {
+                    if (sendSpriteNameChangedEvent) {
                         this.runtime.emitTargetSimplePropertyChanged([[targetId, {name: newName}]]);
                     }
                     this.emitTargetsUpdate();
