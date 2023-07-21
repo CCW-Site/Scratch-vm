@@ -541,17 +541,22 @@ class RenderedTarget extends Target {
      * Rename a costume, taking care to avoid duplicate names.
      * @param {int} costumeIndex - the index of the costume to be renamed.
      * @param {string} newName - the desired new name of the costume (will be modified if already in use).
-     * @param {?boolean} isRemoteOperation Whether this is a remote operation
+     * @param {boolean} [sendNameChangedEvent = true] whether to send an event when the name changes.
      */
-    renameCostume (costumeIndex, newName, isRemoteOperation) {
+    renameCostume (costumeIndex, newName, sendNameChangedEvent) {
         const usedNames = this.sprite.costumes
             .filter((costume, index) => costumeIndex !== index)
             .map(costume => costume.name);
         const oldName = this.getCostumes()[costumeIndex].name;
         const newUnusedName = StringUtil.unusedName(newName, usedNames);
+        if (oldName === newUnusedName) {
+            return;
+        }
         this.getCostumes()[costumeIndex].name = newUnusedName;
-        if (!isRemoteOperation) {
-            this.runtime.emitTargetCostumeChanged(this.originalTargetId, ['costumes', costumeIndex, 'update', {name: newUnusedName}]);
+        if (sendNameChangedEvent) {
+            this.runtime.emitTargetCostumeChanged(this.originalTargetId,
+                ['costumes', costumeIndex, 'update', {name: newUnusedName}]
+            );
         }
 
         if (this.isStage) {
@@ -565,7 +570,6 @@ class RenderedTarget extends Target {
         } else {
             this.blocks.updateAssetName(oldName, newUnusedName, 'costume');
         }
-
     }
 
     /**
@@ -620,17 +624,25 @@ class RenderedTarget extends Target {
      * Rename a sound, taking care to avoid duplicate names.
      * @param {int} soundIndex - the index of the sound to be renamed.
      * @param {string} newName - the desired new name of the sound (will be modified if already in use).
+     * @param {boolean} [sendNameChangedEvent = true] whether to send an event when the name changes.
      * @return {string} The new name of the sound.
      */
-    renameSound (soundIndex, newName) {
+    renameSound (soundIndex, newName, sendNameChangedEvent = true) {
         const usedNames = this.sprite.sounds
             .filter((sound, index) => soundIndex !== index)
             .map(sound => sound.name);
         const oldName = this.sprite.sounds[soundIndex].name;
         const newUnusedName = StringUtil.unusedName(newName, usedNames);
+        if (oldName === newUnusedName) {
+            return;
+        }
         this.sprite.sounds[soundIndex].name = newUnusedName;
         this.blocks.updateAssetName(oldName, newUnusedName, 'sound');
-        return newUnusedName;
+        if (sendNameChangedEvent) {
+            this.runtime.emitTargetSoundsChanged(
+                this.originalTargetId, [soundIndex, 'update', {name: newUnusedName}]
+            );
+        }
     }
 
     /**

@@ -1143,6 +1143,21 @@ class VirtualMachine extends EventEmitter {
                 );
             })
             .then(sprite => {
+                const targets = [...this.runtime.targets];
+                for (let index = targets.length - 1; index > -1; index--) {
+                    /** @type RenderedTarget */
+                    const target = targets[index];
+                    if (target.id === sprite.id) {
+                        // Ensure unique costume name
+                        target.sprite.costumes.forEach((costume, idx) => {
+                            target.renameCostume(idx, costume.name, false);
+                        });
+                        // Ensure unique sound name
+                        target.sprite.sounds.forEach((sound, idx) => {
+                            target.renameSound(idx, sound.name, false);
+                        });
+                    }
+                }
                 if (sprite && !isRemoteOperation) {
                     this.emit('ADD_SPRITE', sprite);
                 }
@@ -1343,15 +1358,14 @@ class VirtualMachine extends EventEmitter {
     /**
      * Update the sound on the specific target.
      * @param {int} soundIndex - the index of the sound to be update.
-     * @param {!object} soundObject Object representing the costume.
+     * @param {!object} soundObject Object representing the sound.
      * @param {string} optTargetId - the id of the target to add to, if not the editing target.
-     * @returns {?Promise} - a promise that resolves when the sound has been decoded and added
      */
     updateSoundFromServer (soundIndex, data, optTargetId) {
         const target = optTargetId ? this.runtime.getTargetById(optTargetId) : this.editingTarget;
         const oldSound = JSON.parse(JSON.stringify(target.getSounds()[soundIndex]));
         if (data[0] === 'name') {
-            target.renameSound(soundIndex, data[1].i);
+            target.renameSound(soundIndex, data[1].i, false);
         } else {
             data.forEach(([key, {i: value}]) => {
                 oldSound[key] = value;
@@ -1383,7 +1397,7 @@ class VirtualMachine extends EventEmitter {
 
     /**
      * Add a sound to the current editing target that from server.
-     * @param {!object} soundObject Object representing the costume.
+     * @param {!object} soundObject Object representing the sound.
      * @param {string} optTargetId - the id of the target to add to, if not the editing target.
      * @returns {?Promise} - a promise that resolves when the sound has been decoded and added
      */
@@ -1416,7 +1430,7 @@ class VirtualMachine extends EventEmitter {
 
     /**
      * Add a sound to the current editing target.
-     * @param {!object} soundObject Object representing the costume.
+     * @param {!object} soundObject Object representing the sound.
      * @param {string} optTargetId - the id of the target to add to, if not the editing target.
      * @returns {?Promise} - a promise that resolves when the sound has been decoded and added
      */
@@ -1447,11 +1461,7 @@ class VirtualMachine extends EventEmitter {
      * @param {string} newName - the desired new name of the sound (will be modified if already in use).
      */
     renameSound (soundIndex, newName) {
-        const newUnusedName = this.editingTarget.renameSound(soundIndex, newName);
-        this.runtime.emitTargetSoundsChanged(
-            this.editingTarget.originalTargetId,
-            [soundIndex, 'update', {name: newUnusedName}]
-        );
+        this.editingTarget.renameSound(soundIndex, newName);
         this.emitTargetsUpdate();
     }
 
@@ -1862,9 +1872,9 @@ class VirtualMachine extends EventEmitter {
      * Rename a sprite.
      * @param {string} targetId ID of a target whose sprite to rename.
      * @param {string} newName New name of the sprite.
-     * @param {boolean} [sendSpriteNameChangedEvent = true] whether to send an event when the sprite name changes.
+     * @param {boolean} [sendNameChangedEvent = true] whether to send an event when the sprite name changes.
      */
-    renameSprite (targetId, newName, sendSpriteNameChangedEvent = true) {
+    renameSprite (targetId, newName, sendNameChangedEvent = true) {
         const target = this.runtime.getTargetById(targetId);
         if (target) {
             if (!target.isSprite()) {
@@ -1898,8 +1908,8 @@ class VirtualMachine extends EventEmitter {
                     );
                 }
                 if (newUnusedName !== oldName) {
-                    if (sendSpriteNameChangedEvent) {
-                        this.runtime.emitTargetSimplePropertyChanged([[targetId, {name: newName}]]);
+                    if (sendNameChangedEvent) {
+                        this.runtime.emitTargetSimplePropertyChanged([[targetId, {name: newUnusedName}]]);
                     }
                     this.emitTargetsUpdate();
                 }
