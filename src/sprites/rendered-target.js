@@ -543,7 +543,7 @@ class RenderedTarget extends Target {
      * @param {string} newName - the desired new name of the costume (will be modified if already in use).
      * @param {boolean} [sendNameChangedEvent = true] whether to send an event when the name changes.
      */
-    renameCostume (costumeIndex, newName, sendNameChangedEvent) {
+    renameCostume (costumeIndex, newName, sendNameChangedEvent = true) {
         const usedNames = this.sprite.costumes
             .filter((costume, index) => costumeIndex !== index)
             .map(costume => costume.name);
