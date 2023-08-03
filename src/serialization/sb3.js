@@ -1035,7 +1035,7 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
     }
     // Blocks container for this object.
     const blocks = new Blocks(runtime, false);
-    
+
     const frames = new Frames(runtime);
 
     // @todo: For now, load all Scratch objects (stage/sprites) as a Sprite.
@@ -1065,7 +1065,7 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
             }
         }
     }
-    
+
     // Costumes from JSON.
     const {costumePromises} = assets;
     // Sounds from JSON
@@ -1386,6 +1386,13 @@ const parseGandiObject = (gandiObject, runtime) => {
     if (gandiObject.wildExtensions) {
         runtime.gandi.wildExtensions = gandiObject.wildExtensions;
     }
+    if (gandiObject.dynamicMenuItems) {
+        runtime.gandi.dynamicMenuItems = gandiObject.dynamicMenuItems;
+    }
+    if (gandiObject.spine) {
+        runtime.gandi.spine = gandiObject.spine;
+    }
+
 };
 
 /**

@@ -847,6 +847,10 @@ class Runtime extends EventEmitter {
         return 'GANDI_WILD_EXTENSIONS_UPDATE';
     }
 
+    static get GANDI_SHOW_SPINE_UPLOAD () {
+        return 'GANDI_SHOW_SPINE_UPLOAD';
+    }
+
     /**
      * Event name for monitors update.
      * @const {string}

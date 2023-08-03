@@ -245,8 +245,9 @@ class ExtensionManager {
             }
         }
 
-        log.warn(`ccw: [${extensionURL}] not found in remote extensions library,try load as URL`);
-
+        log.warn(
+            `ccw: [${extensionURL}] not found in remote extensions library,try load as URL`
+        );
 
         if (!this.runtime.isPlayerOnly) {
             // customExtension.
@@ -440,12 +441,19 @@ class ExtensionManager {
         if (/[^\w-.]/i.test(extensionInfo.id)) {
             throw new Error('Invalid extension id');
         }
-        const warningTipText = extensionInfo.warningTipText || this.runtime.getFormatMessage()({
-            id: 'gui.extension.compatibilityWarning',
-            default: 'This extension is incompatible with Scratch. Projects made with it cannot be uploaded to the Scratch website. You can share the project on Cocrea. Make sure before you use it.',
-            description: 'Give a warning when an extension is not official in Scratch.'
-        });
-        if (!scratchExtension.includes(extensionInfo.id) && this.showCompatibilityWarning) {
+        const warningTipText =
+            extensionInfo.warningTipText ||
+            this.runtime.getFormatMessage()({
+                id: 'gui.extension.compatibilityWarning',
+                default:
+                    'This extension is incompatible with Scratch. Projects made with it cannot be uploaded to the Scratch website. You can share the project on Cocrea. Make sure before you use it.',
+                description:
+                    'Give a warning when an extension is not official in Scratch.'
+            });
+        if (
+            !scratchExtension.includes(extensionInfo.id) &&
+            this.showCompatibilityWarning
+        ) {
             extensionInfo.warningTipText = warningTipText;
         } else {
             delete extensionInfo.warningTipText;
@@ -457,13 +465,13 @@ class ExtensionManager {
             (results, blockInfo) => {
                 try {
                     let result;
-                    if (typeof blockInfo === 'string' && blockInfo.startsWith('---')) {
+                    if (
+                        typeof blockInfo === 'string' &&
+                        blockInfo.startsWith('---')
+                    ) {
                         result = blockInfo;
                     } else {
-                        result = this._prepareBlockInfo(
-                            serviceName,
-                            blockInfo
-                        );
+                        result = this._prepareBlockInfo(serviceName, blockInfo);
                     }
                     // switch (blockInfo) {
                     // case '---': // separator
@@ -480,7 +488,11 @@ class ExtensionManager {
                     results.push(result);
                 } catch (e) {
                     // TODO: more meaningful error reporting
-                    log.error(`Error processing block: ${e.message}, Block:\n${JSON.stringify(blockInfo)}`);
+                    log.error(
+                        `Error processing block: ${
+                            e.message
+                        }, Block:\n${JSON.stringify(blockInfo)}`
+                    );
                 }
                 return results;
             },
@@ -551,6 +563,8 @@ class ExtensionManager {
         const menuFunc = extensionObject[menuItemFunctionName];
         const menuItems = menuFunc
             .call(extensionObject, editingTargetID)
+            // add dynamic menu items from gandi, such as custom skeleton or async asset
+            .concat(this.runtime.gandi.dynamicMenuItems[menuItemFunctionName] ?? [])
             .map(item => {
                 item = maybeFormatMessage(item, extensionMessageContext);
                 switch (typeof item) {
@@ -567,7 +581,7 @@ class ExtensionManager {
                 default:
                     return item;
                 }
-            });
+            })
 
         if (!menuItems || menuItems.length < 1) {
             throw new Error(
@@ -649,10 +663,15 @@ class ExtensionManager {
 
                 return (args, util, realBlockInfo) => {
                     if (serviceObject[funcName]) {
-                        return serviceObject[funcName](args, util, realBlockInfo);
+                        return serviceObject[funcName](
+                            args,
+                            util,
+                            realBlockInfo
+                        );
                     }
-                    log.error(`Warning: the method '${funcName}' in the ${
-                        serviceObject.constructor.name} has not been implemented yet.`);
+                    log.error(
+                        `Warning: the method '${funcName}' in the ${serviceObject.constructor.name} has not been implemented yet.`
+                    );
                 };
             })();
 
@@ -670,7 +689,6 @@ class ExtensionManager {
 
     // powered by xigua start
 
-
     /**
      * @description register gandi extension when developer load custom extension
      * @param {string} id extension id
@@ -679,16 +697,20 @@ class ExtensionManager {
      */
     registerGandiWildExtensions (id, url, isRemoteOperation) {
         if (this.runtime.gandi.wildExtensions[id]) {
-            this.runtime.logSystem.warn(`registerGandiWildExtensions: extension id:${id} registered，will be replaced`);
+            this.runtime.logSystem.warn(
+                `registerGandiWildExtensions: extension id:${id} registered，will be replaced`
+            );
         }
         if (!isRemoteOperation) {
-            this.runtime.emitGandiWildExtensionsUpdate({data: {id, url}, type: 'add'});
+            this.runtime.emitGandiWildExtensionsUpdate({
+                data: {id, url},
+                type: 'add'
+            });
         }
         this.runtime.gandi.wildExtensions[id] = {
             id,
             url
         };
-
     }
 
     shouldReplaceExtension (extensionId) {
@@ -721,7 +743,8 @@ class ExtensionManager {
     }
 
     getLocalExtensionClass (extensionId) {
-        const func = builtinExtensions[extensionId] || injectExtensions[extensionId];
+        const func =
+            builtinExtensions[extensionId] || injectExtensions[extensionId];
         return func && func();
     }
 
@@ -759,29 +782,46 @@ class ExtensionManager {
             }[ENV];
             // const staticName = '-qa';
             // https://static-dev.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m/static/js/
-            const scriptHost = staticName === void 0 ? '' : `https://static${staticName}.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m`;
+            const scriptHost =
+                staticName === void 0 ?
+                    '' :
+                    `https://static${staticName}.xiguacity.cn/h1t86b7fg6c7k36wnt0cb30m`;
 
             onlineScriptUrl = `${scriptHost}/static/js/main.js?_=${Date.now()}`;
         }
 
-        if (this.runtime.ccwAPI && this.runtime.ccwAPI.getOnlineExtensionsConfig) {
-            onlineScriptUrl = this.runtime.ccwAPI.getOnlineExtensionsConfig().fileSrc || onlineScriptUrl;
+        if (
+            this.runtime.ccwAPI &&
+            this.runtime.ccwAPI.getOnlineExtensionsConfig
+        ) {
+            onlineScriptUrl =
+                this.runtime.ccwAPI.getOnlineExtensionsConfig().fileSrc ||
+                onlineScriptUrl;
         }
         // use 'OfficialExtensions' as script tag dom id
         // make load remote script file only once
 
-        return new Promise((resolve, reject) => this.loadRemoteExtensionWithURL('OfficialExtensions', onlineScriptUrl, async () => {
-            if (window.scratchExtensions) {
-                const {default: lib} = await window.scratchExtensions.default();
-                Object.keys(lib).forEach(key => {
-                    const obj = lib[key];
-                    const id = (obj.info && obj.info.extensionId) || key;
-                    this.registOfficialExtensions(id, obj.Extension);
-                });
-                this._officialExtensionInfo = lib;
-            }
-            resolve(this._officialExtensionInfo);
-        }, reject));
+        return new Promise((resolve, reject) =>
+            this.loadRemoteExtensionWithURL(
+                'OfficialExtensions',
+                onlineScriptUrl,
+                async () => {
+                    if (window.scratchExtensions) {
+                        const {default: lib} =
+                            await window.scratchExtensions.default();
+                        Object.keys(lib).forEach(key => {
+                            const obj = lib[key];
+                            const id =
+                                (obj.info && obj.info.extensionId) || key;
+                            this.registOfficialExtensions(id, obj.Extension);
+                        });
+                        this._officialExtensionInfo = lib;
+                    }
+                    resolve(this._officialExtensionInfo);
+                },
+                reject
+            )
+        );
     }
 
     loadCustomExtensionsLibrary (url, id) {
@@ -795,30 +835,45 @@ class ExtensionManager {
             if (!url) {
                 return resolve(this._customExtensionInfo);
             }
-            this.loadRemoteExtensionWithURL(url, url, async () => {
-                if (window.ExtensionLib) {
-                // where is ExtensionLib?
-                // window.ExtensionLib is defined in CCW-Custom-Extension project which host is argument [url] in this function
-                    const lib = await window.ExtensionLib;
-                    Object.keys(lib).forEach(key => {
-                        const obj = lib[key];
-                        const extensionId = (obj.info && obj.info.extensionId) || key;
+            this.loadRemoteExtensionWithURL(
+                url,
+                url,
+                async () => {
+                    if (window.ExtensionLib) {
+                        // where is ExtensionLib?
+                        // window.ExtensionLib is defined in CCW-Custom-Extension project which host is argument [url] in this function
+                        const lib = await window.ExtensionLib;
+                        Object.keys(lib).forEach(key => {
+                            const obj = lib[key];
+                            const extensionId =
+                                (obj.info && obj.info.extensionId) || key;
+                            this.registCustomExtensions(
+                                extensionId,
+                                obj.Extension
+                            );
+                            this.registerGandiWildExtensions(extensionId, url);
+                            this._customExtensionInfo = {
+                                ...this._customExtensionInfo,
+                                [extensionId]: obj
+                            };
+                        });
+                    } else if (window.tempExt) {
+                        const obj = window.tempExt;
+                        const extensionId = obj.info && obj.info.extensionId;
+                        if (!extensionId) {
+                            return reject(new Error('extensionId is null'));
+                        }
                         this.registCustomExtensions(extensionId, obj.Extension);
                         this.registerGandiWildExtensions(extensionId, url);
-                        this._customExtensionInfo = {...this._customExtensionInfo, [extensionId]: obj};
-                    });
-                } else if (window.tempExt) {
-                    const obj = window.tempExt;
-                    const extensionId = obj.info && obj.info.extensionId;
-                    if (!extensionId) {
-                        return reject(new Error('extensionId is null'));
+                        this._customExtensionInfo = {
+                            ...this._customExtensionInfo,
+                            [extensionId]: obj
+                        };
                     }
-                    this.registCustomExtensions(extensionId, obj.Extension);
-                    this.registerGandiWildExtensions(extensionId, url);
-                    this._customExtensionInfo = {...this._customExtensionInfo, [extensionId]: obj};
-                }
-                resolve(this._customExtensionInfo);
-            }, reject);
+                    resolve(this._customExtensionInfo);
+                },
+                reject
+            );
         }).catch(e => console.error('LoadRemoteExtensionError: ', e));
     }
 
