@@ -394,7 +394,7 @@ class Scratch3LooksBlocks {
         if (typeof requestedCostume === 'number') {
             // Numbers should be treated as costume indices, always
             target.setCostume(optZeroIndex ? requestedCostume : requestedCostume - 1);
-        } else {
+        } else if (typeof requestedCostume !== 'undefined' && requestedCostume !== null) {
             // Strings should be treated as costume names, where possible
             const costumeIndex = target.getCostumeIndexByName(requestedCostume.toString());
 
