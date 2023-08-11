@@ -38,7 +38,7 @@ const runtimeFunctions = {};
  * This implements similar functionality to the warp timer found in Scratch.
  * @returns {boolean} true if the current tick is likely stuck.
  */
-runtimeFunctions.isStuck = `let stuckCounter = 0;
+baseRuntime += `let stuckCounter = 0;
 const isStuck = () => {
     // The real time is not checked on every call for performance.
     stuckCounter++;
@@ -47,7 +47,7 @@ const isStuck = () => {
         return globalState.thread.target.runtime.sequencer.timer.timeElapsed() > 500;
     }
     return false;
-}`;
+};`;
 
 /**
  * Start hats by opcode.
