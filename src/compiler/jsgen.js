@@ -45,6 +45,7 @@ const TYPE_STRING = 2;
 const TYPE_BOOLEAN = 3;
 const TYPE_UNKNOWN = 4;
 const TYPE_NUMBER_NAN = 5;
+const TYPE_PROCEDURE_RETURN = 6;
 
 // Pen-related constants
 const PEN_EXT = 'runtime.ext_pen';
@@ -86,6 +87,13 @@ class TypedInput {
         if (typeof type !== 'number') throw new Error('type is invalid');
         this.source = source;
         this.type = type;
+        if (this.type === TYPE_PROCEDURE_RETURN) {
+            if (this.source) {
+                this.source = `(${this.source})`;
+            } else {
+                this.source = `''`;
+            }
+        }
     }
 
     asNumber () {
@@ -115,6 +123,10 @@ class TypedInput {
 
     asSafe () {
         return this.asUnknown();
+    }
+
+    asProcedureReturn () {
+        return `(()=>{return ${this.source} })()`;
     }
 
     isAlwaysNumber () {
@@ -652,6 +664,11 @@ class JSGenerator {
         case 'var.get':
             return this.descendVariable(node.variable);
 
+        case 'procedures.callWithReturn': {
+            const source = this.descendProcedure(node);
+            // if (!source) break;
+            return new TypedInput(source, TYPE_PROCEDURE_RETURN);
+        }
         default:
             log.warn(`JS: Unknown input: ${node.kind}`, node);
             throw new Error(`JS: Unknown input: ${node.kind}`);
@@ -976,44 +993,18 @@ class JSGenerator {
         case 'pen.up':
             this.source += `${PEN_EXT}._penUp(target);\n`;
             break;
-
         case 'procedures.call': {
-            const procedureCode = node.code;
-            // Do not generate any code for empty procedures.
-            const procedureData = this.ir.procedures[procedureCode];
-            if (procedureData.stack === null) {
-                break;
-            }
-            const callingFromNonWarpToWarp = !this.isWarp && procedureData.isWarp;
-            if (callingFromNonWarpToWarp) {
-                this.source += 'thread.warp++;\n';
-            } else if (procedureCode === this.script.procedureCode) {
-                // Direct recursion yields.
-                this.yieldNotWarp();
-            }
-            if (procedureData.yields) {
-                this.source += 'yield* ';
-                if (!this.script.yields) {
-                    throw new Error('Script uses yielding procedure but is not marked as yielding.');
-                }
-            }
-            this.source += `thread.procedures["${sanitize(procedureCode)}"](`;
-            // Only include arguments if the procedure accepts any.
-            if (procedureData.arguments.length) {
-                const args = [];
-                for (const input of node.arguments) {
-                    args.push(this.descendInput(input).asSafe());
-                }
-                this.source += args.join(',');
-            }
-            this.source += `);\n`;
-            if (callingFromNonWarpToWarp) {
-                this.source += 'thread.warp--;\n';
-            }
+            const source = this.descendProcedure(node);
+            if (!source) break;
+            this.source += source;
+            this.source += '\n';
             // Variable input types may have changes after a procedure call.
             this.resetVariableInputs();
             break;
         }
+        case 'procedures.return' :
+            this.source += `return ${this.descendInput(node.returnValue).asUnknown()};\n`;
+            break;
 
         case 'timer.reset':
             this.source += 'runtime.ioDevices.clock.resetProjectTimer();\n';
@@ -1080,6 +1071,40 @@ class JSGenerator {
         return input;
     }
 
+    descendProcedure (node) {
+        const procedureCode = node.code;
+        // Do not generate any code for empty procedures.
+        const procedureData = this.ir.procedures[procedureCode];
+        if (procedureData.stack === null) {
+            return '';
+        }
+        let source = '';
+        const yieldForRecursion = !this.isWarp && procedureCode === this.script.procedureCode;
+        if (yieldForRecursion) {
+            source += 'yield;\n';
+            this.yielded();
+        }
+
+        if (procedureData.yields) {
+            source += 'yield* ';
+            if (!this.script.yields) {
+                throw new Error('Script uses yielding procedure but is not marked as yielding.');
+            }
+        }
+        source += `thread.procedures["${sanitize(procedureCode)}"](`;
+        // Only include arguments if the procedure accepts any.
+        if (procedureData.arguments.length) {
+            const args = [];
+            for (const input of node.arguments) {
+                args.push(this.descendInput(input).asSafe());
+            }
+
+            source += args.join(',');
+        }
+        source += `)`;
+        return source;
+    }
+
     referenceVariable (variable) {
         if (variable.scope === 'target') {
             return this.evaluateOnce(`target.variables["${sanitize(variable.id)}"]`);
@@ -1120,7 +1145,7 @@ class JSGenerator {
      */
     yieldNotWarp () {
         if (!this.isWarp) {
-            this.source += 'if (thread.warp === 0) yield;\n';
+            this.source += 'yield;\n';
             this.yielded();
         }
     }
@@ -1132,7 +1157,7 @@ class JSGenerator {
         if (this.isWarp) {
             this.source += 'if (isStuck()) yield;\n';
         } else {
-            this.source += 'if (thread.warp === 0 || isStuck()) yield;\n';
+            this.source += 'yield;\n';
         }
         this.yielded();
     }
@@ -1178,7 +1203,7 @@ class JSGenerator {
             result += `"${sanitize(fieldName)}":"${sanitize(field)}",`;
         }
         const opcodeFunction = this.evaluateOnce(`runtime.getOpcodeFunction("${sanitize(opcode)}")`);
-        result += `}, ${opcodeFunction}, ${setFlags})`;
+        result += `}, ${opcodeFunction}, ${this.isWarp}, ${setFlags})`;
 
         return result;
     }

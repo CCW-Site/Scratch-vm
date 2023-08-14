@@ -89,7 +89,7 @@ class ScriptTreeGenerator {
 
         if (paramNamesIdsAndDefaults === null) {
 
-            throw new Error(`IR: cannot find procedure: ${pocedureCode}`);
+            throw new Error(`IR: cannot find procedure: ${procedureCode}`);
         }
 
         const [paramNames, _paramIds, _paramDefaults] = paramNamesIdsAndDefaults;
@@ -650,7 +650,7 @@ class ScriptTreeGenerator {
             };
         // ccw reporter customize procedures
         case 'procedures_call_with_return':
-            throw new Error(`IR: not support procedures_call_with_return input thread skip compile`);
+            return this.descendProcedure(block);
         default: {
             const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
             if (opcodeFunction) {
@@ -1126,92 +1126,14 @@ class ScriptTreeGenerator {
             return {
                 kind: 'pen.stamp'
             };
-        case 'procedures_call': {
-            // setting of yields will be handled later in the analysis phase
-
-            const procedureCode = block.mutation.proccode;
-            const isGlobal = block.mutation.isglobal === 'true';
-            if (procedureCode === 'tw:debugger;') {
-                return {
-                    kind: 'tw.debugger'
-                };
-            }
-            let paramNamesIdsAndDefaults;
-            let _target;
-            if (this.script.target) {
-                [paramNamesIdsAndDefaults, _target] = this.script.target.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
-            } else {
-                [paramNamesIdsAndDefaults, _target] = this.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
-            }
-
-            if (paramNamesIdsAndDefaults === null) {
-                return {
-                    kind: 'noop'
-                };
-            }
-
-            const [paramNames, paramIds, paramDefaults] = paramNamesIdsAndDefaults;
-
-            const addonBlock = this.runtime.getAddonBlock(procedureCode);
-            if (addonBlock) {
-                this.script.yields = true;
-                const args = {};
-                for (let i = 0; i < paramIds.length; i++) {
-                    let value;
-                    if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
-                        value = this.descendInputOfBlock(block, paramIds[i]);
-                    } else {
-                        value = {
-                            kind: 'constant',
-                            value: paramDefaults[i]
-                        };
-                    }
-                    args[paramNames[i]] = value;
-                }
-                return {
-                    kind: 'addons.call',
-                    code: procedureCode,
-                    arguments: args,
-                    blockId: block.id
-                };
-            }
-
-            if (!this.script.dependedProcedures.includes(procedureCode)) {
-                this.script.dependedProcedures.push(procedureCode);
-            }
-
-            // Non-warp direct recursion yields.
-            if (!this.script.isWarp) {
-                if (procedureCode === this.script.procedureCode) {
-                    this.script.yields = true;
-                }
-            }
-
-            const args = [];
-            for (let i = 0; i < paramIds.length; i++) {
-                let value;
-                if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
-                    value = this.descendInputOfBlock(block, paramIds[i]);
-                } else {
-                    value = {
-                        kind: 'constant',
-                        value: paramDefaults[i]
-                    };
-                }
-                args.push(value);
-            }
-
-            return {
-                kind: 'procedures.call',
-                code: procedureCode,
-                arguments: args
-            };
-        }
-
+        case 'procedures_call':
+            return this.descendProcedure(block);
         case 'sensing_resettimer':
             return {
                 kind: 'timer.reset'
             };
+        case 'procedures_return':
+            return {kind: 'procedures.return', returnValue: this.descendInputOfBlock(block, 'RETURN')};
 
         default: {
             const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
@@ -1310,6 +1232,63 @@ class ScriptTreeGenerator {
         const data = this._descendVariable(id, variable.value, type);
         this.variableCache[id] = data;
         return data;
+    }
+
+    descendProcedure (block) {
+        // setting of yields will be handled later in the analysis phase
+        const procedureCode = block.mutation.proccode;
+        const isGlobal = block.mutation.isglobal === 'true';
+        if (procedureCode === 'tw:debugger;') {
+            return {
+                kind: 'tw.debugger'
+            };
+        }
+        let paramNamesIdsAndDefaults;
+        let _target;
+        if (this.script.target) {
+            [paramNamesIdsAndDefaults, _target] = this.script.target.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
+        } else {
+            [paramNamesIdsAndDefaults, _target] = this.blocks.getProcedureParamNamesIdsAndDefaults(procedureCode, isGlobal);
+        }
+
+        if (paramNamesIdsAndDefaults === null) {
+            return {
+                kind: 'noop'
+            };
+        }
+
+        const [paramNames, paramIds, paramDefaults] = paramNamesIdsAndDefaults;
+
+        if (!this.script.dependedProcedures.includes(procedureCode)) {
+            this.script.dependedProcedures.push(procedureCode);
+        }
+
+        // Non-warp direct recursion yields.
+        if (!this.script.isWarp) {
+            if (procedureCode === this.script.procedureCode) {
+                this.script.yields = true;
+            }
+        }
+
+        const args = [];
+        for (let i = 0; i < paramIds.length; i++) {
+            let value;
+            if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
+                value = this.descendInputOfBlock(block, paramIds[i]);
+            } else {
+                value = {
+                    kind: 'constant',
+                    value: paramDefaults[i]
+                };
+            }
+            args.push(value);
+        }
+        const kind = block.opcode === 'procedures_call' ? 'procedures.call' : 'procedures.callWithReturn';
+        return {
+            kind,
+            code: procedureCode,
+            arguments: args
+        };
     }
 
     /**

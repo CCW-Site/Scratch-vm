@@ -133,12 +133,12 @@ const waitPromise = function*(promise) {
 
     return returnValue;
 };
-const executeInCompatibilityLayer = function*(inputs, blockFunction, useFlags) {
+const executeInCompatibilityLayer = function*(inputs, blockFunction, isWarp,useFlags) {
     const thread = globalState.thread;
 
     // reset the stackframe
     // we only ever use one stackframe at a time, so this shouldn't cause issues
-    thread.stackFrames[thread.stackFrames.length - 1].reuse(thread.warp > 0);
+    thread.stackFrames[thread.stackFrames.length - 1].reuse(isWarp);
 
     const executeBlock = () => {
         const compatibilityLayerBlockUtility = globalState.compatibilityLayerBlockUtility;
@@ -169,7 +169,7 @@ const executeInCompatibilityLayer = function*(inputs, blockFunction, useFlags) {
         if (thread.status === 2 /* STATUS_YIELD */) {
             thread.status = 0; // STATUS_RUNNING
             // Yield back to the event loop when stuck or not in warp mode.
-            if (thread.warp === 0 || isStuck()) {
+            if (!isWarp || isStuck()) {
                 yield;
             }
         } else {
