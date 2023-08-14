@@ -1,19 +1,28 @@
-const ScratchRender  = require( '@xigua/scratch-render');
-const {BitmapAdapter:V2BitmapAdapter}  = require( 'scratch-svg-renderer');
-const ScratchStorage  = require( 'scratch-storage');
-const VirtualMachine  = require( '../index');
-const Runtime  = require( '../engine/runtime');
-const AudioEngine  = require( 'scratch-audio');
-const AssetType  = require( 'scratch-storage/src/AssetType');
+const ScratchRender = require('@xigua/scratch-render');
+const {BitmapAdapter: V2BitmapAdapter} = require('scratch-svg-renderer');
+const ScratchStorage = require('scratch-storage');
+const VirtualMachine = require('../index');
+const Runtime = require('../engine/runtime');
+const AudioEngine = require('scratch-audio');
+const AssetType = require('scratch-storage/src/AssetType');
 const {decodeString} = require('@teana/scratch-analyzer');
-const jszip  = require( 'jszip');
-const lodash  = require( 'lodash');
+const jszip = require('jszip');
+const lodash = require('lodash');
+const CryptoJS = require('crypto-js');
 
 const Scratch = window.Scratch = window.Scratch || {vm: null, render: null};
 const USER_PROJECTS_ASSETS = 'user_projects_assets';
 const PROJECT_JSON = 'Project.json';
 const XIGUA_ENCODE_HEADER = '{';
 
+// Universal header for zip algorithm compression
+export const NORMAL_ZIP_PREFIX = [80, 75, 3, 4, 10, 0, 0, 0];
+
+// Confusing header for zip algorithm, 7z algorithm header + some useless code 9527
+export const CHAOS_ZIP_PREFIX = [55, 122, 188, 175, 9, 5, 2, 7];
+
+// Prefix for the secret key
+export const SECRET_KEY_PREFIX = 'KzdnFCBRvq3';
 
 const concatTypedArray = (resultConstructor, ...arrays) => {
     let totalLength = 0;
@@ -29,6 +38,16 @@ const concatTypedArray = (resultConstructor, ...arrays) => {
     return result;
 };
 
+const parseProjectIdBySB3Url = maybeProjectUrl => {
+    if (/^https?:\/\//.test(maybeProjectUrl) && /\.sb3$/.test(maybeProjectUrl)) {
+        const fileName = maybeProjectUrl.split('/').pop();
+        const [projectId] = fileName.split('.');
+        return projectId;
+    }
+
+    return maybeProjectUrl;
+};
+
 const ImageJpgmap = {
     contentType: 'image/jpeg',
     name: 'ImageBitmap',
@@ -41,6 +60,20 @@ const SoundMp3 = {
     name: 'sound',
     runtimeFormat: 'mp3',
     immutable: true
+};
+
+const AES_CBC_DECRYPT = function (textBase64, secretKey) {
+    const keyHex = CryptoJS.enc.Base64.parse(SECRET_KEY_PREFIX + secretKey);
+    const ivHex = keyHex.clone();
+    // 前16字节作为向量
+    ivHex.sigBytes = 16;
+    ivHex.words.splice(4);
+    const decrypt = CryptoJS.AES.decrypt(textBase64, keyHex, {
+        iv: ivHex,
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+    });
+    return CryptoJS.enc.Utf8.stringify(decrypt);
 };
 
 
@@ -130,10 +163,19 @@ class CCWStorageWithOSSStore extends CCWStorage {
                 // 还原混淆的 zip 算法头
                 // 使用前8个字节判断是否是混淆的 zip 算法
                 const prefix = Array.from(result.data.slice(0, 8));
-                const isChaos = lodash.isEqual(prefix, [55, 122, 188, 175, 9, 5, 2, 7]);
-                const data = isChaos ? concatTypedArray(Uint8Array, new Uint8Array([80, 75, 3, 4, 10, 0, 0, 0]), result.data.slice(8)) : result.data;
-                result.data = data;
-                return jszip.loadAsync(data).then(zip => {
+                const projectUniqueId = parseProjectIdBySB3Url(result.assetId);
+                const isNormal = lodash.isEqual(prefix, NORMAL_ZIP_PREFIX);
+                const isChaos = lodash.isEqual(prefix, CHAOS_ZIP_PREFIX);
+                let newData = result.data;
+                if (isChaos) {
+                    // 还原混淆的 zip 算法头
+                    newData = concatTypedArray(Uint8Array, new Uint8Array(NORMAL_ZIP_PREFIX), result.data.slice(8));
+                } else if (!isNormal) {
+                    const decryptData = AES_CBC_DECRYPT(new TextDecoder('utf-8').decode(result.data), projectUniqueId);
+                    newData = new Uint8Array(decryptData.split(','));
+                }
+                result.data = newData;
+                return jszip.loadAsync(newData).then(zip => {
                     const jsonFile = zip.files[PROJECT_JSON.toLocaleLowerCase()];
                     return zip.file(jsonFile.name).async('text')
                         .then(jsonStr => {
