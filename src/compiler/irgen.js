@@ -1133,7 +1133,7 @@ class ScriptTreeGenerator {
                 kind: 'timer.reset'
             };
         case 'procedures_return':
-            return {kind: 'procedures.return', returnValue: this.descendInputOfBlock(block, 'RETURN')};
+            return {kind: 'procedures.return', value: this.descendInputOfBlock(block, 'RETURN')};
 
         default: {
             const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);

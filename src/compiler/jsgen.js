@@ -750,11 +750,7 @@ class JSGenerator {
             this.source += 'runtime.stopForTarget(target, thread);\n';
             break;
         case 'control.stopScript':
-            if (this.isProcedure) {
-                this.source += 'return;\n';
-            } else {
-                this.retire();
-            }
+            this.stopScript();
             break;
         case 'control.wait': {
             const duration = this.localVariables.next();
@@ -1003,7 +999,7 @@ class JSGenerator {
             break;
         }
         case 'procedures.return' :
-            this.source += `return ${this.descendInput(node.returnValue).asUnknown()};\n`;
+            this.stopScriptAndReturn(this.descendInput(node.value).asSafe());
             break;
 
         case 'timer.reset':
@@ -1134,9 +1130,30 @@ class JSGenerator {
         // When in a procedure, return will only send us back to the previous procedure, so instead we yield back to the sequencer.
         // Outside of a procedure, return will correctly bring us back to the sequencer.
         if (this.isProcedure) {
-            this.source += 'retire(); yield;\n';
+            this.source += 'retire();\n';
+            this.source += 'yield;\n';
         } else {
-            this.source += 'retire(); return;\n';
+            this.source += 'retire();\n';
+            this.source += 'return;\n';
+        }
+    }
+
+    stopScript () {
+        if (this.isProcedure) {
+            this.source += 'return "";\n';
+        } else {
+            this.retire();
+        }
+    }
+
+    /**
+     * @param {string} valueJS JS code of value to return.
+     */
+    stopScriptAndReturn (valueJS) {
+        if (this.isProcedure) {
+            this.source += `return ${valueJS};\n`;
+        } else {
+            this.retire();
         }
     }
 
@@ -1269,10 +1286,6 @@ class JSGenerator {
 
         script += this.source;
 
-        if (!this.isProcedure) {
-            script += 'retire();\n';
-        }
-
         script += '}; })';
 
         return script;
@@ -1286,7 +1299,7 @@ class JSGenerator {
         if (this.script.stack) {
             this.descendStack(this.script.stack, new Frame(false));
         }
-
+        this.stopScript();
         const factory = this.createScriptFactory();
         const fn = jsexecute.scopedEval(factory);
 
