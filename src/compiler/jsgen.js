@@ -1078,31 +1078,39 @@ class JSGenerator {
         if (procedureData.stack === null) {
             return '';
         }
-        let source = '';
-        const yieldForRecursion = !this.isWarp && procedureCode === this.script.procedureCode;
-        if (yieldForRecursion) {
-            source += 'yield;\n';
-            this.yielded();
-        }
-
-        if (procedureData.yields) {
-            source += 'yield* ';
-            if (!this.script.yields) {
-                throw new Error('Script uses yielding procedure but is not marked as yielding.');
-            }
-        }
-        source += `thread.procedures["${sanitize(procedureCode)}"](`;
         // Only include arguments if the procedure accepts any.
+        let joinedArgs = '';
         if (procedureData.arguments.length) {
             const args = [];
             for (const input of node.arguments) {
                 args.push(this.descendInput(input).asSafe());
             }
-
-            source += args.join(',');
+            joinedArgs = args.join(',');
         }
-        source += `)`;
-        return source;
+        const procedureReference = `thread.procedures["${sanitize(procedureCode)}"]`;
+        const yieldForRecursion = !this.isWarp && procedureCode === this.script.procedureCode;
+        let source = '';
+        if (node.kind === 'procedures.call') {
+            if (yieldForRecursion) {
+                source += 'yield;\n';
+                this.yielded();
+            }
+            if (procedureData.yields) {
+                source += 'yield* ';
+            }
+            source += `${procedureReference}(${joinedArgs})`;
+            return source;
+        }
+        if (node.kind === 'procedures.callWithReturn'){
+            if (yieldForRecursion) {
+                const runtimeFunction = procedureData.yields ? 'yieldThenCallGenerator' : 'yieldThenCall';
+                return `yield* ${runtimeFunction}(${procedureReference}, ${joinedArgs})`;
+            }
+            if (procedureData.yields) {
+                return `yield* ${procedureReference}(${joinedArgs})`;
+            }
+            return `${procedureReference}(${joinedArgs})`;
+        }
     }
 
     referenceVariable (variable) {

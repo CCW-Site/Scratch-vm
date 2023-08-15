@@ -545,6 +545,39 @@ runtimeFunctions.mod = `const mod = (n, modulus) => {
 }`;
 
 /**
+ * Implements Scratch tangent.
+ * @param {number} angle Angle in degrees.
+ * @returns {number} value of tangent or Infinity or -Infinity
+ */
+runtimeFunctions.tan = `const tan = (angle) => {
+    switch (angle % 360) {
+    case -270: case 90: return Infinity;
+    case -90: case 270: return -Infinity;
+    }
+    return Math.round(Math.tan((Math.PI * angle) / 180) * 1e10) / 1e10;
+}`;
+
+/**
+ * @param {function} callback The function to run
+ * @param {...unknown} args The arguments to pass to the function
+ * @returns {unknown} A generator that will yield once then call the function and return its value.
+ */
+runtimeFunctions.yieldThenCall = `const yieldThenCall = function* (callback, ...args) {
+    yield;
+    return callback(...args);
+}`;
+
+/**
+ * @param {function} callback The generator function to run
+ * @param {...unknown} args The arguments to pass to the generator function
+ * @returns {unknown} A generator that will yield once then delegate to the generator function and return its value.
+ */
+runtimeFunctions.yieldThenCallGenerator = `const yieldThenCallGenerator = function* (callback, ...args) {
+    yield;
+    return yield* callback(...args);
+}`;
+
+/**
  * Step a compiled thread.
  * @param {Thread} thread The thread to step.
  */
