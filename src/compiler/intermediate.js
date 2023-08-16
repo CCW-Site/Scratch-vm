@@ -104,7 +104,7 @@ class IntermediateRepresentation {
         this.entry = null;
 
         /**
-         * Maps procedure IDs to their intermediate script.
+         * Maps procedure variants to their intermediate script.
          * @type {Object.<string, IntermediateScript>}
          */
         this.procedures = {};

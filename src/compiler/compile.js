@@ -37,10 +37,10 @@ const compile = thread => {
 
     const entry = compileScript(ir.entry);
 
-    for (const procedureCode of Object.keys(ir.procedures)) {
-        const procedureData = ir.procedures[procedureCode];
+    for (const procedureVariant of Object.keys(ir.procedures)) {
+        const procedureData = ir.procedures[procedureVariant];
         const procedureTree = compileScript(procedureData);
-        procedures[procedureCode] = procedureTree;
+        procedures[procedureVariant] = procedureTree;
     }
 
     return {

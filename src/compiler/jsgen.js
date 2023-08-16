@@ -1069,8 +1069,9 @@ class JSGenerator {
 
     descendProcedure (node) {
         const procedureCode = node.code;
+        const procedureVariant = node.variant;
         // Do not generate any code for empty procedures.
-        const procedureData = this.ir.procedures[procedureCode];
+        const procedureData = this.ir.procedures[procedureVariant];
         if (procedureData.stack === null) {
             return '';
         }
@@ -1083,7 +1084,7 @@ class JSGenerator {
             }
             joinedArgs = args.join(',');
         }
-        const procedureReference = `thread.procedures["${sanitize(procedureCode)}"]`;
+        const procedureReference = `thread.procedures["${sanitize(procedureVariant)}"]`;
         const yieldForRecursion = !this.isWarp && procedureCode === this.script.procedureCode;
         let source = '';
         if (node.kind === 'procedures.call') {
