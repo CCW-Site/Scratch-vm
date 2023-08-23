@@ -247,6 +247,7 @@ const serializeFrame = function (frame) {
     obj.title = frame.title;
     obj.color = frame.color;
     obj.locked = frame.locked;
+    obj.collapsed = frame.collapsed;
     obj.blocks = frame.blocks;
     obj.width = frame.width;
     obj.height = frame.height;

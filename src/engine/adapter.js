@@ -29,6 +29,7 @@ const domToBlock = function (blockDOM, blocks, isTopBlock, parent) {
         // powered by xigua start
         hidden: blockDOM.attribs.hidden === 'true',
         locked: blockDOM.attribs.locked === 'true',
+        collapsed: blockDOM.attribs.collapsed === 'true',
         // powered by xigua end
         x: blockDOM.attribs.x, // X position of script, if top-level.
         y: blockDOM.attribs.y // Y position of script, if top-level.
@@ -149,6 +150,7 @@ const domToFrame = function (frameDOM, frames) {
         title: frameDOM.attribs.title,
         color: frameDOM.attribs.color,
         locked: frameDOM.attribs.locked === 'true',
+        collapsed: frameDOM.attribs.collapsed === 'true',
         blocks: frameDOM.attribs.blocks.split(' '),
         width: frameDOM.attribs.width,
         height: frameDOM.attribs.height,

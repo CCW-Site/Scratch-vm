@@ -119,6 +119,7 @@ class Frames {
             title: e.title,
             color: e.color,
             locked: e.locked,
+            collapsed: e.collapsed,
             blocks: e.blocks,
             x: e.x,
             y: e.y,
@@ -198,6 +199,10 @@ class Frames {
             didChange = frame.locked !== value;
             frame.locked = value.locked;
             break;
+        case 'collapsed':
+            didChange = frame.collapsed !== value;
+            frame.collapsed = value.collapsed;
+            break;
         default:
             break;
         }
@@ -221,6 +226,7 @@ class Frames {
                 title="${xmlEscape(frame.title)}"
                 color="${frame.color}"
                 locked="${frame.locked}"
+                collapsed="${frame.collapsed}"
                 ${frame.blocks ? `blocks="${JSON.stringify(frame.blocks)}"` : ''}
                 x="${frame.x}"
                 y="${frame.y}"
@@ -235,6 +241,7 @@ class Frames {
                 title="${xmlEscape(frame.title)}"
                 color="${frame.color}"
                 locked="${frame.locked}"
+                collapsed="${frame.collapsed}"
                 ${frame.blocks ? `blocks="${frame.blocks.join(' ')}"` : ''}
                 x="${frame.x}"
                 y="${frame.y}"
