@@ -249,6 +249,27 @@ class Target extends EventEmitter {
     }
 
     /**
+     * Look up if a variable is being used based on its name and type.
+     * @param {string} name Name of the variable.
+     * @param {string} type Type of the variable. Defaults to Variable.SCALAR_TYPE.
+     * @return {?bool} True if found, or false if not.
+     */
+    findVariableUsage (name, type) {
+        if (typeof name !== 'string') return;
+        if (typeof type !== 'string') type = Variable.SCALAR_TYPE;
+
+        const fieldKey = type ? 'LIST' : 'VARIABLE';
+        for (const blockId in this.blocks._blocks) {
+            const block = this.blocks._blocks[blockId];
+            if (block.opcode.startsWith('data_') && block.fields[fieldKey].value === name) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
     * Look up a list object for this target, and create it if one doesn't exist.
     * Search begins for local lists; then look for globals.
     * @param {!string} id Id of the list.
@@ -402,7 +423,20 @@ class Target extends EventEmitter {
         if (this.variables.hasOwnProperty(id)) {
             // Get info about the variable before deleting it
             const deletedVariableName = this.variables[id].name;
+            const deletedVariableType = this.variables[id].type;
             const deletedVariableWasCloud = this.variables[id].isCloud;
+
+            if (this.isStage) {
+                // Check for name conflicts in all of the targets
+                const allTargets = this.runtime.targets.filter(t => t.isOriginal);
+                for (const target of allTargets) {
+                    if (target !== this &&
+                        target.findVariableUsage(deletedVariableName, deletedVariableType)
+                    ) {
+                        return;
+                    }
+                }
+            }
             delete this.variables[id];
             if (this.runtime) {
                 if (deletedVariableWasCloud && this.isStage) {
