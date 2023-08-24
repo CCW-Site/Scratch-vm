@@ -9,6 +9,7 @@ const {Map} = require('immutable');
 const log = require('../util/log');
 const StringUtil = require('../util/string-util');
 const VariableUtil = require('../util/variable-util');
+const formatMessage = require('format-message');
 
 require('../util/tw-emit-fast');
 
@@ -433,6 +434,9 @@ class Target extends EventEmitter {
                     if (target !== this &&
                         target.findVariableUsage(deletedVariableName, deletedVariableType)
                     ) {
+                        const warningText = formatMessage({id: 'gui.alerts.deletingGlobalVariable'});
+                        // eslint-disable-next-line no-alert
+                        alert(warningText);
                         return;
                     }
                 }
