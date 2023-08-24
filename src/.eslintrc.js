@@ -5,6 +5,7 @@ module.exports = {
         browser: true
     },
     rules: {
-        'valid-jsdoc': 'off'
+        'valid-jsdoc': 'off',
+        'max-len': ["error", { "code": 200 }]
     }
 };

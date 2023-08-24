@@ -2783,8 +2783,8 @@ class VirtualMachine extends EventEmitter {
         return this.extensionManager.loadOfficialExtensionsLibrary();
     }
 
-    loadCustomExtensionsLibrary (url) {
-        return this.extensionManager.loadCustomExtensionsLibrary(url);
+    loadCustomExtensionsLibrary (url, isManual = false) {
+        return this.extensionManager.loadCustomExtensionsLibrary(url, null, isManual);
     }
     // powered by xigua end
 }

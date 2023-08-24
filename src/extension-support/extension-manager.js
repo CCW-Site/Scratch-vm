@@ -1,4 +1,3 @@
-const formatMessage = require('format-message');
 const dispatch = require('../dispatch/central-dispatch');
 const log = require('../util/log');
 const maybeFormatMessage = require('../util/maybe-format-message');
@@ -212,7 +211,7 @@ class ExtensionManager {
      * @returns {Promise} resolved once the extension is loaded and initialized or rejected on failure
      */
     async loadExtensionURL (extensionURL) {
-        const registExt = extension => {
+        const registerExt = extension => {
             /** @TODO dupe handling for non-builtin extensions. See commit 670e51d33580e8a2e852b3b038bb3afc282f81b9 */
             if (this.isExtensionLoaded(extensionURL)) {
                 const message = `Rejecting attempt to load a second extension with ID ${extensionURL}`;
@@ -232,7 +231,7 @@ class ExtensionManager {
 
         let extension = this.getLocalExtensionClass(extensionURL);
         if (extension) {
-            return registExt(extension);
+            return registerExt(extension);
         }
 
         // officialExtension
@@ -241,7 +240,7 @@ class ExtensionManager {
             extension = await this.getOfficialExtensionClass(extensionURL);
             if (extension) {
                 this.runtime.emit('EXTENSION_DATA_LOADING', false);
-                return registExt(extension.default || extension);
+                return registerExt(extension.default || extension);
             }
         }
 
@@ -255,10 +254,20 @@ class ExtensionManager {
             if (customExtension[extensionURL]) {
                 extension = await this.getCustomExtensionClass(extensionURL);
                 if (extension) {
-                    return registExt(extension.default || extension);
+                    this.runtime.emit('EXTENSION_DATA_LOADING', false);
+                    return registerExt(extension.default || extension);
                 }
-                this.runtime.emit('EXTENSION_DATA_LOADING', true); // ccw start loading remote extension event
             }
+        }
+
+        // try ask user to input url to load extension
+        if (extensionURL && !extensionURL.startsWith('http')) {
+            const url = prompt(`未找到的扩展 ${extensionURL}\n 你可以提供一个 URL 地址，来尝试加载它`);
+            if (url && url.startsWith('http')) {
+                this.runtime.gandi.wildExtensions[extensionURL] = {id: extensionURL, url};
+                return this.loadExtensionURL(extensionURL);
+            }
+            log.warn('invalid url');
         }
 
         // TW
@@ -269,6 +278,7 @@ class ExtensionManager {
                 .then(worker => dispatch.addWorker(worker))
                 .catch(error => {
                     this.runtime.emit('EXTENSION_NOT_FOUND', extensionURL);
+                    log.error(error);
                     return reject(error);
                 });
         }).finally(() => this.runtime.emit('EXTENSION_DATA_LOADING', false));
@@ -581,7 +591,7 @@ class ExtensionManager {
                 default:
                     return item;
                 }
-            })
+            });
 
         if (!menuItems || menuItems.length < 1) {
             throw new Error(
@@ -669,9 +679,7 @@ class ExtensionManager {
                             realBlockInfo
                         );
                     }
-                    log.error(
-                        `Warning: the method '${funcName}' in the ${serviceObject.constructor.name} has not been implemented yet.`
-                    );
+                    log.error(`Warning: the method '${funcName}' in the ${serviceObject.constructor.name} has not been implemented yet.`);
                 };
             })();
 
@@ -701,11 +709,8 @@ class ExtensionManager {
                 `registerGandiWildExtensions: extension id:${id} registered，will be replaced`
             );
         }
-        if (!isRemoteOperation) {
-            this.runtime.emitGandiWildExtensionsUpdate({
-                data: {id, url},
-                type: 'add'
-            });
+        if (isRemoteOperation) {
+            this.runtime.emitGandiWildExtensionsUpdate({data: {id, url}, type: 'add'});
         }
         this.runtime.gandi.wildExtensions[id] = {
             id,
@@ -732,12 +737,12 @@ class ExtensionManager {
         this._loadedExtensions.clear();
     }
 
-    registOfficialExtensions (extensionId, extension) {
+    registerOfficialExtensions (extensionId, extension) {
         this.shouldReplaceExtension(extensionId);
         officialExtension[extensionId] = extension;
     }
 
-    registCustomExtensions (extensionId, extension) {
+    registerCustomExtensions (extensionId, extension) {
         this.shouldReplaceExtension(extensionId);
         customExtension[extensionId] = extension;
     }
@@ -801,30 +806,21 @@ class ExtensionManager {
         // use 'OfficialExtensions' as script tag dom id
         // make load remote script file only once
 
-        return new Promise((resolve, reject) =>
-            this.loadRemoteExtensionWithURL(
-                'OfficialExtensions',
-                onlineScriptUrl,
-                async () => {
-                    if (window.scratchExtensions) {
-                        const {default: lib} =
-                            await window.scratchExtensions.default();
-                        Object.keys(lib).forEach(key => {
-                            const obj = lib[key];
-                            const id =
-                                (obj.info && obj.info.extensionId) || key;
-                            this.registOfficialExtensions(id, obj.Extension);
-                        });
-                        this._officialExtensionInfo = lib;
-                    }
-                    resolve(this._officialExtensionInfo);
-                },
-                reject
-            )
-        );
+        return new Promise((resolve, reject) => this.loadRemoteExtensionWithURL('OfficialExtensions', onlineScriptUrl, async () => {
+            if (window.scratchExtensions) {
+                const {default: lib} = await window.scratchExtensions.default();
+                Object.keys(lib).forEach(key => {
+                    const obj = lib[key];
+                    const id = (obj.info && obj.info.extensionId) || key;
+                    this.registerOfficialExtensions(id, obj.Extension);
+                });
+                this._officialExtensionInfo = lib;
+            }
+            resolve(this._officialExtensionInfo);
+        }, reject));
     }
 
-    loadCustomExtensionsLibrary (url, id) {
+    async loadCustomExtensionsLibrary (url, id, isManual = false) {
         return new Promise((resolve, reject) => {
             if (this._customExtensionInfo[id]) {
                 return resolve(this._customExtensionInfo);
@@ -835,59 +831,48 @@ class ExtensionManager {
             if (!url) {
                 return resolve(this._customExtensionInfo);
             }
-            this.loadRemoteExtensionWithURL(
-                url,
-                url,
-                async () => {
-                    if (window.ExtensionLib) {
-                        // where is ExtensionLib?
-                        // window.ExtensionLib is defined in CCW-Custom-Extension project which host is argument [url] in this function
-                        const lib = await window.ExtensionLib;
-                        Object.keys(lib).forEach(key => {
-                            const obj = lib[key];
-                            const extensionId =
-                                (obj.info && obj.info.extensionId) || key;
-                            this.registCustomExtensions(
-                                extensionId,
-                                obj.Extension
-                            );
-                            this.registerGandiWildExtensions(extensionId, url);
-                            this._customExtensionInfo = {
-                                ...this._customExtensionInfo,
-                                [extensionId]: obj
-                            };
-                        });
-                    } else if (window.tempExt) {
-                        const obj = window.tempExt;
-                        const extensionId = obj.info && obj.info.extensionId;
-                        if (!extensionId) {
-                            return reject(new Error('extensionId is null'));
-                        }
-                        this.registCustomExtensions(extensionId, obj.Extension);
+            this.loadRemoteExtensionWithURL(url, url, async () => {
+                if (window.ExtensionLib) {
+                    // where is ExtensionLib?
+                    // window.ExtensionLib is defined in CCW-Custom-Extension project which host is argument [url] in this function
+                    const lib = await window.ExtensionLib;
+                    Object.keys(lib).forEach(key => {
+                        const obj = lib[key];
+                        const extensionId = (obj.info && obj.info.extensionId) || key;
+                        this.registerCustomExtensions(extensionId, obj.Extension);
                         this.registerGandiWildExtensions(extensionId, url);
                         this._customExtensionInfo = {
                             ...this._customExtensionInfo,
                             [extensionId]: obj
                         };
+                    });
+                } else if (window.tempExt) {
+                    const obj = window.tempExt;
+                    const extensionId = obj.info && obj.info.extensionId;
+                    if (!extensionId) {
+                        return reject(new Error('extensionId is null'));
                     }
-                    resolve(this._customExtensionInfo);
-                },
-                reject
-            );
+                    this.registerCustomExtensions(extensionId, obj.Extension);
+                    this.registerGandiWildExtensions(extensionId, url);
+                    this._customExtensionInfo = {...this._customExtensionInfo, [extensionId]: obj};
+                }
+                resolve(this._customExtensionInfo);
+            }, () => resolve(this._customExtensionInfo), isManual);
         }).catch(e => console.error('LoadRemoteExtensionError: ', e));
     }
 
-    loadRemoteExtensionWithURL (uniqueId, url, onLoadSuccess, onLoadError) {
+    loadRemoteExtensionWithURL (uniqueId, url, onLoadSuccess, onLoadError, isManual) {
         if (!url) {
             log.warn('loadRemoteExtensionWithURL() url is null');
             return Promise.resolve(null);
         }
-        const loader = this.createdScriptLoader(url, uniqueId);
+        const loader = this.createdScriptLoader(url, uniqueId, isManual);
         loader.successCallBack.push(onLoadSuccess);
         loader.failedCallBack.push(onLoadError);
     }
 
-    createdScriptLoader (url, id) {
+    createdScriptLoader (url, id, isManual) {
+        this.setupScratchAPIForExtension(isManual ? url : null);
         const exist = document.getElementById(id);
         if (exist) {
             return exist;
@@ -896,25 +881,86 @@ class ExtensionManager {
             log.warn('onlineScriptUrl is null');
         }
         const script = document.createElement('script');
-        script.src = url;
+
+        script.src = `${url + (url.includes('?') ? '&' : '?')}t=${Date.now()}`;
         script.id = id;
         script.defer = true;
+        script.type = 'module';
 
         script.successCallBack = [];
         script.failedCallBack = [];
 
         script.onload = () => {
-            script.successCallBack.forEach(cb => cb());
+            script.successCallBack.forEach(cb => cb(url));
             script.successCallBack = [];
             document.body.removeChild(script);
         };
         script.onerror = e => {
-            script.failedCallBack.forEach(cb => cb?.(e));
+            script.failedCallBack.forEach(cb => cb?.(e, url));
             script.failedCallBack = [];
             document.body.removeChild(script);
         };
-        document.body.append(script);
+        try {
+            document.body.append(script);
+        } catch (error) {
+            console.error('load custom extension error:', error);
+        }
         return script;
+    }
+
+    // output a Scratch Object contains APIs all extension needed
+    setupScratchAPIForExtension (registerURL){
+        const extensions = {
+            register: obj => {
+                const extensionId = obj.info && obj.info.extensionId;
+                const name = obj.l10n['zh-cn'][obj.info.name]??obj.info.name;
+                if (!extensionId) {
+                    throw (new Error('extensionId is null'));
+                }
+                const extName = `\n  name = ${name}\n  id   = ${extensionId}\n`;
+                const wildExt = this.runtime.gandi.wildExtensions[extensionId];
+                const storedURL = wildExt ? wildExt.url : null;
+                let url = registerURL ?? storedURL;
+                if (!url) {
+                    let retryURL = false;
+                    do {
+                    // eslint-disable-next-line no-alert
+                        url = prompt(maybeFormatMessage({id: 'gui.extension.custom.load.inputURLTip', default: `input custom extension's URL`}, {extName}));
+                        // check if url is a valid url
+                        if (url && !url.startsWith('http')) {
+                        // eslint-disable-next-line no-alert
+                            alert(maybeFormatMessage({id: 'gui.extension.custom.load.invalidURLWarning', default: 'invalid URL, continue?'}));
+                            retryURL = true;
+                        } else {
+                            retryURL = false;
+                        }
+                    } while (retryURL);
+                }
+
+                let shouldGoOn = Boolean(url);
+                if (!url) {
+                    // eslint-disable-next-line no-alert
+                    shouldGoOn = confirm(maybeFormatMessage({id: 'gui.extension.custom.load.noURLWarning', default: 'URL not found, the extension cannot be loaded after saving'}, {extName}));
+                }
+
+                if (shouldGoOn) {
+                    if (url) {
+                        let needStore = !storedURL;
+                        if (storedURL && url !== storedURL) {
+                            // eslint-disable-next-line no-alert
+                            needStore = confirm(maybeFormatMessage({id: 'gui.extension.custom.load.replaceURLTip', default: 'New URL found, replace?'}, {extName, newURL: url, oldURL: storedURL}));
+                        }
+                        if (needStore) {
+                            this.registerGandiWildExtensions(extensionId, url);
+                        }
+                    }
+                    this.registerCustomExtensions(extensionId, obj.Extension);
+                    this._customExtensionInfo = {...this._customExtensionInfo, [extensionId]: obj};
+                }
+            }
+        };
+        if (!global.Scratch) global.Scratch = {};
+        global.Scratch = Object.assign(global.Scratch, {extensions});
     }
 
     // powered by xigua end
