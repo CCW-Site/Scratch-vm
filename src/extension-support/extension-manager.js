@@ -774,9 +774,9 @@ class ExtensionManager {
             return await func();
         } else if (typeof func === 'object' && typeof func.getInfo === 'function' &&
             /^class\s/.test(Function.prototype.toString.call(func.constructor))) {
-            return func;
+            return func.constructor;
         }
-        throw new error('extension class not found');
+        throw new Error('extension class not found');
     }
 
     loadOfficialExtensionsLibrary (serviceURL = '') {
@@ -852,6 +852,7 @@ class ExtensionManager {
                             [extensionId]: obj
                         };
                     });
+                    window.ExtensionLib = null;
                 } else if (window.tempExt) {
                     const obj = window.tempExt;
                     const extensionId = obj.info && obj.info.extensionId;
@@ -861,6 +862,7 @@ class ExtensionManager {
                     this.registerCustomExtensions(extensionId, obj.Extension);
                     this.registerGandiWildExtensions(extensionId, url);
                     this._customExtensionInfo = {...this._customExtensionInfo, [extensionId]: obj};
+                    window.tempExt = null;
                 }
                 resolve(this._customExtensionInfo);
             }, () => resolve(this._customExtensionInfo), isManual);
