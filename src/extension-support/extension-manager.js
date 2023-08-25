@@ -264,7 +264,8 @@ class ExtensionManager {
 
         // try ask user to input url to load extension
         if (extensionURL && !extensionURL.startsWith('http')) {
-            const url = prompt(`未找到的扩展 ${extensionURL}\n 你可以提供一个 URL 地址，来尝试加载它`);
+            // eslint-disable-next-line no-alert
+            const url = prompt(maybeFormatMessage({id: 'gui.extension.custom.load.inputURLTip', default: `input custom extension's URL`}, {extName: extensionURL}));
             if (url && url.startsWith('http')) {
                 this.runtime.gandi.wildExtensions[extensionURL] = {id: extensionURL, url};
                 return this.loadExtensionURL(extensionURL);
@@ -862,6 +863,7 @@ class ExtensionManager {
                 }
                 resolve(this._customExtensionInfo);
             }, () => resolve(this._customExtensionInfo), isManual);
+        // eslint-disable-next-line no-console
         }).catch(e => console.error('LoadRemoteExtensionError: ', e));
     }
 
@@ -907,6 +909,7 @@ class ExtensionManager {
         try {
             document.body.append(script);
         } catch (error) {
+            // eslint-disable-next-line no-console
             console.error('load custom extension error:', error);
         }
         return script;
