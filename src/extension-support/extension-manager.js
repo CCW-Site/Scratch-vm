@@ -1,7 +1,7 @@
 const dispatch = require('../dispatch/central-dispatch');
 const log = require('../util/log');
 const maybeFormatMessage = require('../util/maybe-format-message');
-
+const formatMessage = require('format-message');
 const BlockType = require('./block-type');
 const ArgumentType = require('./argument-type');
 const TargetType = require('./target-type');
@@ -266,7 +266,7 @@ class ExtensionManager {
         // try ask user to input url to load extension
         if (extensionURL && !extensionURL.startsWith('http')) {
             // eslint-disable-next-line no-alert
-            const url = prompt(maybeFormatMessage({id: 'gui.extension.custom.load.inputURLTip', default: `input custom extension's URL`}, {extName: extensionURL}));
+            const url = prompt(formatMessage({id: 'gui.extension.custom.load.inputURLTip', default: `input custom extension [${extensionURL}]'s URL`}, {extName: extensionURL}));
             if (url && url.startsWith('http')) {
                 this.runtime.gandi.wildExtensions[extensionURL] = {id: extensionURL, url};
                 return this.loadExtensionURL(extensionURL);
@@ -960,11 +960,11 @@ class ExtensionManager {
                 let retryURL = false;
                 do {
                 // eslint-disable-next-line no-alert
-                    url = prompt(maybeFormatMessage({id: 'gui.extension.custom.load.inputURLTip', default: `input custom extension's URL`}, {extName}));
+                    url = prompt(formatMessage({id: 'gui.extension.custom.load.inputURLTip', default: `input custom extension [${extName}]'s URL`}, {extName}));
                     // check if url is a valid url
                     if (url && !url.startsWith('http')) {
                     // eslint-disable-next-line no-alert
-                        alert(maybeFormatMessage({id: 'gui.extension.custom.load.invalidURLWarning', default: 'invalid URL, continue?'}));
+                        alert(formatMessage({id: 'gui.extension.custom.load.invalidURLWarning', default: 'invalid URL, continue?'}));
                         retryURL = true;
                     } else {
                         retryURL = false;
@@ -975,7 +975,7 @@ class ExtensionManager {
             let shouldGoOn = Boolean(url);
             if (!url) {
                 // eslint-disable-next-line no-alert
-                shouldGoOn = confirm(maybeFormatMessage({id: 'gui.extension.custom.load.noURLWarning', default: 'URL not found, the extension cannot be loaded after saving'}, {extName}));
+                shouldGoOn = confirm(formatMessage({id: 'gui.extension.custom.load.noURLWarning', default: 'URL not found, the extension cannot be loaded after saving'}, {extName}));
             }
 
             if (shouldGoOn) {
@@ -983,7 +983,7 @@ class ExtensionManager {
                     let needStore = !storedURL;
                     if (storedURL && url !== storedURL) {
                         // eslint-disable-next-line no-alert
-                        needStore = confirm(maybeFormatMessage({id: 'gui.extension.custom.load.replaceURLTip', default: 'New URL found, replace?'}, {extName, newURL: url, oldURL: storedURL}));
+                        needStore = confirm(formatMessage({id: 'gui.extension.custom.load.replaceURLTip', default: 'New URL found, replace?'}, {extName, newURL: url, oldURL: storedURL}));
                     }
                     if (needStore) {
                         this.registerGandiWildExtensions(extensionId, url);
