@@ -266,7 +266,7 @@ class ExtensionManager {
         // try ask user to input url to load extension
         if (extensionURL && !extensionURL.startsWith('http')) {
             // eslint-disable-next-line no-alert
-            const url = prompt(formatMessage({id: 'gui.extension.custom.load.inputURLTip', default: `input custom extension [${extensionURL}]'s URL`}, {extName: extensionURL}));
+            const url = prompt(formatMessage({id: 'gui.extension.custom.load.inputURLTip', default: `input custom extension [${extensionURL}]'s URL`}, {extName: `${extensionURL}\n`}));
             if (url && url.startsWith('http')) {
                 this.runtime.gandi.wildExtensions[extensionURL] = {id: extensionURL, url};
                 return this.loadExtensionURL(extensionURL);
