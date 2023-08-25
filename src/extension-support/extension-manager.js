@@ -5,7 +5,7 @@ const maybeFormatMessage = require('../util/maybe-format-message');
 const BlockType = require('./block-type');
 const ArgumentType = require('./argument-type');
 const TargetType = require('./target-type');
-const {error} = require('console');
+
 
 // These extensions are currently built into the VM repository but should not be loaded at startup.
 // TODO: move these out into a separate repository?
@@ -273,17 +273,15 @@ class ExtensionManager {
             }
             log.warn('invalid url');
         }
-
-        // TW
         this.loadingAsyncExtensions++;
         return new Promise((resolve, reject) => {
             this.pendingExtensions.push({extensionURL, resolve, reject});
             this.createExtensionWorker()
                 .then(worker => dispatch.addWorker(worker))
-                .catch(error => {
+                .catch(_error => {
                     this.runtime.emit('EXTENSION_NOT_FOUND', extensionURL);
-                    log.error(error);
-                    return reject(error);
+                    log.error(_error);
+                    return reject(_error);
                 });
         }).finally(() => this.runtime.emit('EXTENSION_DATA_LOADING', false));
     }
