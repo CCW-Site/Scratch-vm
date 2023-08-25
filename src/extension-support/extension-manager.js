@@ -5,6 +5,7 @@ const maybeFormatMessage = require('../util/maybe-format-message');
 const BlockType = require('./block-type');
 const ArgumentType = require('./argument-type');
 const TargetType = require('./target-type');
+const {error} = require('console');
 
 // These extensions are currently built into the VM repository but should not be loaded at startup.
 // TODO: move these out into a separate repository?
@@ -773,9 +774,11 @@ class ExtensionManager {
                 return func;
             }
             return await func();
-        } else if (typeof func === 'object' && typeof func.getInfo === 'function') {
+        } else if (typeof func === 'object' && typeof func.getInfo === 'function' &&
+            /^class\s/.test(Function.prototype.toString.call(func.constructor))) {
             return func;
         }
+        throw new error('extension class not found');
     }
 
     loadOfficialExtensionsLibrary (serviceURL = '') {
