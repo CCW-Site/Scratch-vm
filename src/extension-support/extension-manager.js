@@ -3,6 +3,8 @@ const log = require('../util/log');
 const maybeFormatMessage = require('../util/maybe-format-message');
 
 const BlockType = require('./block-type');
+const ArgumentType = require('./argument-type');
+const TargetType = require('./target-type');
 
 // These extensions are currently built into the VM repository but should not be loaded at startup.
 // TODO: move these out into a separate repository?
@@ -770,6 +772,8 @@ class ExtensionManager {
                 return func;
             }
             return await func();
+        } else if (typeof func === 'object' && typeof func.getInfo === 'function') {
+            return func;
         }
     }
 
@@ -908,61 +912,94 @@ class ExtensionManager {
         return script;
     }
 
+    customRemoteExtensionRegister (registerURL) {
+        return obj => {
+            let extensionId = obj.info && obj.info.extensionId;
+            let name = 'custom extension';
+            let gandiExtObj;
+            const locale = this.runtime.getOriginalFormatMessage().setup().locale;
+
+            if (extensionId) {
+                gandiExtObj = obj;
+                if (obj.l10n && obj.l10n[locale] && obj.l10n[locale][obj.info.name]) {
+                    name = obj.l10n[locale][obj.info.name];
+                }
+            } else if (typeof obj.getInfo === 'function') {
+                const info = obj.getInfo();
+                if (info.id) {
+                    extensionId = info.id;
+                }
+                if (info.name) {
+                    name = info.name;
+                }
+                gandiExtObj = {
+                    Extension: obj.constructor,
+                    info: {
+                        extensionId,
+                        name,
+                        iconURL: info.menuIconURI,
+                        insetIconURL: info.blockIconURI
+                    }
+                };
+            }
+            if (!extensionId || !gandiExtObj.Extension) {
+                throw (new Error('invalid extension, stop register'));
+            }
+
+            const extName = `\n  name = ${name}\n  id   = ${extensionId}\n`;
+            const wildExt = this.runtime.gandi.wildExtensions[extensionId];
+            const storedURL = wildExt ? wildExt.url : null;
+            let url = registerURL ?? storedURL;
+            if (!url) {
+                let retryURL = false;
+                do {
+                // eslint-disable-next-line no-alert
+                    url = prompt(maybeFormatMessage({id: 'gui.extension.custom.load.inputURLTip', default: `input custom extension's URL`}, {extName}));
+                    // check if url is a valid url
+                    if (url && !url.startsWith('http')) {
+                    // eslint-disable-next-line no-alert
+                        alert(maybeFormatMessage({id: 'gui.extension.custom.load.invalidURLWarning', default: 'invalid URL, continue?'}));
+                        retryURL = true;
+                    } else {
+                        retryURL = false;
+                    }
+                } while (retryURL);
+            }
+
+            let shouldGoOn = Boolean(url);
+            if (!url) {
+                // eslint-disable-next-line no-alert
+                shouldGoOn = confirm(maybeFormatMessage({id: 'gui.extension.custom.load.noURLWarning', default: 'URL not found, the extension cannot be loaded after saving'}, {extName}));
+            }
+
+            if (shouldGoOn) {
+                if (url) {
+                    let needStore = !storedURL;
+                    if (storedURL && url !== storedURL) {
+                        // eslint-disable-next-line no-alert
+                        needStore = confirm(maybeFormatMessage({id: 'gui.extension.custom.load.replaceURLTip', default: 'New URL found, replace?'}, {extName, newURL: url, oldURL: storedURL}));
+                    }
+                    if (needStore) {
+                        this.registerGandiWildExtensions(extensionId, url);
+                    }
+                }
+                this.registerCustomExtensions(extensionId, gandiExtObj.Extension);
+                this._customExtensionInfo = {...this._customExtensionInfo, [extensionId]: gandiExtObj};
+            }
+        };
+    }
+
     // output a Scratch Object contains APIs all extension needed
     setupScratchAPIForExtension (registerURL){
         const extensions = {
-            register: obj => {
-                const extensionId = obj.info && obj.info.extensionId;
-                const name = obj.l10n['zh-cn'][obj.info.name]??obj.info.name;
-                if (!extensionId) {
-                    throw (new Error('extensionId is null'));
-                }
-                const extName = `\n  name = ${name}\n  id   = ${extensionId}\n`;
-                const wildExt = this.runtime.gandi.wildExtensions[extensionId];
-                const storedURL = wildExt ? wildExt.url : null;
-                let url = registerURL ?? storedURL;
-                if (!url) {
-                    let retryURL = false;
-                    do {
-                    // eslint-disable-next-line no-alert
-                        url = prompt(maybeFormatMessage({id: 'gui.extension.custom.load.inputURLTip', default: `input custom extension's URL`}, {extName}));
-                        // check if url is a valid url
-                        if (url && !url.startsWith('http')) {
-                        // eslint-disable-next-line no-alert
-                            alert(maybeFormatMessage({id: 'gui.extension.custom.load.invalidURLWarning', default: 'invalid URL, continue?'}));
-                            retryURL = true;
-                        } else {
-                            retryURL = false;
-                        }
-                    } while (retryURL);
-                }
-
-                let shouldGoOn = Boolean(url);
-                if (!url) {
-                    // eslint-disable-next-line no-alert
-                    shouldGoOn = confirm(maybeFormatMessage({id: 'gui.extension.custom.load.noURLWarning', default: 'URL not found, the extension cannot be loaded after saving'}, {extName}));
-                }
-
-                if (shouldGoOn) {
-                    if (url) {
-                        let needStore = !storedURL;
-                        if (storedURL && url !== storedURL) {
-                            // eslint-disable-next-line no-alert
-                            needStore = confirm(maybeFormatMessage({id: 'gui.extension.custom.load.replaceURLTip', default: 'New URL found, replace?'}, {extName, newURL: url, oldURL: storedURL}));
-                        }
-                        if (needStore) {
-                            this.registerGandiWildExtensions(extensionId, url);
-                        }
-                    }
-                    this.registerCustomExtensions(extensionId, obj.Extension);
-                    this._customExtensionInfo = {...this._customExtensionInfo, [extensionId]: obj};
-                }
-            }
+            register: this.customRemoteExtensionRegister(registerURL)
         };
-        if (!global.Scratch) global.Scratch = {};
+        global.Scratch = global.Scratch || {};
+        global.Scratch.ArgumentType = ArgumentType;
+        global.Scratch.BlockType = BlockType;
+        global.Scratch.TargetType = TargetType;
         global.Scratch = Object.assign(global.Scratch, {extensions});
     }
-
     // powered by xigua end
 }
 
