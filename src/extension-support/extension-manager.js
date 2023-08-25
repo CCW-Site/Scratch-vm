@@ -177,6 +177,10 @@ class ExtensionManager {
 
     setLoadedExtension (extensionID, value) {
         log(`New extension loaded: ${extensionID} ${value}`);
+        const customExt = this._customExtensionInfo[extensionID];
+        if (customExt && customExt.url) {
+            this.registerGandiWildExtensions(extensionID, customExt.url);
+        }
 
         this._loadedExtensions.set(extensionID, value);
     }
@@ -711,7 +715,7 @@ class ExtensionManager {
                 `registerGandiWildExtensions: extension id:${id} registered，will be replaced`
             );
         }
-        if (isRemoteOperation) {
+        if (!isRemoteOperation) {
             this.runtime.emitGandiWildExtensionsUpdate({data: {id, url}, type: 'add'});
         }
         this.runtime.gandi.wildExtensions[id] = {
@@ -845,8 +849,8 @@ class ExtensionManager {
                     Object.keys(lib).forEach(key => {
                         const obj = lib[key];
                         const extensionId = (obj.info && obj.info.extensionId) || key;
+                        obj.url = url;
                         this.registerCustomExtensions(extensionId, obj.Extension);
-                        this.registerGandiWildExtensions(extensionId, url);
                         this._customExtensionInfo = {
                             ...this._customExtensionInfo,
                             [extensionId]: obj
@@ -856,11 +860,11 @@ class ExtensionManager {
                 } else if (window.tempExt) {
                     const obj = window.tempExt;
                     const extensionId = obj.info && obj.info.extensionId;
+                    obj.url = url;
                     if (!extensionId) {
                         return reject(new Error('extensionId is null'));
                     }
                     this.registerCustomExtensions(extensionId, obj.Extension);
-                    this.registerGandiWildExtensions(extensionId, url);
                     this._customExtensionInfo = {...this._customExtensionInfo, [extensionId]: obj};
                     window.tempExt = null;
                 }
@@ -980,13 +984,14 @@ class ExtensionManager {
 
             if (shouldGoOn) {
                 if (url) {
-                    let needStore = !storedURL;
-                    if (storedURL && url !== storedURL) {
+                    gandiExtObj.url = url;
+                    const existExt = this._customExtensionInfo[extensionId];
+                    if (existExt && existExt.url !== url) {
                         // eslint-disable-next-line no-alert
-                        needStore = confirm(formatMessage({id: 'gui.extension.custom.load.replaceURLTip', default: 'New URL found, replace?'}, {extName, newURL: url, oldURL: storedURL}));
-                    }
-                    if (needStore) {
-                        this.registerGandiWildExtensions(extensionId, url);
+                        const replace = confirm(formatMessage({id: 'gui.extension.custom.load.replaceURLTip', default: 'New URL found, replace?'}, {extName, newURL: url, oldURL: existExt.url}));
+                        if (!replace) {
+                            return;
+                        }
                     }
                 }
                 this.registerCustomExtensions(extensionId, gandiExtObj.Extension);

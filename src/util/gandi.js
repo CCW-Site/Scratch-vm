@@ -65,10 +65,16 @@ class Gandi {
     }
 
     serialize (object, extensions) {
+        const usedExt = {};
+        Object.values(this.wildExtensions).forEach(ext => {
+            if (extensions.has(ext.id)) {
+                usedExt[ext.id] = ext;
+            }
+        });
         if (!this.isEmpty()) {
             object.gandi = {
                 assets: this.serializeGandiAssets(extensions),
-                wildExtensions: this.wildExtensions,
+                wildExtensions: usedExt,
                 configs: this.configs,
                 dynamicMenuItems: this.dynamicMenuItems,
                 spine: this.spine
