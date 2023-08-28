@@ -2063,6 +2063,7 @@ class VirtualMachine extends EventEmitter {
                 translations: {[locale]: messages}
             });
         }
+        this.runtime.emit('LOCALE_CHANGED', locale);
         return this.extensionManager.refreshBlocks();
     }
 

@@ -1012,6 +1012,7 @@ class ExtensionManager {
         global.Scratch.BlockType = BlockType;
         global.Scratch.TargetType = TargetType;
         global.Scratch.Cast = Cast;
+        global.Scratch.translate = createTranslate(this.runtime);
         global.Scratch = Object.assign(global.Scratch, {extensions});
     }
     // powered by xigua end
