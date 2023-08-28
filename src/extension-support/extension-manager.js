@@ -5,6 +5,8 @@ const formatMessage = require('format-message');
 const BlockType = require('./block-type');
 const ArgumentType = require('./argument-type');
 const TargetType = require('./target-type');
+const Cast = require('../util/cast');
+const createTranslate = require('./tw-l10n');
 
 
 // These extensions are currently built into the VM repository but should not be loaded at startup.
@@ -1009,6 +1011,7 @@ class ExtensionManager {
         global.Scratch.ArgumentType = ArgumentType;
         global.Scratch.BlockType = BlockType;
         global.Scratch.TargetType = TargetType;
+        global.Scratch.Cast = Cast;
         global.Scratch = Object.assign(global.Scratch, {extensions});
     }
     // powered by xigua end
