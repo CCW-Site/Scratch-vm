@@ -262,7 +262,7 @@ class Target extends EventEmitter {
         const fieldKey = type ? 'LIST' : 'VARIABLE';
         for (const blockId in this.blocks._blocks) {
             const block = this.blocks._blocks[blockId];
-            if (block.opcode.startsWith('data_') && block.fields[fieldKey].value === name) {
+            if (block.fields[fieldKey] && block.opcode.startsWith('data_') && block.fields[fieldKey].value === name) {
                 return true;
             }
         }
