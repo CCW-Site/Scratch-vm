@@ -100,6 +100,9 @@ const createExtensionService = extensionManager => {
     return service;
 };
 
+// check _classCallCheck for ES5
+const isClassFunc = func => /^class\s/.test(Function.prototype.toString.call(func)) || /_classCallCheck\b/.test(Function.prototype.toString.call(func));
+
 class ExtensionManager {
     constructor (runtime) {
         /**
@@ -761,23 +764,42 @@ class ExtensionManager {
         return func && func();
     }
 
+
     async getOfficialExtensionClass (extensionId) {
         const func = officialExtension[extensionId];
         if (typeof func === 'function') {
-            if (/^class\s/.test(Function.prototype.toString.call(func))) {
+            if (isClassFunc(func)) {
                 return func;
             }
-            return await func();
+            // func may be not a class ,because we do lazy import in OfficialExtension lib.
+            // has two possibility
+            let extClass = await func();
+            // 1. normal es module export a default object
+            if (extClass.default) {
+                officialExtension[extensionId] = extClass.default;
+                return extClass.default;
+            }
+            // 2. or a IIFE which called global Scratch.extensions.register to register
+            //      it will replace officialExtension[extensionId] when register success
+            //      so try get again;
+            extClass = officialExtension[extensionId];
+            if (isClassFunc(extClass)) {
+                return extClass;
+            }
         }
+        throw new Error('extension class not found');
     }
 
     async getCustomExtensionClass (extensionId) {
         const func = customExtension[extensionId];
         if (typeof func === 'function') {
-            if (/^class\s/.test(Function.prototype.toString.call(func))) {
+            if (isClassFunc(func)) {
                 return func;
             }
-            return await func();
+            const extClass = await func();
+            if (extClass.default) {
+                return extClass.default;
+            }
         } else if (typeof func === 'object' && typeof func.getInfo === 'function' &&
             /^class\s/.test(Function.prototype.toString.call(func.constructor))) {
             return func.constructor;
@@ -925,7 +947,8 @@ class ExtensionManager {
     }
 
     customRemoteExtensionRegister (registerURL) {
-        return obj => {
+
+        const buildValidExtObj = obj => {
             let extensionId = obj.info && obj.info.extensionId;
             let name = 'custom extension';
             let gandiExtObj;
@@ -954,10 +977,10 @@ class ExtensionManager {
                     }
                 };
             }
-            if (!extensionId || !gandiExtObj.Extension) {
-                throw (new Error('invalid extension, stop register'));
-            }
+            return {extensionId, gandiExtObj, name};
+        };
 
+        const registerIntoCustom = (extensionId, gandiExtObj, name) => {
             const extName = `\n  name = ${name}\n  id   = ${extensionId}\n`;
             const wildExt = this.runtime.gandi.wildExtensions[extensionId];
             const storedURL = wildExt ? wildExt.url : null;
@@ -965,11 +988,11 @@ class ExtensionManager {
             if (!url) {
                 let retryURL = false;
                 do {
-                // eslint-disable-next-line no-alert
+                    // eslint-disable-next-line no-alert
                     url = prompt(formatMessage({id: 'gui.extension.custom.load.inputURLTip', default: `input custom extension [${extName}]'s URL`}, {extName}));
                     // check if url is a valid url
                     if (url && !url.startsWith('http')) {
-                    // eslint-disable-next-line no-alert
+                        // eslint-disable-next-line no-alert
                         alert(formatMessage({id: 'gui.extension.custom.load.invalidURLWarning', default: 'invalid URL, continue?'}));
                         retryURL = true;
                     } else {
@@ -998,6 +1021,19 @@ class ExtensionManager {
                 }
                 this.registerCustomExtensions(extensionId, gandiExtObj.Extension);
                 this._customExtensionInfo = {...this._customExtensionInfo, [extensionId]: gandiExtObj};
+            }
+        };
+
+        return obj => {
+            const {extensionId, gandiExtObj, name} = buildValidExtObj(obj);
+            if (!extensionId || !gandiExtObj.Extension) {
+                throw (new Error('invalid extension, stop register'));
+            }
+            // if it's in officialExtension
+            if (officialExtension[extensionId]) {
+                this.registerOfficialExtensions(extensionId, gandiExtObj.Extension);
+            } else {
+                registerIntoCustom(extensionId, gandiExtObj, name);
             }
         };
     }
