@@ -1043,13 +1043,42 @@ class ExtensionManager {
         const extensions = {
             register: this.customRemoteExtensionRegister(registerURL)
         };
-        global.Scratch = global.Scratch || {};
-        global.Scratch.ArgumentType = ArgumentType;
-        global.Scratch.BlockType = BlockType;
-        global.Scratch.TargetType = TargetType;
-        global.Scratch.Cast = Cast;
-        global.Scratch.translate = createTranslate(this.runtime);
-        global.Scratch = Object.assign(global.Scratch, {extensions});
+        if (!global.Scratch) {
+            const translate = createTranslate(this.runtime);
+            global.Scratch = {
+                get ArgumentType () {
+                    return ArgumentType;
+                },
+                get BlockType () {
+                    return BlockType;
+                },
+                get TargetType () {
+                    return TargetType;
+                },
+                get Cast () {
+                    return Cast;
+                },
+                get translate () {
+                    return translate;
+                },
+                get runtime () {
+                    // eslint-disable-next-line no-alert
+                    alert(`
+# WARNING #
+Can't access runtime in global in Gandi.
+you can get runtime in extension class constructor.
+example:
+    class myExtClass {
+      constructor(runtime) {
+          this.runtime = runtime;
+          // use this.runtime in your blocks op function
+      }
+    }`);
+                    return {};
+                }
+            };
+        }
+        global.Scratch.extensions = extensions;
     }
     // powered by xigua end
 }
