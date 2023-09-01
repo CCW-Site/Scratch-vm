@@ -103,7 +103,10 @@ const createExtensionService = extensionManager => {
 const isClassFunc = func =>
     typeof func === 'function' &&
     (/^class\s/.test(Function.prototype.toString.call(func)) ||
-        /_classCallCheck\b/.test(Function.prototype.toString.call(func)));
+        // dirty hack to check if func is a class
+        /_classCallCheck\b/.test(Function.prototype.toString.call(func)) ||
+            // code transpiled by babel when prod build
+            Function.prototype.toString.call(func) === 'function t(){!function(e,t){if(!(e instanceof t))throw new TypeError("Cannot call a class as a function")}(this,t)}');
 
 class ExtensionManager {
     constructor (runtime) {
@@ -809,6 +812,7 @@ class ExtensionManager {
             //      it will replace officialExtension[extensionId] when register success
             //      so try get again;
             extClass = officialExtension[extensionId];
+            // don't check extClass if it is a class
             if (isClassFunc(extClass)) {
                 return extClass;
             }
