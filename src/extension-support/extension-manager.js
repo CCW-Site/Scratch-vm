@@ -1062,8 +1062,9 @@ class ExtensionManager {
                     // eslint-disable-next-line no-alert
                     alert(`
 # WARNING #
-Can't access runtime in global in Gandi.
-you can get runtime in extension class constructor.
+you are load a extension which try access runtime in global.
+Gandi don't support that way.
+you can access runtime in extension class constructor.
 example:
     class myExtClass {
       constructor(runtime) {
