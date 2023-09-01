@@ -100,13 +100,18 @@ const createExtensionService = extensionManager => {
 };
 
 // check _classCallCheck for ES5
-const isClassFunc = func =>
-    typeof func === 'function' &&
-    (/^class\s/.test(Function.prototype.toString.call(func)) ||
+const isClassFunc = func => {
+    if (typeof func === 'function') {
         // dirty hack to check if func is a class
-        /_classCallCheck\b/.test(Function.prototype.toString.call(func)) ||
-            // code transpiled by babel when prod build
-            Function.prototype.toString.call(func) === 'function t(){!function(e,t){if(!(e instanceof t))throw new TypeError("Cannot call a class as a function")}(this,t)}');
+        const str = Function.prototype.toString.call(func);
+        return (/^class\s/.test(str) ||
+            /_classCallCheck\b/.test(str) ||
+            // code transpiled by babel and minified when prod build
+            str.includes('function t(){!function(e,t){if(!(e instanceof t))throw new TypeError("Cannot call a class as a function")}(this,t)}')
+        );
+    }
+    return false;
+};
 
 class ExtensionManager {
     constructor (runtime) {
@@ -789,30 +794,36 @@ class ExtensionManager {
     async getOfficialExtensionClass (extensionId) {
         const func = officialExtension[extensionId];
         if (typeof func === 'function') {
-            if (isClassFunc(func)) {
+            let extClass;
+            try {
+                // func may be not a class ,because we do lazy import in OfficialExtension lib.
+                // has three possibility:
+                //      1. return a es modules which export a default class
+                //      2. return a class
+                //      3. return a IIFE to register a extension class into officialExtension[extensionId]
+                // so invoke func first
+                extClass = await func();
+            } catch (error) {
+                // if func is a function but can not call as a function
+                // maybe it's a class
                 return func;
             }
-            // func may be not a class ,because we do lazy import in OfficialExtension lib.
-            // has two possibility:
-            //      1. function to import a es modules which export a default class or class
-            //      2. a IIFE to register a extension class
-            let extClass = await func();
-            // 1. normal es module export a default object
-            if (extClass.default) {
+            if (extClass && extClass.__esModule && extClass.default) {
+            // 1. es module export a default class
                 // extClass is a es module which export a default class
                 officialExtension[extensionId] = extClass.default;
                 return extClass.default;
             } else if (isClassFunc(extClass)) {
+            // 2. return a class
                 // if ext is developed by ccw-customExt-tool ts version
                 // extClass will be a class
                 officialExtension[extensionId] = extClass;
                 return extClass;
             }
-            // 2. or a IIFE which called global Scratch.extensions.register to register
+            // 3. return a IIFE which called global Scratch.extensions.register to register
             //      it will replace officialExtension[extensionId] when register success
             //      so try get again;
             extClass = officialExtension[extensionId];
-            // don't check extClass if it is a class
             if (isClassFunc(extClass)) {
                 return extClass;
             }
@@ -1130,12 +1141,33 @@ class ExtensionManager {
         };
 
         return obj => {
+            // reset register to remove registerURL;
+            // registerURL not null means add by user, need store url
+            // registerURL is null means load by project.json, need not store url
+            global.Scratch.extensions = {
+                register: this.customRemoteExtensionRegister()
+            };
+
             const {extensionId, gandiExtObj, name} = buildValidExtObj(obj);
             if (!extensionId || !gandiExtObj.Extension) {
                 throw new Error('invalid extension, stop register');
             }
             // if it's in officialExtension
             if (officialExtension[extensionId]) {
+                if (registerURL) {
+                    // when use add a existed extension id, show a alert
+                    // eslint-disable-next-line no-alert
+                    alert(
+                        formatMessage(
+                            {
+                                id: 'gui.extension.custom.load.duplicateIdError',
+                                default: 'extension:{extName} extension id already existed, please change the extension id'
+                            },
+                            {extName: `\n  name = ${name}\n  id   = ${extensionId}\n`}
+                        )
+                    );
+                    return;
+                }
                 this.registerOfficialExtensions(
                     extensionId,
                     gandiExtObj.Extension
