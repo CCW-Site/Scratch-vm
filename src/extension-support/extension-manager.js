@@ -1040,9 +1040,6 @@ class ExtensionManager {
 
     // output a Scratch Object contains APIs all extension needed
     setupScratchAPIForExtension (registerURL){
-        const extensions = {
-            register: this.customRemoteExtensionRegister(registerURL)
-        };
         if (!global.Scratch) {
             const translate = createTranslate(this.runtime);
             global.Scratch = {
@@ -1078,7 +1075,10 @@ example:
                 }
             };
         }
-        global.Scratch.extensions = extensions;
+        // reset extensions.register when load a new remote registerURL
+        global.Scratch.extensions = {
+            register: this.customRemoteExtensionRegister(registerURL)
+        };
     }
     // powered by xigua end
 }
