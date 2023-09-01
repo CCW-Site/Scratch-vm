@@ -100,7 +100,10 @@ const createExtensionService = extensionManager => {
 };
 
 // check _classCallCheck for ES5
-const isClassFunc = func => /^class\s/.test(Function.prototype.toString.call(func)) || /_classCallCheck\b/.test(Function.prototype.toString.call(func));
+const isClassFunc = func =>
+    typeof func === 'function' &&
+    (/^class\s/.test(Function.prototype.toString.call(func)) ||
+        /_classCallCheck\b/.test(Function.prototype.toString.call(func)));
 
 class ExtensionManager {
     constructor (runtime) {
