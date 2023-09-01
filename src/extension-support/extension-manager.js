@@ -772,12 +772,20 @@ class ExtensionManager {
                 return func;
             }
             // func may be not a class ,because we do lazy import in OfficialExtension lib.
-            // has two possibility
+            // has two possibility:
+            //      1. function to import a es modules which export a default class or class
+            //      2. a IIFE to register a extension class
             let extClass = await func();
             // 1. normal es module export a default object
             if (extClass.default) {
+                // extClass is a es module which export a default class
                 officialExtension[extensionId] = extClass.default;
                 return extClass.default;
+            } else if (isClassFunc(extClass)) {
+                // if ext is developed by ccw-customExt-tool ts version
+                // extClass will be a class
+                officialExtension[extensionId] = extClass;
+                return extClass;
             }
             // 2. or a IIFE which called global Scratch.extensions.register to register
             //      it will replace officialExtension[extensionId] when register success
