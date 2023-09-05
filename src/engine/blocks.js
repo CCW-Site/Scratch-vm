@@ -439,12 +439,14 @@ class Blocks {
 
     // CCW: update global procedure caller when editing
     updateGlobalProcedure (oldProccode, newMutation) {
-        Object.values(this._blocks).forEach(block => {
-            if (block.opcode.startsWith('procedures_call') &&
-                    block.mutation.isglobal === 'true' &&
-                    block.mutation.proccode === oldProccode) {
+        const updatedBlocks = [];
+        Object.values(this._blocks).forEach(originalBlock => {
+            if (originalBlock.opcode.startsWith('procedures_call') &&
+                originalBlock.mutation.isglobal === 'true' &&
+                originalBlock.mutation.proccode === oldProccode) {
                 // only proccode/warp/argumentIds_ can editing
                 // isglobal and isreporter does not allow editing
+                const block = JSON.parse(JSON.stringify(originalBlock));
                 block.mutation.proccode = newMutation.getProcCode();
                 block.mutation.warp = newMutation.getWarp();
                 const newArgIds = newMutation.argumentIds_;
@@ -488,8 +490,12 @@ class Blocks {
                     }
                     i += 1;
                 }
+                // for collaboration
+                this._blocks[block.id] = block;
+                updatedBlocks.push(block.id);
             }
         });
+        return updatedBlocks;
     }
 
     duplicate () {
@@ -578,7 +584,7 @@ class Blocks {
             // Don't accept delete events for missing blocks,
             // or shadow blocks being obscured.
             if (!this._blocks.hasOwnProperty(e.blockId) ||
-                this._blocks[e.blockId].shadow) {
+                    this._blocks[e.blockId].shadow) {
                 return;
             }
             // Inform any runtime to forget about glows on this script.
@@ -692,7 +698,7 @@ class Blocks {
                     e.xy.x, e.xy.y, e.width, e.height, e.minimized);
 
                 if (currTarget.comments[e.commentId].x === null &&
-                    currTarget.comments[e.commentId].y === null) {
+                        currTarget.comments[e.commentId].y === null) {
                     // Block comments imported from 2.0 projects are imported with their
                     // x and y coordinates set to null so that scratch-blocks can
                     // auto-position them. If we are receiving a create event for these
@@ -724,7 +730,7 @@ class Blocks {
                     comment.minimized = change.minimized;
                     changedData.minimized = comment.minimized;
                 }
-                if (change.hasOwnProperty('width') && change.hasOwnProperty('height')){
+                if (change.hasOwnProperty('width') && change.hasOwnProperty('height')) {
                     comment.width = change.width;
                     comment.height = change.height;
                     changedData.width = comment.width;
@@ -917,7 +923,7 @@ class Blocks {
             // Update block value
             if (!block.fields[args.name]) return;
             if (args.name === 'VARIABLE' || args.name === 'LIST' ||
-                args.name === 'BROADCAST_OPTION') {
+                    args.name === 'BROADCAST_OPTION') {
                 // Get variable name using the id in args.value.
                 const variable = this.runtime.getEditingTarget().lookupVariableById(args.value);
                 if (variable) {
@@ -957,7 +963,7 @@ class Blocks {
             // block but in the case of monitored reporters that have arguments,
             // map the old id to a new id, creating a new monitor block if necessary
             if (block.fields && Object.keys(block.fields).length > 0 &&
-                block.opcode !== 'data_variable' && block.opcode !== 'data_listcontents') {
+                    block.opcode !== 'data_variable' && block.opcode !== 'data_listcontents') {
 
                 // This block has an argument which needs to get separated out into
                 // multiple monitor blocks with ids based on the selected argument
@@ -988,8 +994,8 @@ class Blocks {
             }
 
             const isSpriteSpecific = isSpriteLocalVariable ||
-                (this.runtime.monitorBlockInfo.hasOwnProperty(block.opcode) &&
-                this.runtime.monitorBlockInfo[block.opcode].isSpriteSpecific);
+                    (this.runtime.monitorBlockInfo.hasOwnProperty(block.opcode) &&
+                        this.runtime.monitorBlockInfo[block.opcode].isSpriteSpecific);
             if (isSpriteSpecific) {
                 // If creating a new sprite specific monitor, the only possible target is
                 // the current editing one b/c you cannot dynamically create monitors.
