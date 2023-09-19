@@ -241,7 +241,7 @@ class Sequencer {
                 return;
             }
             // If no control flow has happened, switch to next block.
-            if (thread.peekStack() === currentBlockId) {
+            if (thread.peekStack() === currentBlockId && !thread.peekStackFrame().reporting) {
                 thread.goToNextBlock();
             }
             // If no next block has been found at this point, look on the stack.
