@@ -493,19 +493,13 @@ const execute = function (sequencer, thread) {
                 // Cast it to a string. We don't need an id here.
                 argValues.BROADCAST_OPTION.id = null;
                 argValues.BROADCAST_OPTION.name = cast.toString(inputValue);
-            } else if (argValues && inputName) {
-                // pass value to parent argument if has parent
+            } else {
                 argValues[inputName] = inputValue;
             }
 
             i += 1;
-            if (i >= length) {
-                // there no more operations to execute meaning click procedures_call_with_return block separately
-                // show value bubble
-                handleReport(inputValue, sequencer, thread, opCached, true);
-            }
         }
-
+        currentStackFrame.waitingReporter = false;
         currentStackFrame.reporting = null;
         currentStackFrame.reported = null;
     }
@@ -515,6 +509,8 @@ const execute = function (sequencer, thread) {
     for (; i < length; i++) {
         const lastOperation = i === length - 1;
         const opCached = ops[i];
+        // cache op in stack frame to determine isRecursiveCall in Sequencer.stepToProcedure
+        currentStackFrame.op = opCached;
 
         const blockFunction = opCached._blockFunction;
 
@@ -538,7 +534,7 @@ const execute = function (sequencer, thread) {
         const isPromiseReportedValue = isPromise(primitiveReportedValue);
         // If it's a promise, wait until promise resolves.
         // CCW: procedures_call_with_return make stack frame waiting report like promise
-        if (isPromiseReportedValue || opCached.opcode === 'procedures_call_with_return') {
+        if (isPromiseReportedValue || currentStackFrame.waitingReporter) {
             if (isPromiseReportedValue) {
                 handlePromise(primitiveReportedValue, sequencer, thread, opCached, lastOperation);
             }
@@ -586,12 +582,6 @@ const execute = function (sequencer, thread) {
                     parentValues[inputName] = primitiveReportedValue;
                 }
             }
-        }
-        if (opCached.opcode === 'procedures_return') {
-            // CCW: when a procedure returns, we need to stop op chain execution
-            // pop stack until we find the procedures_call_with_return block
-            thread.stopThisScript();
-            break;
         }
     }
 

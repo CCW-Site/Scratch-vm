@@ -24,15 +24,19 @@ class Scratch3ProcedureBlocks {
         };
     }
 
-    proceduresReturn (args) {
-        return args.RETURN;
+    proceduresReturn (args, util) {
+        util.stopThisScript();
+        // If used outside of a custom block, there may be no stack frame.
+        if (util.thread.peekStackFrame()) {
+            util.stackFrame.returnValue = args.RETURN;
+        }
     }
 
     definition () {
         // No-op: execute the blocks.
     }
 
-    _callProcedure (args, util, canNestedCall = false) {
+    _callProcedure (args, util) {
         const procedureCode = args.mutation.proccode;
         const isGlobal = args.mutation.isglobal === 'true';
         let paramNamesIdsAndDefaults;
@@ -66,19 +70,33 @@ class Scratch3ProcedureBlocks {
                 util.pushParam(paramNames[i], paramDefaults[i]);
             }
         }
-        if (!canNestedCall) {
-            // reporter procedure call can be nested in same stackFrame
-            // statement procedure call cannot be nested in same stackFrame
-            util.stackFrame.executed = true;
-        }
+        util.stackFrame.executed = true;
         // CCW: pass global target to procedure if isGlobal === true
         util.startProcedure(procedureCode, globalTarget);
     }
 
     callWithReturn (args, util) {
-        if (!util.stackFrame.executed) {
-            this._callProcedure(args, util, true);
+        if (util.stackFrame.executed) {
+            const stackFrame = util.stackFrame;
+            const returnValue = stackFrame.returnValue;
+            // This stackframe will be reused for other reporters in this block, so clean it up for them.
+            // Can't use reset() because that will reset too much.
+            // when call [procedures_call_with_return] in a [procedure] which has input params.
+            // after call [procedures_call_with_return], it will init its own params (params are {} now) in stackframe.
+            // when in [procedure] follow-up block try to find params like [argumentReporterStringNumber].
+            // thread.getParams() will return value when any stackframe's params !== null.
+            // so when call [procedures_call_with_return] is done,
+            // set its stackframe params to null to make sure [procedure]'s params can be find
+            // stackFrame.params = null;
+            const threadStackFrame = util.thread.peekStackFrame();
+            threadStackFrame.params = null;
+            delete stackFrame.returnValue;
+            delete stackFrame.executed;
+            return returnValue;
         }
+        util.thread.peekStackFrame().waitingReporter = true;
+        util.stackFrame.returnValue = ''; // default return value
+        this._callProcedure(args, util);
     }
 
     call (args, util) {

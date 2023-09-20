@@ -79,7 +79,6 @@ class _StackFrame {
         this.waitingReporter = null;
         this.params = null;
         this.executionContext = null;
-        this.reporting = ''; // CCW: use reporting for custom procedure_return
         return this;
     }
 
@@ -283,9 +282,9 @@ class Thread {
     // CCW: return current stack global target for global procedure
     getCurrentGlobalTarget () {
         let target;
-        const stackframe = this.peekStackFrame();
-        if (stackframe && stackframe.executionContext) {
-            target = stackframe.executionContext.globalTarget;
+        const stackFrame = this.peekStackFrame();
+        if (stackFrame && stackFrame.executionContext) {
+            target = stackFrame.executionContext.globalTarget;
         }
         return target;
     }
@@ -293,7 +292,7 @@ class Thread {
     /**
      * Push stack and update stack frames appropriately.
      * @param {string} blockId Block ID to push to stack.
-     * @param {Target} target CCW: the target execute in this stackframe, for global procedure.
+     * @param {Target} target CCW: the target execute in this stack frame, for global procedure.
      */
     pushStack (blockId, target) {
         this.stack.push(blockId);
@@ -348,28 +347,10 @@ class Thread {
                 block = globalTarget.blocks.getBlock(blockID);
             }
 
-            // CCW: when stack is or waiting procedures_call_with_return, dont pop
-            let isWaitingProceduresReturn = false;
-            if (stackFrame.reporting) {
-                let reportBlock = this.target.blocks.getBlock(stackFrame.reporting);
-                if (!reportBlock && globalTarget) {
-                    reportBlock = globalTarget.blocks.getBlock(stackFrame.reporting);
-                }
-                isWaitingProceduresReturn = reportBlock.opcode === 'procedures_call_with_return';
-                if (isWaitingProceduresReturn) {
-                    // CCW:
-                    // when call [procedures_call_with_return] in a [procedure] which has input params.
-                    // after call [procedures_call_with_return], it will init its own params (params are {} now) in stackframe.
-                    // when in [procedure] follow-up block try to find params like [argumentReporterStringNumber].
-                    // thread.getParams() will return value when any stackframe's params !== null.
-                    // so when call [procedures_call_with_return] is done,
-                    // set its stackframe params to null to make sure [procedure]'s params can be find
-                    stackFrame.params = null;
-                }
-            }
-
             if (typeof block !== 'undefined' &&
-                (block.opcode === 'procedures_call' || isWaitingProceduresReturn)) {
+                    (block.opcode === 'procedures_call' ||
+                    block.opcode === 'procedures_call_with_return' ||
+                    stackFrame.waitingReporter)) {
                 break;
             }
             this.popStack();
@@ -509,22 +490,10 @@ class Thread {
      */
     isRecursiveCall (procedureCode) {
         let callCount = 5; // Max number of enclosing procedure calls to examine.
-        const sp = this.stack.length - 1;
+        const sp = this.stackFrames.length - 1;
         for (let i = sp - 1; i >= 0; i--) {
-            let block = this.target.blocks.getBlock(this.stack[i]);
-            if (!block) {
-                const globalTarget = this.getCurrentGlobalTarget();
-                block = globalTarget.blocks.getBlock(this.stack[i]);
-            }
-
-            if (!block) {
-                // Gandi: when not found block, it means this procedure call is from other global procedure call
-                // is recursive call
-                return true;
-                // throw new Error(
-                //     'not Found procedure in local or Global by BlockId ' + this.stack[i]);
-            }
-            if (block.opcode === 'procedures_call' &&
+            const block = this.stackFrames[i].op;
+            if ((block.opcode === 'procedures_call' || block.opcode === 'procedures_call_with_return') &&
                 block.mutation.proccode === procedureCode) {
                 return true;
             }
