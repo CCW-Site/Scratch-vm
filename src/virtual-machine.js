@@ -110,7 +110,6 @@ class VirtualMachine extends EventEmitter {
          * @type {!Runtime}
          */
         this.runtime = new Runtime();
-        window.vm = this;
         centralDispatch
             .setService('runtime', createRuntimeService(this.runtime))
             .catch(e => {
