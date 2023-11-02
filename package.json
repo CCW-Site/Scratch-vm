@@ -1,6 +1,6 @@
 {
   "name": "@xigua/scratch-vm",
-  "version": "1.10.5",
+  "version": "1.10.6",
   "description": "Virtual Machine for Scratch 3.0 merged tw-vm",
   "author": "Massachusetts Institute of Technology",
   "license": "LGPL-3.0-only",
@@ -8,7 +8,7 @@
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/LLK/scratch-vm.git",
-    "sha": "b8cf31f72ec675ac0e1f57b6d37a83e5101a7d03"
+    "sha": "851940c2c1f4aa710b863d591ce701127a411e97"
   },
   "main": "./src/index.js",
   "browser": "./src/index.js",
