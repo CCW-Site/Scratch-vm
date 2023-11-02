@@ -297,9 +297,10 @@ class Target extends EventEmitter {
      * @param {string} name Name of variable.
      * @param {string} type Type of variable, '', 'broadcast_msg', or 'list'
      * @param {boolean} isCloud Whether the variable to create has the isCloud flag set.
+     * @param {boolean} isRemoteOperation - Set to true if this is a remote operation
      * Additional checks are made that the variable can be created as a cloud variable.
      */
-    createVariable (id, name, type, isCloud) {
+    createVariable (id, name, type, isCloud, isRemoteOperation) {
         if (!this.variables.hasOwnProperty(id)) {
             const newVariable = new Variable(id, name, type, false, this.id);
             if (isCloud && this.isStage && this.runtime.canAddCloudVariable()) {
@@ -308,6 +309,12 @@ class Target extends EventEmitter {
                 this.runtime.ioDevices.cloud.requestCreateVariable(newVariable);
             }
             this.variables[id] = newVariable;
+            if (!isRemoteOperation) {
+                const data = [name, newVariable.value];
+                this.runtime.emitTargetVariablesChanged(this.originalTargetId,
+                    [id, type, 'add', newVariable.isCloud ? [...data, true] : data]
+                );
+            }
         }
     }
 
@@ -431,17 +438,22 @@ class Target extends EventEmitter {
                 // Check for name conflicts in all of the targets
                 const allTargets = this.runtime.targets.filter(t => t.isOriginal);
                 for (const target of allTargets) {
-                    if (target !== this &&
-                        target.findVariableUsage(deletedVariableName, deletedVariableType)
-                    ) {
+                    if (target !== this && target.findVariableUsage(deletedVariableName, deletedVariableType)) {
                         const warningText = formatMessage({id: 'gui.alerts.deletingGlobalVariable'});
-                        // eslint-disable-next-line no-alert
-                        alert(warningText);
+                        if (!isRemoteOperation) {
+                            // eslint-disable-next-line no-alert
+                            alert(warningText);
+                        }
                         return;
                     }
                 }
             }
             delete this.variables[id];
+            if (!isRemoteOperation) {
+                this.runtime.emitTargetVariablesChanged(this.originalTargetId,
+                    [id, deletedVariableType, 'delete']
+                );
+            }
             if (this.runtime) {
                 if (deletedVariableWasCloud && this.isStage) {
                     this.runtime.ioDevices.cloud.requestDeleteVariable(deletedVariableName);
@@ -676,6 +688,9 @@ class Target extends EventEmitter {
             const newVar = new Variable(null, varName, varType, false, sprite.id);
             newVarId = newVar.id;
             sprite.variables[newVarId] = newVar;
+            this.runtime.emitTargetVariablesChanged(sprite.originalTargetId,
+                [newVarId, varType, 'add', [varName, newVar.value]]
+            );
         }
 
         // Merge with the local variable on the new sprite.
@@ -732,6 +747,20 @@ class Target extends EventEmitter {
         }
     }
 
+    resolveVariableSharingConflicts (blocks) {
+        // Get all the variable references in the given list of blocks
+        const allVarList = this.blocks.getAllVariableAndListWithBlocks(blocks, true);
+
+        for (let index = 0; index < allVarList.length; index++) {
+            const [varName, varType, varOrListField] = allVarList[index];
+            const oldVarList = this.lookupVariableByNameAndType(varName, varType);
+            if (oldVarList && oldVarList.id !== varOrListField.id) {
+                varOrListField.id = oldVarList.id;
+            } else if (!oldVarList) {
+                this.createVariable(varOrListField.id, varName, varType, varName.startsWith('☁ '));
+            }
+        }
+    }
     /**
      * Fixes up variable references in this target avoiding conflicts with
      * pre-existing variables in the same scope.

@@ -81,7 +81,7 @@ const hotFixProjectJson = data => {
                             if (typeof input === 'string' && broadcasts[input]) {
                                 blockData.inputs.BROADCAST_INPUT[1] = [11, broadcasts[input], input];
                                 // 用于协作工程的修复
-                                acc.push([target.name, blockId, JSON.stringify(blockData.inputs.BROADCAST_INPUT[1])]);
+                                acc.push([target.id, blockId, JSON.stringify(blockData.inputs.BROADCAST_INPUT[1])]);
                             }
                         }
                     }
@@ -110,6 +110,7 @@ class VirtualMachine extends EventEmitter {
          * @type {!Runtime}
          */
         this.runtime = new Runtime();
+        window.vm = this;
         centralDispatch
             .setService('runtime', createRuntimeService(this.runtime))
             .catch(e => {
@@ -1969,7 +1970,7 @@ class VirtualMachine extends EventEmitter {
                 }
             }
             if (!isRemoteOperation) {
-                this.emit('DELETE_SPRITE', targetId);
+                this.emit('DELETE_SPRITE', targetId, target.sprite.name);
             }
             // Sprite object should be deleted by GC.
             this.emitTargetsUpdate();
@@ -2327,6 +2328,8 @@ class VirtualMachine extends EventEmitter {
                 copiedBlocks,
                 target
             );
+        } else {
+            target.resolveVariableSharingConflicts(copiedBlocks);
         }
 
         // Create a unique set of extensionIds that are not yet loaded

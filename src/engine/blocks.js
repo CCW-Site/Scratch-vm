@@ -612,9 +612,6 @@ class Blocks {
                 if (!editingTarget.lookupVariableById(e.varId)) {
                     editingTarget.createVariable(e.varId, e.varName, e.varType);
                     this.emitProjectChanged();
-                    this.runtime.emitTargetVariablesChanged(editingTarget.originalTargetId,
-                        [e.varId, e.varType, 'add', [e.varName, 0]]
-                    );
                 }
             } else {
                 if (stage.lookupVariableById(e.varId)) {
@@ -630,33 +627,29 @@ class Blocks {
                 }
                 stage.createVariable(e.varId, e.varName, e.varType, e.isCloud);
                 this.emitProjectChanged();
-                if (e.isCloud) {
-                    this.runtime.emitTargetVariablesChanged(stage.id,
-                        [e.varId, e.varType, 'add', [e.varName, 0, true]]
-                    );
-                } else {
-                    this.runtime.emitTargetVariablesChanged(stage.id,
-                        [e.varId, e.varType, 'add', [e.varName, 0]]
-                    );
-                }
             }
             break;
         case 'var_rename':
             if (editingTarget && editingTarget.variables.hasOwnProperty(e.varId)) {
+                const originalTargetId = editingTarget.originalTargetId;
+                const variable = editingTarget.variables[e.varId];
                 // This is a local variable, rename on the current target
                 editingTarget.renameVariable(e.varId, e.newName);
                 // Update all the blocks on the current target that use
                 // this variable
                 const affectedBlocks = editingTarget.blocks.updateBlocksAfterVarRename(e.varId, e.newName);
                 if (affectedBlocks.length) {
-                    this.runtime.affectedBlocksAfterVarRename = {[editingTarget.originalTargetId]: affectedBlocks};
+                    this.runtime.affectedBlocksAfterVarRename = {[originalTargetId]: affectedBlocks};
                 }
                 this.emitProjectChanged();
-                this.runtime.emitTargetVariablesChanged(editingTarget.originalTargetId,
-                    [e.varId, e.varType, 'update', [0, e.newName]]
+                // Note: e.varType may be null
+                this.runtime.emitTargetVariablesChanged(originalTargetId,
+                    [e.varId, variable.type, 'update', [0, e.newName]]
                 );
                 this.runtime.emitMonitorsChanged(['update', e.varId, {name: e.newName}]);
             } else {
+                const originalTargetId = stage.originalTargetId;
+                const variable = stage.variables[e.varId];
                 // This is a global variable
                 stage.renameVariable(e.varId, e.newName);
 
@@ -672,8 +665,9 @@ class Blocks {
                 }
                 this.runtime.affectedBlocksAfterVarRename = tempMap;
                 this.emitProjectChanged();
-                this.runtime.emitTargetVariablesChanged(stage.id,
-                    [e.varId, e.varType, 'update', [0, e.newName]]
+                // Note: e.varType may be null
+                this.runtime.emitTargetVariablesChanged(originalTargetId,
+                    [e.varId, variable.type, 'update', [0, e.newName]]
                 );
                 this.runtime.emitMonitorsChanged(['update', e.varId, {name: e.newName}]);
             }
@@ -682,9 +676,6 @@ class Blocks {
             this.resetCache(); // tw: more aggressive cache resetting
             const target = (editingTarget && editingTarget.variables.hasOwnProperty(e.varId)) ?
                 editingTarget : stage;
-            this.runtime.emitTargetVariablesChanged(target.id,
-                [e.varId, e.varType, 'delete']
-            );
             target.deleteVariable(e.varId);
             this.emitProjectChanged();
 
@@ -1229,14 +1220,42 @@ class Blocks {
                 if (allReferences[currVarId]) {
                     allReferences[currVarId].push({
                         referencingField: varOrListField,
-                        type: varType
+                        type: varType,
+                        blockId: blockId
                     });
                 } else {
                     allReferences[currVarId] = [{
                         referencingField: varOrListField,
-                        type: varType
+                        type: varType,
+                        blockId: blockId
                     }];
                 }
+            }
+        }
+        return allReferences;
+    }
+
+    getAllVariableAndListWithBlocks (blocks, optIncludeBroadcast) {
+        const allReferences = [];
+        for (const blockId in blocks) {
+            let varOrListField = null;
+            let varType = null;
+            let varName = null;
+            if (blocks[blockId].fields.VARIABLE) {
+                varOrListField = blocks[blockId].fields.VARIABLE;
+                varType = Variable.SCALAR_TYPE;
+                varName = varOrListField.value;
+                allReferences.push([varName, varType, varOrListField]);
+            } else if (blocks[blockId].fields.LIST) {
+                varOrListField = blocks[blockId].fields.LIST;
+                varType = Variable.LIST_TYPE;
+                varName = blocks[blockId].fields.LIST.value;
+                allReferences.push([varName, varType, varOrListField]);
+            } else if (optIncludeBroadcast && blocks[blockId].fields.BROADCAST_OPTION) {
+                varOrListField = blocks[blockId].fields.BROADCAST_OPTION;
+                varType = Variable.BROADCAST_MESSAGE_TYPE;
+                varName = blocks[blockId].fields.BROADCAST_OPTION.value;
+                allReferences.push([varName, varType, varOrListField]);
             }
         }
         return allReferences;
