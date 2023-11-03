@@ -757,7 +757,14 @@ class Target extends EventEmitter {
             if (oldVarList && oldVarList.id !== varOrListField.id) {
                 varOrListField.id = oldVarList.id;
             } else if (!oldVarList) {
-                this.createVariable(varOrListField.id, varName, varType, varName.startsWith('☁ '));
+                const isCloud = varName.startsWith('☁ ');
+                const idBroadcast = varType === Variable.BROADCAST_MESSAGE_TYPE;
+                if (idBroadcast || isCloud) {
+                    const stage = this.runtime.getTargetForStage();
+                    stage.createVariable(varOrListField.id, varName, varType, !idBroadcast && isCloud);
+                } else {
+                    this.createVariable(varOrListField.id, varName, varType);
+                }
             }
         }
     }
