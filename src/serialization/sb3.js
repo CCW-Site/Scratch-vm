@@ -1447,7 +1447,6 @@ const deserialize = function (json, runtime, zip, isSingleSprite) {
         parseGandiObject(gandiObjects, runtime);
     }
 
-    // @ts-ignore
     return Promise.resolve(
         targetObjects.map(target =>
             parseScratchAssets(target, runtime, zip))
