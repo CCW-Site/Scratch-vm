@@ -583,7 +583,7 @@ const serializeMonitors = function (monitors, runtime) {
  * @param {string=} targetId Optional target id if serializing only a single target
  * @return {object} Serialized runtime instance.
  */
-const serialize = function (runtime, targetId, {allowOptimization = false} = {}) {
+const serialize = function (runtime, targetId, {allowOptimization = false, saveVarId = false} = {}) {
     // Fetch targets
     const obj = Object.create(null);
     // Create extension set to hold extension ids found while serializing targets
@@ -608,19 +608,8 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
             t.layerOrder = layerOrdering[index];
         });
     }
-    let serializedTargets;
-    if (runtime.isTeamworkMode) {
-        serializedTargets = flattenedOriginalTargets.reduce(
-            (a, t, i) => {
-                const target = serializeTarget(t, extensions, true);
-                target.order = i;
-                target.id = t.id;
-                return {...a, [t.id]: target};
-            }, {}
-        );
-    } else {
-        serializedTargets = flattenedOriginalTargets.map(t => serializeTarget(t, extensions));
-    }
+
+    const serializedTargets = flattenedOriginalTargets.map(t => serializeTarget(t, extensions, saveVarId));
 
     if (targetId) {
         return serializedTargets[0];
@@ -628,13 +617,7 @@ const serialize = function (runtime, targetId, {allowOptimization = false} = {})
 
     obj.targets = serializedTargets;
 
-    if (runtime.isTeamworkMode) {
-        obj.monitors = serializeMonitors(runtime.getMonitorState(), runtime).reduce(
-            (a, m, i) => ({...a, [m.id]: {...m, order: i}}), {}
-        );
-    } else {
-        obj.monitors = serializeMonitors(runtime.getMonitorState(), runtime);
-    }
+    obj.monitors = serializeMonitors(runtime.getMonitorState(), runtime);
 
     runtime.gandi.serialize(obj, extensions);
 
