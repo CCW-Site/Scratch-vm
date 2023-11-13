@@ -753,18 +753,40 @@ class Target extends EventEmitter {
 
         for (let index = 0; index < allVarList.length; index++) {
             const [varName, varType, varOrListField] = allVarList[index];
-            const oldVarList = this.lookupVariableByNameAndType(varName, varType);
-            if (oldVarList && oldVarList.id !== varOrListField.id) {
-                varOrListField.id = oldVarList.id;
-            } else if (!oldVarList) {
-                const isCloud = varName.startsWith('☁ ');
-                const idBroadcast = varType === Variable.BROADCAST_MESSAGE_TYPE;
-                if (idBroadcast || isCloud) {
-                    const stage = this.runtime.getTargetForStage();
-                    stage.createVariable(varOrListField.id, varName, varType, !idBroadcast && isCloud);
-                } else {
-                    this.createVariable(varOrListField.id, varName, varType);
+            const maybeOldVarOrList = {current: null, stage: null, other: null};
+            const targets = this.runtime.targets.filter(i => i.isOriginal);
+
+            targets.forEach(target => {
+                const varOrList = target.lookupVariableByNameAndType(varName, varType, true);
+                if (varOrList) {
+                    if (target.id === this.id) {
+                        maybeOldVarOrList.current = varOrList;
+                    } else if (target.isStage) {
+                        maybeOldVarOrList.stage = varOrList;
+                    } else {
+                        maybeOldVarOrList.other = varOrList;
+                    }
                 }
+            });
+
+            /**
+             * If there are variables or lists with the same name in both the global and current target,
+             * ensure that they are consistent.
+             * if it exists in other targets, create it as a private one.
+             * if it doesn't exist in any target, create it as a global variable.
+             */
+            if (maybeOldVarOrList.stage || maybeOldVarOrList.current) {
+                const varOrList = maybeOldVarOrList.stage || maybeOldVarOrList.current;
+                if (varOrList.id !== varOrListField.id) {
+                    varOrListField.id = varOrList.id;
+                }
+            } else if (maybeOldVarOrList.other) {
+                this.createVariable(varOrListField.id, varName, varType);
+            } else {
+                const isCloud = varName.startsWith('☁ ');
+                const stage = this.runtime.getTargetForStage();
+                const idBroadcast = varType === Variable.BROADCAST_MESSAGE_TYPE;
+                stage.createVariable(varOrListField.id, varName, varType, !idBroadcast && isCloud);
             }
         }
     }
