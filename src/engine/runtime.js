@@ -2212,7 +2212,7 @@ class Runtime extends EventEmitter {
         for (let i = 0; i < this.threads.length; i++) {
             // Don't re-add the script if it's already running
             if (this.threads[i].topBlock === topBlockId && this.threads[i].status !== Thread.STATUS_DONE &&
-                    this.threads[i].updateMonitor) {
+                this.threads[i].updateMonitor) {
                 return;
             }
         }
@@ -2656,7 +2656,7 @@ class Runtime extends EventEmitter {
         // flag will still indicate that a script ran.
         this._emitProjectRunStatus(
             this.threads.length + doneThreads.length -
-                this._getMonitorThreadCount([...this.threads, ...doneThreads]));
+            this._getMonitorThreadCount([...this.threads, ...doneThreads]));
         // Store threads that completed this iteration for testing and other
         // internal purposes.
         this._lastStepDoneThreads = doneThreads;
@@ -3732,15 +3732,17 @@ class Runtime extends EventEmitter {
      * @param {string} md5ext - the MD5 and extension of the costume to be loaded.
      * @param {!object} costumeObject Object representing the costume.
      * @param {object} target - the target to add to.
-     * @param {?int} index Index at which to add costume
+     * @param {?boolean} show - show Costume immediately
      * @returns {?Promise} - a promise that resolves when the costume has been added
      */
-    addAsyncCostumeToTarget (md5ext, costumeObject, target) {
+    addAsyncCostumeToTarget (md5ext, costumeObject, target, show) {
         if (target) {
             const index = target.getCostumes().length;
             return loadCostume(md5ext, costumeObject, this, 3).then(() => {
                 target.addCostume(costumeObject, index, true);
-                target.setCostume(index);
+                if (show) {
+                    target.setCostume(index);
+                }
                 if (target.isOriginal) {
                     target.updateAllDrawableProperties();
                 }
