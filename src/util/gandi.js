@@ -50,11 +50,8 @@ class Gandi {
                     // py and json file need GandiPython extension to run
                     extensions.add('GandiPython');
                 }
-                return Array.isArray(acc) ?
-                    [...acc, item] :
-                    {...acc, [item.assetId]: item};
-            },
-            this.runtime.isTeamworkMode ? Object.create(null) : []
+                return [...acc, item];
+            }, []
         );
     }
 

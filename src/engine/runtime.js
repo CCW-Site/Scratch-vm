@@ -627,6 +627,14 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for start load a project from a Scratch JSON representation.
+     * @const {string}
+     */
+    static get START_DESERIALIZE_PROJECT () {
+        return 'START_DESERIALIZE_PROJECT';
+    }
+
+    /**
      * Event name for the project starts loading assets asynchronously
      * @const {string}
      */

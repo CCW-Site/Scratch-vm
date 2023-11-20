@@ -59,39 +59,6 @@ const createRuntimeService = runtime => {
         runtime._registerExtensionPrimitives.bind(runtime);
     return service;
 };
-/**
- * Fixed the problem of incorrect Inputs for VM deserialization, resulting in incorrect Inputs for VM deserialization.
- * @param {*} data project data.
- * @returns Fixed project data.
- */
-const hotFixProjectJson = data => {
-    if (data.projectVersion === 3) {
-        const targets = data.targets;
-        if (targets.length) {
-            const broadcasts = targets.find(target => target.isStage).broadcasts;
-            return targets.reduce((acc, target) => {
-                for (const blockId in target.blocks) {
-                    if (Object.hasOwnProperty.call(target.blocks, blockId)) {
-                        const blockData = target.blocks[blockId];
-                        if (blockData.opcode === 'event_broadcast' || blockData.opcode === 'event_broadcastandwait') {
-                            if (!blockData.inputs.BROADCAST_INPUT) {
-                                continue;
-                            }
-                            const input = blockData.inputs.BROADCAST_INPUT[1];
-                            if (typeof input === 'string' && broadcasts[input]) {
-                                blockData.inputs.BROADCAST_INPUT[1] = [11, broadcasts[input], input];
-                                // 用于协作工程的修复
-                                acc.push([target.name, blockId, JSON.stringify(blockData.inputs.BROADCAST_INPUT[1])]);
-                            }
-                        }
-                    }
-                }
-                return acc;
-            }, []);
-        }
-        throw new Error('At least one target should be included in project data.');
-    }
-};
 
 /**
  * Handles connections between blocks, stage, and extensions.
@@ -544,10 +511,9 @@ class VirtualMachine extends EventEmitter {
     /**
      * Load a Scratch project from a .sb, .sb2, .sb3 or json string.
      * @param {string | object} input A json string, object, or ArrayBuffer representing the project to load.
-     * @param {?function} callback A callback to run when the project is loaded.
      * @return {!Promise} Promise that resolves after targets are installed.
      */
-    loadProject (input, callback) {
+    loadProject (input) {
         // If assets are being loaded non-blockingly, they can all be aborted at once.
         if (this.runtime.asyncLoadingProjectAssets) {
             this.runtime.disposeFireWaitingLoadCallbackQueue();
@@ -658,12 +624,6 @@ class VirtualMachine extends EventEmitter {
                         }
 
                         zip = null;
-                    }
-                    try {
-                        const data = hotFixProjectJson(json);
-                        if (callback) callback(data);
-                    } catch (error) {
-                        return Promise.reject(error);
                     }
                     return this.deserializeProject(
                         json,
@@ -868,14 +828,11 @@ class VirtualMachine extends EventEmitter {
      */
     exportSprite (targetId, optZipType) {
         const sb3 = require('./serialization/sb3');
-        const temp = this.runtime.isTeamworkMode;
         const soundDescs = serializeSounds(this.runtime, targetId);
         const costumeDescs = serializeCostumes(this.runtime, targetId);
-        this.runtime.isTeamworkMode = false;
         const spriteJson = StringUtil.stringify(
             sb3.serialize(this.runtime, targetId)
         );
-        this.runtime.isTeamworkMode = temp;
         const zip = new JSZip();
         zip.file('sprite.json', spriteJson);
         this._addFileDescsToZip(soundDescs.concat(costumeDescs), zip);
@@ -904,13 +861,14 @@ class VirtualMachine extends EventEmitter {
     /**
      * Serialize a sprite in the sprite3 format.
      * @param {string} targetId ID of the target to export
+     * @param {?Boolean} saveVarId Whether to save the variable ID or not
      * @returns {Object} Serialized state of the runtime.
      */
-    serializeSprite (targetId) {
+    serializeSprite (targetId, saveVarId) {
         const sb3 = require('./serialization/sb3');
         const target = this.runtime.getTargetById(targetId);
         if (target) {
-            return sb3.serializeTarget(target.toJSON(), new Set(), true);
+            return sb3.serializeTarget(target.toJSON(), new Set(), saveVarId);
         }
     }
 
@@ -958,6 +916,8 @@ class VirtualMachine extends EventEmitter {
         // Clear the current runtime
         this.clear();
 
+        this.emit(Runtime.START_DESERIALIZE_PROJECT, projectJSON);
+
         if (typeof performance !== 'undefined') {
             performance.mark('scratch-vm-deserialize-start');
         }
@@ -969,6 +929,12 @@ class VirtualMachine extends EventEmitter {
                 return sb2.deserialize(projectJSON, runtime, false, zip);
             }
             if (projectVersion === 3) {
+                // Ensure that there is at least one sprite in the project.
+                if (projectJSON.targets.length === 0) {
+                    return Promise.reject(new Error(
+                        'Project deserialization failed because there are no sprite in the project.'
+                    ));
+                }
                 const sb3 = require('./serialization/sb3');
                 return sb3.deserialize(projectJSON, runtime, zip);
             }
@@ -1969,7 +1935,7 @@ class VirtualMachine extends EventEmitter {
                 }
             }
             if (!isRemoteOperation) {
-                this.emit('DELETE_SPRITE', targetId);
+                this.emit('DELETE_SPRITE', targetId, target.sprite.name);
             }
             // Sprite object should be deleted by GC.
             this.emitTargetsUpdate();
@@ -2327,6 +2293,8 @@ class VirtualMachine extends EventEmitter {
                 copiedBlocks,
                 target
             );
+        } else {
+            target.resolveVariableSharingConflicts(copiedBlocks);
         }
 
         // Create a unique set of extensionIds that are not yet loaded

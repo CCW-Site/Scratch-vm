@@ -99,16 +99,18 @@ const createExtensionService = extensionManager => {
     return service;
 };
 
-// check _classCallCheck for ES5
+// check if func is a class
 const isClassFunc = func => {
     if (typeof func === 'function') {
-        // dirty hack to check if func is a class
-        const str = Function.prototype.toString.call(func);
-        return (/^class\s/.test(str) ||
-            /_classCallCheck\b/.test(str) ||
-            // code transpiled by babel and minified when prod build
-            str.includes('function t(){!function(e,t){if(!(e instanceof t))throw new TypeError("Cannot call a class as a function")}(this,t)}')
-        );
+        try {
+            // eslint-disable-next-line no-new
+            new func();
+        } catch (err) {
+            if (err.message.indexOf('is not a constructor') >= 0) {
+                return false;
+            }
+        }
+        return true;
     }
     return false;
 };
@@ -808,13 +810,13 @@ class ExtensionManager {
                 // maybe it's a class
                 return func;
             }
-            if (extClass && extClass.__esModule && extClass.default) {
-            // 1. es module export a default class
+            if (extClass && extClass.__esModule && extClass.default && isClassFunc(extClass.default)) {
+                // 1. es module export a default class
                 // extClass is a es module which export a default class
                 officialExtension[extensionId] = extClass.default;
                 return extClass.default;
             } else if (isClassFunc(extClass)) {
-            // 2. return a class
+                // 2. return a class
                 // if ext is developed by ccw-customExt-tool ts version
                 // extClass will be a class
                 officialExtension[extensionId] = extClass;
@@ -828,7 +830,7 @@ class ExtensionManager {
                 return extClass;
             }
         }
-        throw new Error('extension class not found');
+        throw new Error(`extension class not found: ${extensionId}`);
     }
 
     async getCustomExtensionClass (extensionId) {
@@ -848,7 +850,7 @@ class ExtensionManager {
         ) {
             return func.constructor;
         }
-        throw new Error('extension class not found');
+        throw new Error(`extension class not found: ${extensionId}`);
     }
 
     loadOfficialExtensionsLibrary (serviceURL = '') {
