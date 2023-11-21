@@ -997,7 +997,7 @@ class VirtualMachine extends EventEmitter {
         }
 
         return Promise.all(extensionPromises).then(() => {
-            targets.forEach(target => {
+            const addedTargets = targets.map(target => {
                 this.runtime.addTarget(target);
                 /** @type RenderedTarget */ target.updateAllDrawableProperties();
                 // Ensure unique sprite name
@@ -1006,6 +1006,7 @@ class VirtualMachine extends EventEmitter {
                     // because the target has not completed installation yet.
                     this.renameSprite(target.id, target.getName(), false);
                 }
+                return target;
             });
             // Sort the executable targets by layerOrder.
             // Remove layerOrder property after use.
@@ -1044,13 +1045,8 @@ class VirtualMachine extends EventEmitter {
             this.runtime.ioDevices.cloud.setStage(
                 this.runtime.getTargetForStage()
             );
-
-            if (!isRemoteOperation && !wholeProject) {
-                const sb3 = require('./serialization/sb3');
-                const serializedTarget = sb3.serializeTarget(targets[0].toJSON(), new Set());
-                serializedTarget.id = targets[0].id;
-                return serializedTarget;
-            }
+            // Facilitating subsequent operations to update these targets.
+            return addedTargets;
         });
     }
 
@@ -1108,24 +1104,24 @@ class VirtualMachine extends EventEmitter {
                     `${errorPrefix} Unable to verify sprite version.`
                 );
             })
-            .then(sprite => {
-                const targets = [...this.runtime.targets];
-                for (let index = targets.length - 1; index > -1; index--) {
+            .then(targets => {
+                for (let index = 0; index < targets.length; index++) {
                     /** @type RenderedTarget */
                     const target = targets[index];
-                    if (target.id === sprite.id) {
-                        // Ensure unique costume name
-                        target.sprite.costumes.forEach((costume, idx) => {
-                            target.renameCostume(idx, costume.name, false);
-                        });
-                        // Ensure unique sound name
-                        target.sprite.sounds.forEach((sound, idx) => {
-                            target.renameSound(idx, sound.name, false);
-                        });
-                    }
+                    // Ensure unique costume name
+                    target.sprite.costumes.forEach((costume, idx) => {
+                        target.renameCostume(idx, costume.name, false);
+                    });
+                    // Ensure unique sound name
+                    target.sprite.sounds.forEach((sound, idx) => {
+                        target.renameSound(idx, sound.name, false);
+                    });
                 }
-                if (sprite && !isRemoteOperation) {
-                    this.emit('ADD_SPRITE', sprite);
+
+                if (targets && !isRemoteOperation) {
+                    targets.forEach(target => {
+                        this.emit('ADD_SPRITE', target.id);
+                    });
                 }
                 this.runtime.emitProjectChanged();
             })
@@ -1961,12 +1957,8 @@ class VirtualMachine extends EventEmitter {
             throw new Error('No sprite associated with this target.');
         }
         return target.duplicate().then(newTarget => {
-            const sb3 = require('./serialization/sb3');
             this.runtime.addTarget(newTarget);
-            const newTargetId = newTarget.id;
-            const newSerializedTarget = sb3.serializeTarget(newTarget.toJSON(), new Set());
-            newSerializedTarget.id = newTargetId;
-            this.emit('ADD_SPRITE', newSerializedTarget);
+            this.emit('ADD_SPRITE', newTarget.id);
             newTarget.goBehindOther(target);
             this.setEditingTarget(newTarget.id);
         });
