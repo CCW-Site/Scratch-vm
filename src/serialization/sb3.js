@@ -154,7 +154,7 @@ const serializeInputs = function (inputs) {
                 INPUT_SAME_BLOCK_SHADOW,
                 inputs[inputName].block
             ];
-        } else if (inputs[inputName].shadow === null) {
+        } else if (inputs[inputName].shadow === null || typeof inputs[inputName].shadow === 'undefined') {
             // does not have shadow
             obj[inputName] = [
                 INPUT_BLOCK_NO_SHADOW,
@@ -657,6 +657,8 @@ const serialize = function (runtime, targetId, {allowOptimization = false, saveV
  * @return {object} The deserialized input descriptor.
  */
 const deserializeInputDesc = function (inputDescOrId, parentId, isShadow, blocks, blockId) {
+    // due to a collaboration error, some blocks have a shadow of "␀".
+    if (inputDescOrId === '␀') return null;
     if (!Array.isArray(inputDescOrId)) return inputDescOrId;
     const primitiveObj = Object.create(null);
     const newId = blockId || uid();
