@@ -369,8 +369,7 @@ const serializeBlocks = function (blocks, saveVarId) {
         // they would have been compressed in the last pass)
         if (Array.isArray(serializedBlock) &&
             [VAR_PRIMITIVE, LIST_PRIMITIVE].indexOf(serializedBlock[0]) < 0) {
-            log.warn(`Found an unexpected top level primitive with block ID: ${
-                blockID}; deleting it from serialized blocks.`);
+            log.warn(`Found an unexpected top level primitive with block ID: ${blockID}; deleting it from serialized blocks.`);
             delete obj[blockID];
         }
     }
@@ -1221,8 +1220,7 @@ const deserializeMonitor = function (monitorData, runtime, targets, extensions) 
         if (filteredTargets && filteredTargets.length > 0) {
             monitorData.targetId = filteredTargets[0].id;
         } else {
-            log.warn(`Tried to deserialize sprite specific monitor ${
-                monitorData.opcode} but could not find sprite ${monitorData.spriteName}.`);
+            log.warn(`Tried to deserialize sprite specific monitor ${monitorData.opcode} but could not find sprite ${monitorData.spriteName}.`);
         }
     }
 
@@ -1350,22 +1348,6 @@ const replaceUnsafeCharsInVariableIds = function (targets) {
 };
 
 const parseGandiObject = (gandiObject, runtime) => {
-    if (gandiObject.assets && isArray(gandiObject.assets)) {
-        const filePromises = (gandiObject.assets || []).map(file => {
-            const gandiAsset = {
-                asset: null,
-                uid: file.uid || uid(),
-                assetId: file.assetId,
-                name: file.name,
-                md5: file.md5ext,
-                dataFormat: file.dataFormat
-            };
-            return loadGandiAsset(file.md5ext, gandiAsset, runtime);
-        });
-        Promise.all(filePromises).then(gandiAssets => {
-            runtime.gandi.assets = gandiAssets;
-        });
-    }
     if (gandiObject.configs) {
         runtime.gandi.configs = gandiObject.configs;
     }
@@ -1378,7 +1360,24 @@ const parseGandiObject = (gandiObject, runtime) => {
     if (gandiObject.spine) {
         runtime.gandi.spine = gandiObject.spine;
     }
-
+    if (gandiObject.assets && isArray(gandiObject.assets)) {
+        const filePromises = (gandiObject.assets || []).map(file => {
+            const gandiAsset = {
+                asset: null,
+                uid: file.uid || uid(),
+                assetId: file.assetId,
+                name: file.name,
+                md5: file.md5ext,
+                dataFormat: file.dataFormat
+            };
+            return loadGandiAsset(file.md5ext, gandiAsset, runtime);
+        });
+        return Promise.all(filePromises).then(gandiAssets => {
+            runtime.gandi.assets = gandiAssets;
+            return null;
+        });
+    }
+    return Promise.resolve(null);
 };
 
 /**
@@ -1414,35 +1413,42 @@ const deserialize = function (json, runtime, zip, isSingleSprite) {
 
     // Gandi: extended project.json to include global assets such as python files
     const gandiObjects = json.gandi;
-    if (gandiObjects) {
-        if (gandiObjects.assets && isArray(gandiObjects.assets)) {
-            // find extension need to load
-            gandiObjects.assets.forEach(asset => {
-                if (asset.dataFormat === 'py' || asset.dataFormat === 'json') {
-                    // py and json file need GandiPython extension to run
-                    extensions.extensionIDs.add('GandiPython');
-                }
-            });
+    const getLoadingGandiObjectsPromise = () => {
+        if (gandiObjects) {
+            if (gandiObjects.assets && isArray(gandiObjects.assets)) {
+                // find extension need to load
+                gandiObjects.assets.forEach(asset => {
+                    if (asset.dataFormat === 'py' || asset.dataFormat === 'json') {
+                        // py and json file need GandiPython extension to run
+                        extensions.extensionIDs.add('GandiPython');
+                    }
+                });
+            }
+            if (gandiObjects.wildExtensions) {
+                Object.values(gandiObjects.wildExtensions).forEach(extension => {
+                    extensions.extensionIDs.add(extension.id);
+                });
+            }
+            return parseGandiObject(gandiObjects, runtime);
         }
-        if (gandiObjects.wildExtensions) {
-            Object.values(gandiObjects.wildExtensions).forEach(extension => {
-                extensions.extensionIDs.add(extension.id);
-            });
-        }
-        parseGandiObject(gandiObjects, runtime);
-    }
+        return Promise.resolve(null);
+    };
 
-    return Promise.resolve(
-        targetObjects.map(target =>
-            parseScratchAssets(target, runtime, zip))
-    )
+    return Promise.resolve(targetObjects.map(target => parseScratchAssets(target, runtime, zip)))
         // Force this promise to wait for the next loop in the js tick. Let
         // storage have some time to send off asset requests.
         .then(assets => Promise.resolve(assets))
         .then(assets => Promise.all(targetObjects
-            .map((target, index) =>
-                parseScratchObject(target, runtime, extensions, zip, assets[index]))))
-        .then(targets => targets // Re-sort targets back into original sprite-pane ordering
+            .map((target, index) => parseScratchObject(target, runtime, extensions, zip, assets[index]))
+            // add LoadingGandiObjectsPromise to queue, make all assets download in parallel
+            .concat(getLoadingGandiObjectsPromise())
+        ))
+        .then(targets => targets
+            // Remove GandiGandiObjectsPromise result
+            // GandiGandiObjectsPromise result is always null
+            // make targets array only contain RenderTarget
+            .filter(t => t !== null)
+            // Re-sort targets back into original sprite-pane ordering
             .map((t, i) => {
                 // Add layer order property to deserialized targets.
                 // This property is used to initialize executable targets in
