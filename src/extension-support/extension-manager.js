@@ -673,6 +673,11 @@ class ExtensionManager {
                 );
             }
             break;
+        case BlockType.LABEL:
+            if (blockInfo.opcode) {
+                log.warn(`Ignoring opcode "${blockInfo.opcode}" for label: ${blockInfo.text}`);
+            }
+            break;
         default: {
             if (!blockInfo.opcode) {
                 throw new Error('Missing opcode for block');
@@ -1199,6 +1204,9 @@ class ExtensionManager {
                 },
                 get translate () {
                     return translate;
+                },
+                get renderer () {
+                    return this.runtime.renderer;
                 },
                 get runtime () {
                     // eslint-disable-next-line no-alert

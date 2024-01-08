@@ -44,7 +44,12 @@ const BlockType = {
     /**
      * General reporter with numeric or string value
      */
-    REPORTER: 'reporter'
+    REPORTER: 'reporter',
+
+    /**
+     * A text label (not an actual block) for adding comments or labling blocks
+     */
+    LABEL: 'label'
 };
 
 module.exports = BlockType;
