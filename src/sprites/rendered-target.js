@@ -513,7 +513,7 @@ class RenderedTarget extends Target {
 
         if (!isRemoteOperation) {
             const {
-                uid,
+                id,
                 assetId,
                 bitmapResolution,
                 dataFormat,
@@ -522,9 +522,9 @@ class RenderedTarget extends Target {
                 rotationCenterX,
                 rotationCenterY
             } = costumeObject;
-            this.runtime.emitTargetCostumeChanged(this.originalTargetId, ['costumes', index, 'add',
+            this.runtime.emitTargetCostumeChanged(this.originalTargetId, ['add', id,
                 {
-                    uid,
+                    id,
                     assetId,
                     bitmapResolution,
                     dataFormat,
@@ -534,6 +534,22 @@ class RenderedTarget extends Target {
                     rotationCenterY
                 }
             ]);
+        }
+    }
+
+    renameCostumeById (id, newName) {
+        const costume = this.getCostumeById(id);
+        const oldName = costume.name;
+        costume.name = newName;
+
+        if (this.isStage) {
+            const targets = this.runtime.targets;
+            for (let i = 0; i < targets.length; i++) {
+                const currTarget = targets[i];
+                currTarget.blocks.updateAssetName(oldName, newName, 'backdrop');
+            }
+        } else {
+            this.blocks.updateAssetName(oldName, newName, 'costume');
         }
     }
 
@@ -552,11 +568,10 @@ class RenderedTarget extends Target {
         if (oldName === newUnusedName) {
             return;
         }
-        this.getCostumes()[costumeIndex].name = newUnusedName;
+        const costume = this.getCostumes()[costumeIndex];
+        costume.name = newUnusedName;
         if (sendNameChangedEvent) {
-            this.runtime.emitTargetCostumeChanged(this.originalTargetId,
-                ['costumes', costumeIndex, 'update', {name: newUnusedName}]
-            );
+            this.runtime.emitTargetCostumeChanged(this.originalTargetId, ['update', costume.id, {name: newUnusedName}]);
         }
 
         if (this.isStage) {
@@ -587,9 +602,6 @@ class RenderedTarget extends Target {
         if (index < 0 || index >= originalCostumeCount) {
             return null;
         }
-        if (!isRemoteOperation) {
-            this.runtime.emitTargetCostumeChanged(this.originalTargetId, ['costumes', index, 'delete']);
-        }
 
         const deletedCostume = this.sprite.deleteCostumeAt(index);
 
@@ -599,6 +611,11 @@ class RenderedTarget extends Target {
             this.setCostume(this.currentCostume - 1);
         } else {
             this.setCostume(this.currentCostume);
+        }
+
+        if (!isRemoteOperation) {
+            this.runtime.emitTargetSimplePropertyChanged([[this.originalTargetId, {currentCostume: this.currentCostume}]]);
+            this.runtime.emitTargetCostumeChanged(this.originalTargetId, ['delete', deletedCostume.id]);
         }
 
         this.runtime.requestTargetsUpdate(this);
@@ -640,7 +657,7 @@ class RenderedTarget extends Target {
         this.blocks.updateAssetName(oldName, newUnusedName, 'sound');
         if (sendNameChangedEvent) {
             this.runtime.emitTargetSoundsChanged(
-                this.originalTargetId, [soundIndex, 'update', {name: newUnusedName}]
+                this.originalTargetId, ['update', this.sprite.sounds[soundIndex].id, {name: newUnusedName}]
             );
         }
     }
@@ -700,6 +717,31 @@ class RenderedTarget extends Target {
     }
 
     /**
+     * Get a costume index of this rendered target, by id of the costume.
+     * @param {?string} costumeId Id of a costume.
+     * @return {number} Index of the named costume, or -1 if not present.
+     */
+    getCostumeIndexById (costumeId) {
+        const costumes = this.getCostumes();
+        for (let i = 0; i < costumes.length; i++) {
+            if (costumes[i].id === costumeId) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    getCostumeById (id) {
+        const costumes = this.getCostumes();
+        for (let i = 0; i < costumes.length; i++) {
+            if (costumes[i].id === id) {
+                return costumes[i];
+            }
+        }
+        return null;
+    }
+
+    /**
      * Get a costume of this rendered target by id.
      * @return {object} current costume
      */
@@ -733,11 +775,14 @@ class RenderedTarget extends Target {
         // Use the sprite method for deleting costumes because setCostume is handled manually
         this.sprite.deleteCostumeAt(costumeIndex);
         this.addCostume(costume, newIndex, true);
+        const oldCurrentCostume = this.currentCostume;
         this.currentCostume = this.getCostumeIndexByName(currentCostume.name);
-        this.runtime.emitTargetSimplePropertyChanged([[this.originalTargetId, {currentCostume: this.currentCostume}]]);
-        this.runtime.emitTargetCostumeChanged(this.originalTargetId,
-            ['costumes', costumeIndex, 'reorder', [costumeIndex, newIndex]]
-        );
+        if (oldCurrentCostume !== this.currentCostume) {
+            this.runtime.emitTargetSimplePropertyChanged([
+                [this.originalTargetId, {currentCostume: this.currentCostume}]
+            ]);
+        }
+        this.runtime.emitTargetCostumeChanged(this.originalTargetId, ['reorder', [{id: currentCostume.id, index: newIndex}]]);
         return true;
     }
 
@@ -756,7 +801,7 @@ class RenderedTarget extends Target {
         const sound = this.sprite.sounds[soundIndex];
         this.deleteSound(soundIndex);
         this.addSound(sound, newIndex);
-        this.runtime.emitTargetSoundsChanged(this.originalTargetId, [soundIndex, 'reorder', [soundIndex, newIndex]]);
+        this.runtime.emitTargetSoundsChanged(this.originalTargetId, ['reorder', [{id: sound.id, index: newIndex}]]);
         return true;
     }
 
@@ -766,6 +811,31 @@ class RenderedTarget extends Target {
      */
     getSounds () {
         return this.sprite.sounds;
+    }
+
+    /**
+     * Get a sound index of this rendered target, by id of the sound.
+     * @param {?string} soundId Id of a sound.
+     * @return {number} Index of the named sound, or -1 if not present.
+     */
+    getSoundIndexById (soundId) {
+        const sounds = this.getSounds();
+        for (let i = 0; i < sounds.length; i++) {
+            if (sounds[i].id === soundId) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    getSoundById (id) {
+        const sounds = this.getSounds();
+        for (let i = 0; i < sounds.length; i++) {
+            if (sounds[i].id === id) {
+                return sounds[i];
+            }
+        }
+        return null;
     }
 
     /**

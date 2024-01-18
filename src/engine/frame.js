@@ -84,11 +84,20 @@ class Frames {
                     this.runtime.emitTargetFramesChanged(targetId, ['update', e.id, {title: e.newTitle}]);
                 }
                 break;
-            case 'frame_change':
+            case 'frame_change': {
+                const oldBlocks = this._frames[e.id].blocks;
                 if (this.changeFrame(e.id, e.element, e.newValue)) {
-                    this.runtime.emitTargetFramesChanged(targetId, ['update', e.id, {...e.newValue}]);
+                    if (e.element === 'blocks') {
+                        this.runtime.emitTargetFramesChanged(targetId, ['update', e.id, {
+                            newBlocks: e.newValue.blocks,
+                            oldBlocks
+                        }]);
+                    } else {
+                        this.runtime.emitTargetFramesChanged(targetId, ['update', e.id, {...e.newValue}]);
+                    }
                 }
                 break;
+            }
             }
         }
 

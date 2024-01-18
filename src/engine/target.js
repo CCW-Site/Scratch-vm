@@ -310,9 +310,8 @@ class Target extends EventEmitter {
             }
             this.variables[id] = newVariable;
             if (!isRemoteOperation) {
-                const data = [name, newVariable.value];
                 this.runtime.emitTargetVariablesChanged(this.originalTargetId,
-                    [id, type, 'add', newVariable.isCloud ? [...data, true] : data]
+                    [id, type, 'add', {name, value: newVariable.value, isCloud: newVariable.isCloud}]
                 );
             }
         }
@@ -329,8 +328,9 @@ class Target extends EventEmitter {
      * @param {number} width The width of the comment when it is full size
      * @param {number} height The height of the comment when it is full size
      * @param {boolean} minimized Whether the comment is minimized.
+     * @param {boolean} isRemoteOperation - set to true if this is a remote operation
      */
-    createComment (id, blockId, text, x, y, width, height, minimized) {
+    createComment (id, blockId, text, x, y, width, height, minimized, isRemoteOperation) {
         if (!this.comments.hasOwnProperty(id)) {
             const newComment = new Comment(id, text, x, y,
                 width, height, minimized);
@@ -346,6 +346,10 @@ class Target extends EventEmitter {
                 }
             }
             this.comments[id] = newComment;
+            
+            if (!isRemoteOperation) {
+                this.runtime.emitTargetCommentsChanged(this.originalTargetId, ['add', id, newComment]);
+            }
         }
     }
 
@@ -451,7 +455,7 @@ class Target extends EventEmitter {
             delete this.variables[id];
             if (!isRemoteOperation) {
                 this.runtime.emitTargetVariablesChanged(this.originalTargetId,
-                    [id, deletedVariableType, 'delete']
+                    [id, deletedVariableType, 'delete', {name: deletedVariableName}]
                 );
             }
             if (this.runtime) {
@@ -689,7 +693,7 @@ class Target extends EventEmitter {
             newVarId = newVar.id;
             sprite.variables[newVarId] = newVar;
             this.runtime.emitTargetVariablesChanged(sprite.originalTargetId,
-                [newVarId, varType, 'add', [varName, newVar.value]]
+                [newVarId, varType, 'add', {name: newVar.name, value: newVar.value, isCloud: newVar.isCloud}]
             );
         }
 

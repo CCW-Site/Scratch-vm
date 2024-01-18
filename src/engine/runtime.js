@@ -602,6 +602,10 @@ class Runtime extends EventEmitter {
         return 'FRAMERATE_CHANGED';
     }
 
+    static get TARGETS_INDEX_CHANGED () {
+        return 'TARGETS_INDEX_CHANGED';
+    }
+
     /**
      * Event name for interpolation changing.
      * @const {string}
@@ -851,8 +855,8 @@ class Runtime extends EventEmitter {
         return 'GANDI_ASSET_UPDATE';
     }
 
-    static get GANDI_WILD_EXTENSIONS_UPDATE () {
-        return 'GANDI_WILD_EXTENSIONS_UPDATE';
+    static get GANDI_WILD_EXTENSIONS_CHANGED () {
+        return 'GANDI_WILD_EXTENSIONS_CHANGED';
     }
 
     static get GANDI_SHOW_SPINE_UPLOAD () {
@@ -3214,9 +3218,12 @@ class Runtime extends EventEmitter {
      * @param {boolean} isRemoteOperation - set to true if this is a remote operation
      */
     requestRemoveMonitor (monitorId, isRemoteOperation) {
-        this._monitorState = this._monitorState.delete(monitorId);
-        if (!isRemoteOperation) {
-            this.emitMonitorsChanged(['delete', monitorId]);
+        const deletedMonitor = this._monitorState.get(monitorId);
+        if (deletedMonitor) {
+            this._monitorState = this._monitorState.delete(monitorId);
+            if (!isRemoteOperation) {
+                this.emitMonitorsChanged(['delete', monitorId, {spriteName: deletedMonitor.get('spriteName')}]);
+            }
         }
     }
 
@@ -3263,7 +3270,7 @@ class Runtime extends EventEmitter {
     requestRemoveMonitorByTargetId (targetId) {
         this._monitorState.forEach(monitor => {
             if (monitor.get('targetId') === targetId) {
-                this.emitMonitorsChanged(['delete', monitor.get('id')]);
+                this.emitMonitorsChanged(['delete', monitor.get('id'), {spriteName: monitor.get('spriteName')}]);
             }
         });
         this._monitorState = this._monitorState.filterNot(value => value.targetId === targetId);
@@ -3350,8 +3357,8 @@ class Runtime extends EventEmitter {
         this.emit(Runtime.GANDI_ASSET_UPDATE, action);
     }
 
-    emitGandiWildExtensionsUpdate (action) {
-        this.emit(Runtime.GANDI_WILD_EXTENSIONS_UPDATE, action);
+    emitGandiWildExtensionsChanged (data) {
+        this.emit(Runtime.GANDI_WILD_EXTENSIONS_CHANGED, data);
     }
 
     /**
@@ -3435,6 +3442,10 @@ class Runtime extends EventEmitter {
 
     emitMonitorsChanged (data) {
         this.emit(Runtime.MONITORS_CHANGED, data);
+    }
+
+    emitTargetsIndexChanged (data) {
+        this.emit(Runtime.TARGETS_INDEX_CHANGED, data);
     }
 
     /**

@@ -743,24 +743,17 @@ class ExtensionManager {
      * @description register gandi extension when developer load custom extension
      * @param {string} id extension id
      * @param {string} url extension url
-     * @param {?boolean} isRemoteOperation Whether this is a remote operation
      */
-    registerGandiWildExtensions (id, url, isRemoteOperation) {
-        if (this.runtime.gandi.wildExtensions[id]) {
+    registerGandiWildExtensions (id, url) {
+        if (this._loadedExtensions.has(id)) {
             this.runtime.logSystem.warn(
-                `registerGandiWildExtensions: extension id:${id} registered，will be replaced`
+                `The extension (ID: ${id}) has already been registered and will be replaced.`
             );
         }
-        if (!isRemoteOperation) {
-            this.runtime.emitGandiWildExtensionsUpdate({
-                data: {id, url},
-                type: 'add'
-            });
-        }
-        this.runtime.gandi.wildExtensions[id] = {
-            id,
-            url
-        };
+        if (this.runtime.gandi.wildExtensions[id]) return;
+    
+        this.runtime.gandi.wildExtensions[id] = {id, url};
+        this.runtime.emitGandiWildExtensionsChanged(['add', id, {id, url}]);
     }
 
     shouldReplaceExtension (extensionId) {

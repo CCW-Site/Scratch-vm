@@ -159,6 +159,11 @@ class Blocks {
         return 'SUBSTACK';
     }
 
+    getIsPrimitiveBlock (block) {
+        const sb3 = require('../serialization/sb3');
+        return Object.hasOwnProperty.call(sb3.primitiveOpcodeInfoMap, block.opcode);
+    }
+
     /**
      * Provide an object with metadata for the requested block ID.
      * @param {!string} blockId ID of block we have stored.
@@ -529,20 +534,20 @@ class Blocks {
             return;
         }
 
-        if (source === 'default' && e.blockId && e.type !== 'delete') {
-            this.runtime.emitTargetBlocksChanged(editingTarget.originalTargetId, this._blocks, {
-                blockId: e.blockId,
-                type: e.type
-            });
-        }
-
+        const editingTargetId = editingTarget && editingTarget.originalTargetId;
         // Block create/update/destroy
         switch (e.type) {
         case 'create': {
             const newBlocks = adapter(e);
+            const addedBlocks = [];
             // A create event can create many blocks. Add them all.
             for (let i = 0; i < newBlocks.length; i++) {
-                this.createBlock(newBlocks[i], source);
+                if (this.createBlock(newBlocks[i], source)) {
+                    addedBlocks.push(newBlocks[i]);
+                }
+            }
+            if (source === 'default' && addedBlocks.length) {
+                this.runtime.emitTargetBlocksChanged(editingTargetId, ['add', newBlocks]);
             }
             break;
         }
@@ -552,7 +557,9 @@ class Blocks {
                 element: e.element,
                 name: e.name,
                 value: e.newValue,
-                recordUndo: e.recordUndo
+                recordUndo: e.recordUndo,
+                targetId: editingTargetId,
+                source: source
             });
             break;
         case 'move':
@@ -560,9 +567,12 @@ class Blocks {
                 id: e.blockId,
                 oldParent: e.oldParentId,
                 oldInput: e.oldInputName,
+                oldCoordinate: e.oldCoordinate,
                 newParent: e.newParentId,
                 newInput: e.newInputName,
-                newCoordinate: e.newCoordinate
+                newCoordinate: e.newCoordinate,
+                targetId: editingTargetId,
+                source: source
             });
             break;
         case 'dragOutside':
@@ -591,13 +601,10 @@ class Blocks {
             if (this._blocks[e.blockId].topLevel) {
                 this.runtime.quietGlow(e.blockId);
             }
-            if (source === 'default' && e.blockId && e.recordUndo) {
-                this.runtime.emitTargetBlocksChanged(editingTarget.originalTargetId, this._blocks, {
-                    blockId: e.blockId,
-                    type: e.type
-                });
-            }
-            this.deleteBlock(e.blockId, source);
+            this.deleteBlock(e.blockId, {
+                targetId: editingTargetId,
+                source: source
+            });
             break;
         case 'var_create':
             this.resetCache(); // tw: more aggressive cache resetting
@@ -637,14 +644,11 @@ class Blocks {
                 editingTarget.renameVariable(e.varId, e.newName);
                 // Update all the blocks on the current target that use
                 // this variable
-                const affectedBlocks = editingTarget.blocks.updateBlocksAfterVarRename(e.varId, e.newName);
-                if (affectedBlocks.length) {
-                    this.runtime.affectedBlocksAfterVarRename = {[originalTargetId]: affectedBlocks};
-                }
+                editingTarget.blocks.updateBlocksAfterVarRename(e.varId, e.newName);
                 this.emitProjectChanged();
                 // Note: e.varType may be null
                 this.runtime.emitTargetVariablesChanged(originalTargetId,
-                    [e.varId, variable.type, 'update', [0, e.newName]]
+                    [e.varId, variable.type, 'update', {name: e.newName}]
                 );
                 this.runtime.emitMonitorsChanged(['update', e.varId, {name: e.newName}]);
             } else {
@@ -667,7 +671,7 @@ class Blocks {
                 this.emitProjectChanged();
                 // Note: e.varType may be null
                 this.runtime.emitTargetVariablesChanged(originalTargetId,
-                    [e.varId, variable.type, 'update', [0, e.newName]]
+                    [e.varId, variable.type, 'update', {name: e.newName}]
                 );
                 this.runtime.emitMonitorsChanged(['update', e.varId, {name: e.newName}]);
             }
@@ -678,7 +682,6 @@ class Blocks {
                 editingTarget : stage;
             target.deleteVariable(e.varId);
             this.emitProjectChanged();
-
             break;
         }
         case 'comment_create':
@@ -699,9 +702,6 @@ class Blocks {
                     currTarget.comments[e.commentId].x = e.xy.x;
                     currTarget.comments[e.commentId].y = e.xy.y;
                 }
-                this.runtime.emitTargetCommentsChanged(currTarget.originalTargetId,
-                    ['add', e.commentId, currTarget.comments[e.commentId]]
-                );
             }
             this.emitProjectChanged();
             break;
@@ -731,9 +731,11 @@ class Blocks {
                     comment.text = change.text;
                     changedData.text = comment.text;
                 }
-                this.runtime.emitTargetCommentsChanged(currTarget.originalTargetId,
-                    ['update', e.commentId, changedData]
-                );
+                if (source === 'default') {
+                    this.runtime.emitTargetCommentsChanged(currTarget.originalTargetId,
+                        ['update', e.commentId, changedData]
+                    );
+                }
                 this.emitProjectChanged();
             }
             break;
@@ -748,9 +750,11 @@ class Blocks {
                 const newCoord = e.newCoordinate_;
                 comment.x = newCoord.x;
                 comment.y = newCoord.y;
-                this.runtime.emitTargetCommentsChanged(currTarget.originalTargetId,
-                    ['update', e.commentId, {x: comment.x, y: comment.y}]
-                );
+                if (source === 'default') {
+                    this.runtime.emitTargetCommentsChanged(currTarget.originalTargetId,
+                        ['update', e.commentId, {x: comment.x, y: comment.y}]
+                    );
+                }
                 this.emitProjectChanged();
             }
             break;
@@ -858,12 +862,13 @@ class Blocks {
     /**
      * Block management: create blocks and scripts from a `create` event
      * @param {!object} block Blockly create event to be processed
+     * @return {boolean} Whether the block successfully created
      */
     createBlock (block, source) {
         // Does the block already exist?
         // Could happen, e.g., for an unobscured shadow.
         if (this._blocks.hasOwnProperty(block.id)) {
-            return;
+            return false;
         }
         // Create new block.
         this._blocks[block.id] = block;
@@ -887,6 +892,8 @@ class Blocks {
         if (block.id !== 'Fj5[gB=S0qJiUu$/!nym' && block.id !== 'Z2l`f?]oj|=Nq/GH@G_u') {
             this.emitProjectChanged();
         }
+
+        return true;
     }
 
     /**
@@ -900,7 +907,7 @@ class Blocks {
         let block = this._blocks[args.id];
         if (typeof block === 'undefined') return;
         switch (args.element) {
-        case 'field':
+        case 'field': {
             // TODO when the field of a monitored block changes,
             // update the checkbox in the flyout based on whether
             // a monitor for that current combination of selected parameters exists
@@ -913,6 +920,8 @@ class Blocks {
 
             // Update block value
             if (!block.fields[args.name]) return;
+
+            const changedBlocks = {[args.id]: {}};
             if (args.name === 'VARIABLE' || args.name === 'LIST' ||
                     args.name === 'BROADCAST_OPTION') {
                 // Get variable name using the id in args.value.
@@ -920,20 +929,29 @@ class Blocks {
                 if (variable) {
                     block.fields[args.name].value = variable.name;
                     block.fields[args.name].id = args.value;
+                    changedBlocks[block.id][JSON.stringify(['fields', args.name, 'value'])] = variable.name;
+                    changedBlocks[block.id][JSON.stringify(['fields', args.name, 'id'])] = args.value;
                 }
             } else {
+                const field = block.fields[args.name];
                 // Changing the value in a dropdown
-                block.fields[args.name].value = args.value;
+                field.value = args.value;
+                changedBlocks[args.id][JSON.stringify(['fields', args.name, 'value'])] = args.value;
 
                 // The selected item in the sensing of block menu needs to change based on the
                 // selected target.  Set it to the first item in the menu list.
                 // TODO: (#1787)
                 if (block.opcode === 'sensing_of_object_menu') {
+                    let newValue = '';
                     if (block.fields.OBJECT.value === '_stage_') {
-                        this._blocks[block.parent].fields.PROPERTY.value = 'backdrop #';
+                        newValue = 'backdrop #';
                     } else {
-                        this._blocks[block.parent].fields.PROPERTY.value = 'x position';
+                        newValue = 'x position';
                     }
+                    const _field = this._blocks[block.parent].fields.PROPERTY;
+                    _field.value = newValue;
+
+                    changedBlocks[block.parent][JSON.stringify(['fields', 'PROPERTY', 'value'])] = _field.value;
                     this.runtime.requestBlocksUpdate();
                 }
 
@@ -945,9 +963,14 @@ class Blocks {
                     }));
                 }
             }
+
+            if (args.source === 'default') {
+                this.runtime.emitTargetBlocksChanged(args.targetId, ['update', changedBlocks]);
+            }
             break;
-        case 'mutation':
+        } case 'mutation':
             block.mutation = mutationAdapter(args.value);
+            this.runtime.emitTargetBlocksChanged(args.targetId, ['update', {[block.id]: {mutation: block.mutation}}]);
             break;
         case 'checkbox': {
             // A checkbox usually has a one to one correspondence with the monitor
@@ -1023,8 +1046,12 @@ class Blocks {
             let hasUnusedArguments = false;
             Object.keys(block.inputs).forEach(name => {
                 if (!argumentIds.includes(name)) {
-                    this.deleteBlock(block.inputs[name].block);
+                    this.deleteBlock(block.inputs[name].block, {
+                        source: args.source,
+                        targetId: args.targetId
+                    });
                     delete block.inputs[name];
+                    this.runtime.emitTargetBlocksChanged(args.targetId, ['deleteInput', {id: block.id, inputName: name}]);
                     hasUnusedArguments = true;
                 }
             });
@@ -1054,40 +1081,62 @@ class Blocks {
         // of a block when loading a workspace
         let didChange = false;
 
+        const changedBlocks = {[e.id]: {}};
         // Move coordinate changes.
         if (e.newCoordinate) {
-
-            didChange = (block.x !== e.newCoordinate.x) || (block.y !== e.newCoordinate.y);
-
-            block.x = e.newCoordinate.x;
-            block.y = e.newCoordinate.y;
+            const {x, y} = e.newCoordinate;
+            if (block.x !== x) {
+                block.x = x;
+                didChange = true;
+            }
+            if (block.y !== y) {
+                block.y = y;
+                didChange = true;
+            }
+            // 此处不能根据x,y的对比来判断
+            changedBlocks[e.id].x = x;
+            changedBlocks[e.id].y = y;
         }
 
         // Remove from any old parent.
         if (typeof e.oldParent !== 'undefined') {
+            changedBlocks[e.oldParent] = {};
             const oldParent = this._blocks[e.oldParent];
             if (typeof e.oldInput !== 'undefined' &&
                 oldParent.inputs[e.oldInput].block === e.id) {
                 // This block was connected to the old parent's input.
                 oldParent.inputs[e.oldInput].block = null;
+                changedBlocks[e.oldParent][JSON.stringify(['inputs', e.oldInput, 'block'])] = null;
             } else if (oldParent.next === e.id) {
                 // This block was connected to the old parent's next connection.
                 oldParent.next = null;
+                changedBlocks[e.oldParent].next = null;
             }
             this._blocks[e.id].parent = null;
+            changedBlocks[e.id].parent = null;
             didChange = true;
         }
 
         // Is this block a top-level block?
         if (typeof e.newParent === 'undefined') {
-            this._addScript(e.id);
+            if (e.oldParent) {
+                this._addScript(e.id);
+                changedBlocks[e.id].topLevel = true;
+            }
         } else {
             // Remove script, if one exists.
             this._deleteScript(e.id);
+            changedBlocks[e.newParent] = changedBlocks[e.newParent] || {};
+            if (e.oldParent !== e.newParent) {
+                changedBlocks[e.id].topLevel = false;
+                changedBlocks[e.id].parent = e.newParent;
+            }
+
             // Otherwise, try to connect it in its new place.
             if (typeof e.newInput === 'undefined') {
                 // Moved to the new parent's next connection.
                 this._blocks[e.newParent].next = e.id;
+                changedBlocks[e.newParent].next = e.id;
             } else {
                 // Moved to the new parent's input.
                 // Don't obscure the shadow block.
@@ -1106,9 +1155,14 @@ class Blocks {
                     block: e.id,
                     shadow: oldShadow
                 };
+                changedBlocks[e.newParent][JSON.stringify(['inputs', e.newInput, 'block'])] = e.id;
             }
             this._blocks[e.id].parent = e.newParent;
             didChange = true;
+        }
+
+        if (e.source === 'default' && Object.keys(changedBlocks).length > 0) {
+            this.runtime.emitTargetBlocksChanged(e.targetId, ['update', changedBlocks]);
         }
         this.resetCache();
 
@@ -1145,7 +1199,7 @@ class Blocks {
      * with the given ID does not exist.
      * @param {!string} blockId Id of block to delete
      */
-    deleteBlock (blockId, source) {
+    deleteBlock (blockId, params = {}) {
         // @todo In runtime, stop threads running on this script.
 
         // Get block
@@ -1157,19 +1211,19 @@ class Blocks {
 
         // Delete children
         if (block.next !== null) {
-            this.deleteBlock(block.next);
+            this.deleteBlock(block.next, params);
         }
 
         // Delete inputs (including branches)
         for (const input in block.inputs) {
             // If it's null, the block in this input moved away.
             if (block.inputs[input].block !== null) {
-                this.deleteBlock(block.inputs[input].block);
+                this.deleteBlock(block.inputs[input].block, params);
             }
             // Delete obscured shadow blocks.
             if (block.inputs[input].shadow !== null &&
                 block.inputs[input].shadow !== block.inputs[input].block) {
-                this.deleteBlock(block.inputs[input].shadow);
+                this.deleteBlock(block.inputs[input].shadow, params);
             }
         }
 
@@ -1180,8 +1234,11 @@ class Blocks {
         delete this._blocks[blockId];
 
         // When custom blocks are added or deleted, it may be necessary to update the toolbox
-        if (source === 'default' && block.opcode === 'procedures_definition') {
+        if (params.source === 'default' && block.opcode === 'procedures_definition') {
             this.emitCustomBlocksLengthChanged();
+        }
+        if (params.source === 'default' && !this.getIsPrimitiveBlock(block)) {
+            this.runtime.emitTargetBlocksChanged(params.targetId, ['delete', blockId]);
         }
 
         this.resetCache();
@@ -1449,8 +1506,8 @@ class Blocks {
      * @param {object<string, Comment>} comments Map of comments referenced by id
      * @return {string} String of XML representing this block and any children.
      */
-    blockToXML (blockId, comments) {
-        const block = this._blocks[blockId];
+    blockToXML (blockId, comments, blocks = this._blocks) {
+        const block = blocks[blockId];
         // block should exist, but currently some blocks' next property point
         // to a blockId for non-existent blocks. Until we track down that behavior,
         // this early exit allows the project to load.
@@ -1489,11 +1546,11 @@ class Blocks {
             if (blockInput.block || blockInput.shadow) {
                 xmlString += `<value name="${blockInput.name}">`;
                 if (blockInput.block) {
-                    xmlString += this.blockToXML(blockInput.block, comments);
+                    xmlString += this.blockToXML(blockInput.block, comments, blocks);
                 }
                 if (blockInput.shadow && blockInput.shadow !== blockInput.block) {
                     // Obscured shadow.
-                    xmlString += this.blockToXML(blockInput.shadow, comments);
+                    xmlString += this.blockToXML(blockInput.shadow, comments, blocks);
                 }
                 xmlString += '</value>';
             }
@@ -1519,7 +1576,7 @@ class Blocks {
         }
         // Add blocks connected to the next connection.
         if (block.next) {
-            xmlString += `<next>${this.blockToXML(block.next, comments)}</next>`;
+            xmlString += `<next>${this.blockToXML(block.next, comments, blocks)}</next>`;
         }
         xmlString += `</${tagName}>`;
         return xmlString;
@@ -1586,13 +1643,15 @@ class Blocks {
     /**
      * Helper to add a stack to `this._scripts`.
      * @param {?string} topBlockId ID of block that starts the script.
+     * @return {boolean} Whether added successfully.
      */
     _addScript (topBlockId) {
         const i = this._scripts.indexOf(topBlockId);
-        if (i > -1) return; // Already in scripts.
+        if (i > -1) return false; // Already in scripts.
         this._scripts.push(topBlockId);
         // Update `topLevel` property on the top block.
         this._blocks[topBlockId].topLevel = true;
+        return true;
     }
 
     /**

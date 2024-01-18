@@ -387,7 +387,8 @@ const parseMonitorObject = (object, runtime, targets, extensions) => {
         width: object.width,
         height: object.height,
         visible: object.visible
-    }));
+    // Do not trigger emitMonitorsChanged by serializing the new monitor
+    }), true);
 };
 
 /**
