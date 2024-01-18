@@ -41,7 +41,7 @@ class Gandi {
         return this.assets.reduce(
             (acc, gandiAsset) => {
                 const item = Object.create(null);
-                item.uid = gandiAsset.uid;
+                item.id = gandiAsset.id;
                 item.assetId = gandiAsset.assetId;
                 item.name = gandiAsset.name;
                 item.md5ext = gandiAsset.md5;

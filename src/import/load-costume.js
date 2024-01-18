@@ -262,6 +262,8 @@ const loadBitmap_ = function (costume, runtime, _rotationCenter) {
  * Do not call this unless there is a renderer attached.
  * @param {!object} costume - the Scratch costume object.
  * @property {int} skinId - the ID of the costume's render skin, once installed.
+ * @property {string=} id Optional uid for costume; a new one will be generated if
+ *     not provided.
  * @property {number} rotationCenterX - the X component of the costume's origin.
  * @property {number} rotationCenterY - the Y component of the costume's origin.
  * @property {number} [bitmapResolution] - the resolution scale for a bitmap costume.
@@ -272,10 +274,7 @@ const loadBitmap_ = function (costume, runtime, _rotationCenter) {
  * @returns {Promise} - a promise which will resolve after skinId is set, or null on error.
  */
 const loadCostumeFromAsset = function (costume, runtime, optVersion) {
-    if (!costume.uid) {
-        // Ensure that the costume has a unique ID.
-        costume.uid = uid();
-    }
+    costume.id = costume.id || uid();
     costume.assetId = costume.asset.assetId;
     const renderer = runtime.renderer;
     if (!renderer) {

@@ -154,7 +154,7 @@ const serializeInputs = function (inputs) {
                 INPUT_SAME_BLOCK_SHADOW,
                 inputs[inputName].block
             ];
-        } else if (inputs[inputName].shadow === null || typeof inputs[inputName].shadow === 'undefined') {
+        } else if ([void 0, null].includes(inputs[inputName].shadow)) {
             // does not have shadow
             obj[inputName] = [
                 INPUT_BLOCK_NO_SHADOW,
@@ -383,7 +383,7 @@ const serializeBlocks = function (blocks, saveVarId) {
  */
 const serializeCostume = function (costume) {
     const obj = Object.create(null);
-    obj.uid = costume.uid;
+    obj.id = costume.id;
     obj.assetId = costume.assetId;
     obj.name = costume.name;
     obj.bitmapResolution = costume.bitmapResolution;
@@ -406,7 +406,7 @@ const serializeCostume = function (costume) {
  */
 const serializeSound = function (sound) {
     const obj = Object.create(null);
-    obj.uid = sound.uid;
+    obj.id = sound.id;
     obj.assetId = sound.assetId;
     obj.name = sound.name;
     obj.dataFormat = sound.dataFormat.toLowerCase();
@@ -438,7 +438,6 @@ const serializeVariables = function (variables) {
     obj.broadcasts = Object.create(null);
     for (const varId in variables) {
         const v = variables[varId];
-
 
         if (v.type === Variable.BROADCAST_MESSAGE_TYPE) {
             obj.broadcasts[varId] = v.value; // name and value is the same for broadcast msgs
@@ -945,7 +944,7 @@ const parseScratchAssets = function (object, runtime, zip) {
         const costume = {
             // costumeSource only has an asset if an image is being uploaded as
             // a sprite
-            uid: costumeSource.uid || uid(),
+            id: costumeSource.id || uid(),
             asset: costumeSource.asset,
             assetId: costumeSource.assetId,
             skinId: null,
@@ -975,7 +974,7 @@ const parseScratchAssets = function (object, runtime, zip) {
     // Sounds from JSON
     assets.soundPromises = (object.sounds || []).map(soundSource => {
         const sound = {
-            uid: soundSource.uid || uid(),
+            id: soundSource.id || uid(),
             assetId: soundSource.assetId,
             format: soundSource.format,
             rate: soundSource.rate,
@@ -1314,8 +1313,8 @@ const deserializeMonitor = function (monitorData, runtime, targets, extensions) 
             extensions.extensionIDs.add(extensionID);
         }
     }
-
-    runtime.requestAddMonitor(MonitorRecord(monitorData));
+    // Do not trigger emitMonitorsChanged by serializing the new monitor
+    runtime.requestAddMonitor(MonitorRecord(monitorData), true);
 };
 
 // Replace variable IDs throughout the project with
@@ -1364,7 +1363,7 @@ const parseGandiObject = (gandiObject, runtime) => {
         const filePromises = (gandiObject.assets || []).map(file => {
             const gandiAsset = {
                 asset: null,
-                uid: file.uid || uid(),
+                id: file.id || uid(),
                 assetId: file.assetId,
                 name: file.name,
                 md5: file.md5ext,
@@ -1489,5 +1488,7 @@ module.exports = {
     serializeComments: serializeComments,
     serializeVariables: serializeVariables,
     getExtensionIdForOpcode: getExtensionIdForOpcode,
-    deserializeInputDesc: deserializeInputDesc
+    deserializeInputDesc: deserializeInputDesc,
+    serializePrimitiveBlock: serializePrimitiveBlock,
+    primitiveOpcodeInfoMap: primitiveOpcodeInfoMap
 };

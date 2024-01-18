@@ -5,6 +5,8 @@ const uid = require('../util/uid');
 /**
  * Initialize a sound from an asset asynchronously.
  * @param {!object} sound - the Scratch sound object.
+ * @property {string=} id Optional uid for sound; a new one will be generated if
+ *     not provided.
  * @property {string} md5 - the MD5 and extension of the sound to be loaded.
  * @property {Buffer} data - sound data will be written here once loaded.
  * @param {!Asset} soundAsset - the asset loaded from storage.
@@ -13,9 +15,7 @@ const uid = require('../util/uid');
  * @returns {!Promise} - a promise which will resolve to the sound when ready.
  */
 const loadSoundFromAsset = function (sound, soundAsset, runtime, soundBank) {
-    if (!sound.uid) {
-        sound.uid = uid();
-    }
+    sound.id = sound.id || uid();
     sound.assetId = soundAsset.assetId;
     if (!runtime.audioEngine) {
         log.error('No audio engine present; cannot load sound asset: ', sound.md5);
