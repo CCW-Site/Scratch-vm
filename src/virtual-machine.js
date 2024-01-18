@@ -779,6 +779,11 @@ class VirtualMachine extends EventEmitter {
         return generateUid();
     }
 
+    getSb3Utils () {
+        const sb3 = require('./serialization/sb3');
+        return sb3;
+    }
+
     createGandiAssetFile (name, assetType, data = '') {
         const fileName = `${name}.${assetType.runtimeFormat}`;
         if (this.getGandiAssetFile(fileName)) {
@@ -1498,6 +1503,79 @@ class VirtualMachine extends EventEmitter {
             }
         }
         return [...keys];
+    }
+
+    /**
+     * Updates global procedure call mutations in the project.
+     *
+     * @param {string} oldProccode - The old procedure code to be replaced.
+     * @param {string} newMutationText - The new mutation text to replace the old mutation.
+     * @returns {void}
+     */
+    updateGlobalProcedureCallMutation (oldProccode, newMutationText) {
+        const targets = this.runtime.targets.filter(t => t.isOriginal);
+        const newMutation = mutationAdapter(newMutationText);
+        targets.forEach(target => {
+            if (target !== this.editingTarget) {
+                const targetId = target.id;
+                const blocksIds = Object.keys(target.blocks._blocks);
+                const addedBlocks = [];
+                for (let index = 0; index < blocksIds.length; index++) {
+                    const block = target.blocks._blocks[blocksIds[index]];
+                    // A block may not exist, as there are operations to delete blocks below.
+                    if (!block) continue;
+                    // Including procedures_call, procedures_call_with_return
+                    if (block.opcode.startsWith('procedures_call') && block.mutation.isglobal === 'true' && block.mutation.proccode === oldProccode) {
+                        const oldArgIds = JSON.parse(block.mutation.argumentids);
+                        block.mutation = newMutation;
+                        const newArgIds = JSON.parse(block.mutation.argumentids);
+                        Object.keys(block.inputs).forEach(key => {
+                            if (!newArgIds.includes(key)) {
+                                // If it's null, the block in this input moved away.
+                                if (block.inputs[key].block !== null) {
+                                    target.blocks.deleteBlock(block.inputs[key].block, {source: 'default'});
+                                }
+                                // Delete obscured shadow blocks.
+                                if (block.inputs[key].shadow !== null &&
+                                    block.inputs[key].shadow !== block.inputs[key].block) {
+                                    target.blocks.deleteBlock(block.inputs[key].shadow, {source: 'default'});
+                                }
+                                delete block.inputs[key];
+                                this.runtime.emitTargetBlocksChanged(targetId, ['deleteInput', {id: block.id, inputName: key}]);
+                            }
+                        });
+                        const newArgTypes = block.mutation.proccode.match(/ %[b|s]/g) || [];
+                        newArgIds.forEach((argId, idx) => {
+                            // add new input block except boolean
+                            if (!oldArgIds.includes(argId) && newArgTypes[idx] !== 'b') {
+                                const textBlockId = generateUid();
+                                target.blocks._blocks[textBlockId] = {
+                                    id: textBlockId,
+                                    opcode: 'text',
+                                    inputs: {},
+                                    fields: {TEXT: {name: 'TEXT', value: ''}},
+                                    next: null,
+                                    topLevel: false,
+                                    parent: block.id,
+                                    shadow: true,
+                                    x: 0,
+                                    y: 0
+                                };
+                                addedBlocks.push(target.blocks._blocks[textBlockId]);
+                                block.inputs[argId] = {
+                                    name: argId,
+                                    block: textBlockId,
+                                    shadow: textBlockId
+                                };
+                            }
+                        });
+                    }
+                }
+                if (addedBlocks.length > 0) {
+                    this.runtime.emitTargetBlocksChanged(targetId, ['add', addedBlocks]);
+                }
+            }
+        });
     }
 
     /**
