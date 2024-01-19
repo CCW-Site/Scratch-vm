@@ -1528,6 +1528,7 @@ class VirtualMachine extends EventEmitter {
                     if (block.opcode.startsWith('procedures_call') && block.mutation.isglobal === 'true' && block.mutation.proccode === oldProccode) {
                         const oldArgIds = JSON.parse(block.mutation.argumentids);
                         block.mutation = newMutation;
+                        this.runtime.emitTargetBlocksChanged(targetId, ['update', {[block.id]: {mutation: newMutation}}]);
                         const newArgIds = JSON.parse(block.mutation.argumentids);
                         Object.keys(block.inputs).forEach(key => {
                             if (!newArgIds.includes(key)) {
