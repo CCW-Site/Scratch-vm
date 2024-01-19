@@ -2365,33 +2365,6 @@ class VirtualMachine extends EventEmitter {
         return sb3.getExtensionIdForOpcode(opcode);
     }
 
-    setTargetBlocks (blocks, targetId) {
-        const sb3 = require('./serialization/sb3');
-        const target = this.runtime.getTargetById(targetId);
-        const copiedBlocks = JSON.parse(JSON.stringify(blocks));
-        const extensionIDs = new Set(
-            copiedBlocks
-                .map(b => sb3.getExtensionIdForOpcode(b.opcode))
-                .filter(id => !!id) // Remove ids that do not exist
-                .filter(id => !this.extensionManager.isExtensionLoaded(id)) // and remove loaded extensions
-        );
-
-        // Create an array promises for extensions to load
-        const extensionPromises = Array.from(extensionIDs, id =>
-            this.extensionManager.loadExtensionURL(id)
-        );
-        return Promise.all(extensionPromises).then(() => {
-            copiedBlocks.forEach(block => {
-                if (target.blocks._blocks[block.id]) {
-                    target.blocks.updateBlock({...block});
-                } else {
-                    target.blocks.createBlock(block);
-                }
-            });
-            target.blocks.updateTargetSpecificBlocks(target.isStage);
-        });
-    }
-
     /**
      * Called when blocks are dragged from one sprite to another. Adds the blocks to the
      * workspace of the given target.
@@ -2437,6 +2410,9 @@ class VirtualMachine extends EventEmitter {
             copiedBlocks.forEach(block => {
                 target.blocks.createBlock(block, 'default');
             });
+            if (copiedBlocks.length) {
+                this.runtime.emitTargetBlocksChanged(targetId, ['add', copiedBlocks]);
+            }
             target.blocks.updateTargetSpecificBlocks(target.isStage);
             return blockIdOldToNewMap;
         });
