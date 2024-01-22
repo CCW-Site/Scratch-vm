@@ -3549,6 +3549,9 @@ class Runtime extends EventEmitter {
         const stage = this.getTargetForStage();
         const variable = new Variable(optVarId || uid(), newName, varType, false, stage.id);
         stage.variables[variable.id] = variable;
+        this.emitTargetVariablesChanged(stage.originalTargetId,
+            [variable.id, varType, 'add', {name: newName, value: variable.value, isCloud: variable.isCloud}]
+        );
         return variable;
     }
 
