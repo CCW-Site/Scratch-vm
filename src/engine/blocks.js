@@ -159,11 +159,6 @@ class Blocks {
         return 'SUBSTACK';
     }
 
-    getIsPrimitiveBlock (block) {
-        const sb3 = require('../serialization/sb3');
-        return Object.hasOwnProperty.call(sb3.primitiveOpcodeInfoMap, block.opcode);
-    }
-
     /**
      * Provide an object with metadata for the requested block ID.
      * @param {!string} blockId ID of block we have stored.
@@ -1237,7 +1232,7 @@ class Blocks {
         if (params.source === 'default' && block.opcode === 'procedures_definition') {
             this.emitCustomBlocksLengthChanged();
         }
-        if (params.source === 'default' && !this.getIsPrimitiveBlock(block)) {
+        if (params.source === 'default') {
             this.runtime.emitTargetBlocksChanged(params.targetId, ['delete', blockId]);
         }
 
