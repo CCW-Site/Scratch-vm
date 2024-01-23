@@ -289,6 +289,9 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.GANDI_WILD_EXTENSIONS_CHANGED, data => {
             this.emit(Runtime.GANDI_WILD_EXTENSIONS_CHANGED, data);
         });
+        this.runtime.on(Runtime.GANDI_SPINE_UPDATE, data => {
+            this.emit(Runtime.GANDI_SPINE_UPDATE, data);
+        });
 
         this.extensionManager = new ExtensionManager(this.runtime);
 

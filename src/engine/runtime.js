@@ -855,6 +855,10 @@ class Runtime extends EventEmitter {
         return 'GANDI_ASSET_UPDATE';
     }
 
+    static get GANDI_SPINE_UPDATE () {
+        return 'GANDI_SPINE_UPDATE';
+    }
+
     static get GANDI_WILD_EXTENSIONS_CHANGED () {
         return 'GANDI_WILD_EXTENSIONS_CHANGED';
     }
@@ -3160,6 +3164,10 @@ class Runtime extends EventEmitter {
      */
     emitFrameEndDrag (frame, frameId, newBatchElements) {
         this.emit(Runtime.FRAME_DRAG_END, frame, frameId, newBatchElements);
+    }
+
+    emitGandiSpineUpdate (type, id, data) {
+        this.emit(Runtime.GANDI_SPINE_UPDATE, [type, id, data]);
     }
 
     /**

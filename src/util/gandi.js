@@ -79,8 +79,14 @@ class Gandi {
         }
     }
 
-    addSpineAsset (obj) {
-        this.spine = Object.assign(this.spine, obj);
+    addSpineAsset (key, data) {
+        this.spine[key] = data;
+        this.runtime.emitGandiSpineUpdate('add', key, data);
+    }
+
+    deleteSpineAsset (key) {
+        delete this.spine[key];
+        this.runtime.emitGandiSpineUpdate('delete', key);
     }
 
     getSpineAsset (name) {
@@ -96,6 +102,10 @@ class Gandi {
 
     getDynamicMenuItems (menuName) {
         return this.dynamicMenuItems[menuName] || [];
+    }
+
+    deleteDynamicMenuItems (menuName) {
+        delete this.dynamicMenuItems[menuName];
     }
 }
 
