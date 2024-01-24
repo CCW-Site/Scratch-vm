@@ -99,12 +99,12 @@ const domToBlock = function (blockDOM, blocks, isTopBlock, parent) {
         case 'value':
         case 'statement':
         {
-            // Recursively generate block structure for input block.
-            domToBlock(childBlockNode, blocks, false, block.id);
             if (childShadowNode && childBlockNode !== childShadowNode) {
                 // Also generate the shadow block.
                 domToBlock(childShadowNode, blocks, false, block.id);
             }
+            // Recursively generate block structure for input block.
+            domToBlock(childBlockNode, blocks, false, block.id);
             // Link this block's input to the child block.
             const inputName = xmlChild.attribs.name;
             block.inputs[inputName] = {
