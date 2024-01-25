@@ -916,7 +916,13 @@ class Blocks {
             // Update block value
             if (!block.fields[args.name]) return;
 
-            const changedBlocks = {[args.id]: {}};
+            const _changedBlocks = {};
+            const pushChangedBlocks = (id, obj) => {
+                if (!_changedBlocks.hasOwnProperty(id)) {
+                    _changedBlocks[id] = {};
+                }
+                Object.assign(_changedBlocks[id], obj);
+            };
             if (args.name === 'VARIABLE' || args.name === 'LIST' ||
                     args.name === 'BROADCAST_OPTION') {
                 // Get variable name using the id in args.value.
@@ -924,14 +930,14 @@ class Blocks {
                 if (variable) {
                     block.fields[args.name].value = variable.name;
                     block.fields[args.name].id = args.value;
-                    changedBlocks[block.id][JSON.stringify(['fields', args.name, 'value'])] = variable.name;
-                    changedBlocks[block.id][JSON.stringify(['fields', args.name, 'id'])] = args.value;
+                    pushChangedBlocks(block.id, {[JSON.stringify(['fields', args.name, 'value'])]: variable.name});
+                    pushChangedBlocks(block.id, {[JSON.stringify(['fields', args.name, 'id'])]: args.value});
                 }
             } else {
                 const field = block.fields[args.name];
                 // Changing the value in a dropdown
                 field.value = args.value;
-                changedBlocks[args.id][JSON.stringify(['fields', args.name, 'value'])] = args.value;
+                pushChangedBlocks(args.id, {[JSON.stringify(['fields', args.name, 'value'])]: args.value});
 
                 // The selected item in the sensing of block menu needs to change based on the
                 // selected target.  Set it to the first item in the menu list.
@@ -946,7 +952,7 @@ class Blocks {
                     const _field = this._blocks[block.parent].fields.PROPERTY;
                     _field.value = newValue;
 
-                    changedBlocks[block.parent][JSON.stringify(['fields', 'PROPERTY', 'value'])] = _field.value;
+                    pushChangedBlocks(block.parent, {[JSON.stringify(['fields', 'PROPERTY', 'value'])]: _field.value});
                     this.runtime.requestBlocksUpdate();
                 }
 
@@ -960,7 +966,7 @@ class Blocks {
             }
 
             if (args.source === 'default') {
-                this.runtime.emitTargetBlocksChanged(args.targetId, ['update', changedBlocks]);
+                this.runtime.emitTargetBlocksChanged(args.targetId, ['update', _changedBlocks]);
             }
             break;
         } case 'mutation':
