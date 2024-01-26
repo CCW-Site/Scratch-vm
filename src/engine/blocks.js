@@ -10,6 +10,7 @@ const log = require('../util/log');
 const Variable = require('./variable');
 const getMonitorIdForBlockWithArgs = require('../util/get-monitor-id');
 const uid = require('../util/uid');
+const StateManager = require('./state-manager');
 
 /**
  * @fileoverview
@@ -834,27 +835,6 @@ class Blocks {
     }
 
     /**
-     * Block management: create/delete/change/move block;
-     * @param {!object} e Blockly move event to be processed
-     */
-    updateBlock (block) {
-        // Maybe the block already exists, but we need to update it anyway
-        this._blocks[block.id] = block;
-
-        // Is this block a top-level block?
-        if (block.topLevel) {
-            this._addScript(block.id);
-        } else {
-            this._deleteScript(block.id);
-        }
-        // A new block was actually added to the block container or updated
-        // emit a project changed event
-        this.emitProjectChanged();
-
-        this.resetCache();
-    }
-
-    /**
      * Block management: create blocks and scripts from a `create` event
      * @param {!object} block Blockly create event to be processed
      * @return {boolean} Whether the block successfully created
@@ -916,13 +896,7 @@ class Blocks {
             // Update block value
             if (!block.fields[args.name]) return;
 
-            const _changedBlocks = {};
-            const pushChangedBlocks = (id, obj) => {
-                if (!_changedBlocks.hasOwnProperty(id)) {
-                    _changedBlocks[id] = {};
-                }
-                Object.assign(_changedBlocks[id], obj);
-            };
+            const changedBlockRecorder = new StateManager();
             if (args.name === 'VARIABLE' || args.name === 'LIST' ||
                     args.name === 'BROADCAST_OPTION') {
                 // Get variable name using the id in args.value.
@@ -930,14 +904,14 @@ class Blocks {
                 if (variable) {
                     block.fields[args.name].value = variable.name;
                     block.fields[args.name].id = args.value;
-                    pushChangedBlocks(block.id, {[JSON.stringify(['fields', args.name, 'value'])]: variable.name});
-                    pushChangedBlocks(block.id, {[JSON.stringify(['fields', args.name, 'id'])]: args.value});
+                    changedBlockRecorder.set(block.id, {[JSON.stringify(['fields', args.name, 'value'])]: variable.name});
+                    changedBlockRecorder.set(block.id, {[JSON.stringify(['fields', args.name, 'id'])]: args.value});
                 }
             } else {
                 const field = block.fields[args.name];
                 // Changing the value in a dropdown
                 field.value = args.value;
-                pushChangedBlocks(args.id, {[JSON.stringify(['fields', args.name, 'value'])]: args.value});
+                changedBlockRecorder.set(args.id, {[JSON.stringify(['fields', args.name, 'value'])]: args.value});
 
                 // The selected item in the sensing of block menu needs to change based on the
                 // selected target.  Set it to the first item in the menu list.
@@ -952,7 +926,7 @@ class Blocks {
                     const _field = this._blocks[block.parent].fields.PROPERTY;
                     _field.value = newValue;
 
-                    pushChangedBlocks(block.parent, {[JSON.stringify(['fields', 'PROPERTY', 'value'])]: _field.value});
+                    changedBlockRecorder.set(block.parent, {[JSON.stringify(['fields', 'PROPERTY', 'value'])]: _field.value});
                     this.runtime.requestBlocksUpdate();
                 }
 
@@ -966,7 +940,7 @@ class Blocks {
             }
 
             if (args.source === 'default') {
-                this.runtime.emitTargetBlocksChanged(args.targetId, ['update', _changedBlocks]);
+                this.runtime.emitTargetBlocksChanged(args.targetId, ['update', changedBlockRecorder.state]);
             }
             break;
         } case 'mutation':
@@ -1081,8 +1055,7 @@ class Blocks {
         // ignoring changes like routine re-positioning
         // of a block when loading a workspace
         let didChange = false;
-
-        const changedBlocks = {[e.id]: {}};
+        const changedBlockRecorder = new StateManager();
         // Move coordinate changes.
         if (e.newCoordinate) {
             const {x, y} = e.newCoordinate;
@@ -1095,26 +1068,25 @@ class Blocks {
                 didChange = true;
             }
             // 此处不能根据x,y的对比来判断
-            changedBlocks[e.id].x = x;
-            changedBlocks[e.id].y = y;
+            changedBlockRecorder.set(e.id, {x});
+            changedBlockRecorder.set(e.id, {y});
         }
 
         // Remove from any old parent.
         if (typeof e.oldParent !== 'undefined') {
-            changedBlocks[e.oldParent] = {};
             const oldParent = this._blocks[e.oldParent];
             if (typeof e.oldInput !== 'undefined' &&
                 oldParent.inputs[e.oldInput].block === e.id) {
                 // This block was connected to the old parent's input.
                 oldParent.inputs[e.oldInput].block = null;
-                changedBlocks[e.oldParent][JSON.stringify(['inputs', e.oldInput, 'block'])] = null;
+                changedBlockRecorder.set(e.oldParent, {[JSON.stringify(['inputs', e.oldInput, 'block'])]: null});
             } else if (oldParent.next === e.id) {
                 // This block was connected to the old parent's next connection.
                 oldParent.next = null;
-                changedBlocks[e.oldParent].next = null;
+                changedBlockRecorder.set(e.oldParent, {next: null});
             }
             this._blocks[e.id].parent = null;
-            changedBlocks[e.id].parent = null;
+            changedBlockRecorder.set(e.id, {parent: null});
             didChange = true;
         }
 
@@ -1122,22 +1094,20 @@ class Blocks {
         if (typeof e.newParent === 'undefined') {
             if (e.oldParent) {
                 this._addScript(e.id);
-                changedBlocks[e.id].topLevel = true;
+                changedBlockRecorder.set(e.id, {topLevel: true});
             }
         } else {
             // Remove script, if one exists.
             this._deleteScript(e.id);
-            changedBlocks[e.newParent] = changedBlocks[e.newParent] || {};
             if (e.oldParent !== e.newParent) {
-                changedBlocks[e.id].topLevel = false;
-                changedBlocks[e.id].parent = e.newParent;
+                changedBlockRecorder.set(e.id, {topLevel: false, parent: e.newParent});
             }
 
             // Otherwise, try to connect it in its new place.
             if (typeof e.newInput === 'undefined') {
                 // Moved to the new parent's next connection.
                 this._blocks[e.newParent].next = e.id;
-                changedBlocks[e.newParent].next = e.id;
+                changedBlockRecorder.set(e.newParent, {next: e.id});
             } else {
                 // Moved to the new parent's input.
                 // Don't obscure the shadow block.
@@ -1156,14 +1126,14 @@ class Blocks {
                     block: e.id,
                     shadow: oldShadow
                 };
-                changedBlocks[e.newParent][JSON.stringify(['inputs', e.newInput, 'block'])] = e.id;
+                changedBlockRecorder.set(e.newParent, {[JSON.stringify(['inputs', e.newInput, 'block'])]: e.id});
             }
             this._blocks[e.id].parent = e.newParent;
             didChange = true;
         }
 
-        if (e.source === 'default' && Object.keys(changedBlocks).length > 0) {
-            this.runtime.emitTargetBlocksChanged(e.targetId, ['update', changedBlocks]);
+        if (e.source === 'default' && Object.keys(changedBlockRecorder.state).length > 0) {
+            this.runtime.emitTargetBlocksChanged(e.targetId, ['update', changedBlockRecorder.state]);
         }
         this.resetCache();
 
