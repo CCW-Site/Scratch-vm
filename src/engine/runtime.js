@@ -859,6 +859,10 @@ class Runtime extends EventEmitter {
         return 'GANDI_SPINE_UPDATE';
     }
 
+    static get GANDI_DYNAMIC_MENU_ITEMS_UPDATE () {
+        return 'GANDI_DYNAMIC_MENU_ITEMS_UPDATE';
+    }
+
     static get GANDI_WILD_EXTENSIONS_CHANGED () {
         return 'GANDI_WILD_EXTENSIONS_CHANGED';
     }
@@ -3170,6 +3174,10 @@ class Runtime extends EventEmitter {
         this.emit(Runtime.GANDI_SPINE_UPDATE, [type, id, data]);
     }
 
+    emitGandiDynamicMenuItemsUpdate (type, id, data) {
+        this.emit(Runtime.GANDI_DYNAMIC_MENU_ITEMS_UPDATE, [type, id, data]);
+    }
+
     /**
      * Emit value for reporter to show in the blocks.
      * @param {string} blockId ID for the block.
@@ -3402,6 +3410,7 @@ class Runtime extends EventEmitter {
      * Report that the target has changed in a way that would affect serialization
      */
     emitTargetBlocksChanged (targeId, blocks, ext) {
+        console.log('emitTargetBlocksChanged', targeId, blocks, ext);
         this.emit(Runtime.TARGET_BLOCKS_CHANGED, targeId, blocks, ext);
     }
 

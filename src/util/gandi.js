@@ -1,9 +1,51 @@
 class Gandi {
+    /**
+     * Constructor for the Gandi class.
+     * @constructor
+     * @param {Object} runtime - The runtime object.
+     */
     constructor (runtime) {
+        /**
+         * The runtime object.
+         * @member {Object}
+         */
         this.runtime = runtime;
 
-        this.properties = [];
-        const builtInSpine = {
+        /**
+         * Array to store properties.
+         * @member {Array}
+         */
+        this.properties = ['assets', 'wildExtensions', 'configs', 'dynamicMenuItems', 'spine'];
+
+        /**
+         * Array to store assets.
+         * @member {Array}
+         */
+        this.assets = [];
+
+        /**
+         * Object to store wild extensions.
+         * @member {Object}
+         */
+        this.wildExtensions = {};
+
+        /**
+         * Object to store configurations.
+         * @member {Object}
+         */
+        this.configs = {};
+
+        /**
+         * Object to store dynamic menu items.
+         * @member {Object}
+         */
+        this.dynamicMenuItems = {};
+
+        /**
+         * Object to store spine data.
+         * @member {Object}
+         */
+        this.spine = {
             heroes: {
                 atlas: 'heroes.atlas',
                 json: 'heroes.json'
@@ -13,30 +55,32 @@ class Gandi {
                 json: 'ScratchCat.json'
             }
         };
-        this.initProperties([
-            ['assets', []],
-            ['wildExtensions', {}],
-            ['configs', {}],
-            ['dynamicMenuItems', {}],
-            ['spine', builtInSpine]
-        ]);
     }
-
-    initProperties (properties) {
-        this.properties = properties.map(([key, val]) => {
-            this[key] = val;
-            return key;
-        });
-    }
-
+    /**
+     * Checks if all properties are empty.
+     * @method
+     * @returns {boolean} - True if all properties are empty, false otherwise.
+     */
     isEmpty () {
         return this.properties.every(key => this.isEmptyObject(this[key]));
     }
 
+    /**
+     * Checks if a specific property is empty.
+     * @method
+     * @param {string} propertyName - The name of the property to check.
+     * @returns {boolean} - True if the property is empty, false otherwise.
+     */
     istPropertyEmpty (propertyName) {
         return this.isEmptyObject(this[propertyName]);
     }
 
+    /**
+     * Serializes Gandi assets.
+     * @method
+     * @param {Set} extensions - Set of extensions.
+     * @returns {Array} - Serialized Gandi assets.
+     */
     serializeGandiAssets (extensions) {
         return this.assets.reduce(
             (acc, gandiAsset) => {
@@ -55,12 +99,24 @@ class Gandi {
         );
     }
 
+    /**
+     * Checks if an object is empty.
+     * @method
+     * @param {Object} object - The object to check.
+     * @returns {boolean} - True if the object is empty, false otherwise.
+     */
     isEmptyObject (object) {
         return typeof object === 'object' ?
             Object.keys(object).length === 0 :
             Boolean(object);
     }
 
+    /**
+     * Serializes Gandi data.
+     * @method
+     * @param {Object} object - The object to serialize.
+     * @param {Set} extensions - Set of extensions.
+     */
     serialize (object, extensions) {
         const usedExt = {};
         Object.values(this.wildExtensions).forEach(ext => {
@@ -79,33 +135,89 @@ class Gandi {
         }
     }
 
+    /**
+     * Adds a Spine asset.
+     * @method
+     * @param {string} key - The key for the Spine asset.
+     * @param {Object} data - The data for the Spine asset.
+     */
     addSpineAsset (key, data) {
-        this.spine[key] = data;
-        this.runtime.emitGandiSpineUpdate('add', key, data);
+        if (!this.spine[key]) {
+            this.spine[key] = data;
+            this.runtime.emitGandiSpineUpdate('add', key, data);
+        }
     }
 
+    /**
+     * Deletes a Spine asset.
+     * @method
+     * @param {string} key - The key of the Spine asset to delete.
+     */
     deleteSpineAsset (key) {
-        delete this.spine[key];
-        this.runtime.emitGandiSpineUpdate('delete', key);
+        if (this.spine[key]) {
+            delete this.spine[key];
+            this.runtime.emitGandiSpineUpdate('delete', key);
+        }
     }
 
+    /**
+     * Gets a Spine asset by name.
+     * @method
+     * @param {string} name - The name of the Spine asset.
+     * @returns {Object} - The Spine asset data.
+     */
     getSpineAsset (name) {
         return this.spine[name];
     }
 
+    /**
+     * Adds a dynamic menu item.
+     * @method
+     * @param {string} menuName - The name of the dynamic menu.
+     * @param {Object} menuItem - The dynamic menu item to add.
+     */
     addDynamicMenuItem (menuName, menuItem) {
         if (!this.dynamicMenuItems[menuName]) {
             this.dynamicMenuItems[menuName] = [];
         }
         this.dynamicMenuItems[menuName].push(menuItem);
+        this.runtime.emitGandiDynamicMenuItemsUpdate('add', menuName, menuItem);
     }
 
+    /**
+     * Gets dynamic menu items by name.
+     * @method
+     * @param {string} menuName - The name of the dynamic menu.
+     * @returns {Array} - Array of dynamic menu items.
+     */
     getDynamicMenuItems (menuName) {
         return this.dynamicMenuItems[menuName] || [];
     }
 
-    deleteDynamicMenuItems (menuName) {
-        delete this.dynamicMenuItems[menuName];
+    /**
+     * Deletes dynamic menu items.
+     * @method
+     * @param {string} menuName - The name of the dynamic menu.
+     * @param {string} id - The id of the dynamic menu item to delete.
+     * @throws Will throw an error if the menu name is not provided.
+     */
+    deleteDynamicMenuItems (menuName, id) {
+        if (menuName) {
+            if (id) {
+                const menus = this.dynamicMenuItems[menuName];
+                if (menus) {
+                    const idx = menus.findIndex(i => i.value === id);
+                    menus.split(idx, 1);
+                } else {
+                    throw new Error(`Can not find dynamic menu: ${menuName}`);
+                }
+            } else {
+                delete this.dynamicMenuItems[menuName];
+            }
+            this.runtime.emitGandiDynamicMenuItemsUpdate('delete', [menuName, id]);
+        } else {
+            throw new Error('The menu name must be provided.');
+        }
     }
 }
 
