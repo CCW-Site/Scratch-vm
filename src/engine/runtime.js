@@ -3410,7 +3410,6 @@ class Runtime extends EventEmitter {
      * Report that the target has changed in a way that would affect serialization
      */
     emitTargetBlocksChanged (targeId, blocks, ext) {
-        console.log('emitTargetBlocksChanged', targeId, blocks, ext);
         this.emit(Runtime.TARGET_BLOCKS_CHANGED, targeId, blocks, ext);
     }
 
