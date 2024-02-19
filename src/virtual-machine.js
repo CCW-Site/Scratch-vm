@@ -2479,17 +2479,19 @@ class VirtualMachine extends EventEmitter {
         const clone = Object.assign({}, originalSound);
         clone.id = generateUid();
         const target = this.runtime.getTargetById(targetId);
-        return loadSound(clone, this.runtime, target.sprite.soundBank).then(
-            () => {
-                if (target) {
-                    target.addSound(clone);
-                    this.runtime.emitTargetSoundsChanged(target.originalTargetId,
-                        ['add', clone.id, clone]
-                    );
-                    this.emitTargetsUpdate();
+        if (target) {
+            return loadSound(clone, this.runtime, target.sprite.soundBank).then(
+                () => {
+                    if (this.runtime.getTargetById(targetId)) {
+                        target.addSound(clone);
+                        this.runtime.emitTargetSoundsChanged(target.originalTargetId,
+                            ['add', clone.id, clone]
+                        );
+                        this.emitTargetsUpdate();
+                    }
                 }
-            }
-        );
+            );
+        }
     }
 
     /**
