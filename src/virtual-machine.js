@@ -423,10 +423,9 @@ class VirtualMachine extends EventEmitter {
 
     // powered by xigua start
     disposeAll () {
+        this.stopAll();
         this.runtime.disposeAll();
         this.editingTarget = null;
-        // sprite资源被后也清空舞台区
-        this.renderer?.draw();
     }
     // powered by xigua end
 
