@@ -485,7 +485,12 @@ class ExtensionManager {
         if (/[^\w-.]/i.test(extensionInfo.id)) {
             throw new Error('Invalid extension id');
         }
-        const warningTipText =
+        if (
+            !scratchExtension.includes(extensionInfo.id) &&
+            this.showCompatibilityWarning
+        ) {
+
+            const warningTipText =
             extensionInfo.warningTipText ||
             this.runtime.getFormatMessage()({
                 id: 'gui.extension.compatibilityWarning',
@@ -494,10 +499,6 @@ class ExtensionManager {
                 description:
                     'Give a warning when an extension is not official in Scratch.'
             });
-        if (
-            !scratchExtension.includes(extensionInfo.id) &&
-            this.showCompatibilityWarning
-        ) {
             extensionInfo.warningTipText = warningTipText;
         } else {
             delete extensionInfo.warningTipText;
@@ -751,7 +752,7 @@ class ExtensionManager {
             );
         }
         if (this.runtime.gandi.wildExtensions[id]) return;
-    
+
         this.runtime.gandi.wildExtensions[id] = {id, url};
         this.runtime.emitGandiWildExtensionsChanged(['add', id, {id, url}]);
     }
