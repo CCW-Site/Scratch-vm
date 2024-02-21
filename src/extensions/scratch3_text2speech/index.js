@@ -788,7 +788,7 @@ class Scratch3Text2SpeechBlocks {
             words = words.replace(/\S+/g, 'meow');
             locale = LANGUAGE_MAP[this.LANGUAGE_INFO[this.DEFAULT_LANGUAGE].speechSynthLocale];
         }
-        const path = this.host || `${XIGUA_SERVER_HOST}/study-main/external/speech/tts`;
+        const path = this.host || `${XIGUA_SERVER_HOST}/ccw-main/external/speech/tts`;
 
         return fetchWithTimeout(path, {
             // powered by xigua start

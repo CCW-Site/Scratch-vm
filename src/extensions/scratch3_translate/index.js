@@ -335,7 +335,7 @@ class Scratch3TranslateBlocks {
     }
 
     runWithCCWAPI (args, lang) {
-        const url = `${this.host || xiguaServerURL}/study-main/external/mt/translate/`;
+        const url = `${this.host || xiguaServerURL}/ccw-main/external/mt/translate/`;
 
         const tempThis = this;
         // powered by xigua start
