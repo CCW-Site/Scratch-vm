@@ -1024,6 +1024,15 @@ class ExtensionManager {
 
     customRemoteExtensionRegister (registerURL) {
         const buildValidExtObj = obj => {
+            // TODO need refactor customRemoteExtensionRegister
+            // there are some wrong logic, such as
+            // every install a remote extension
+            // the extension class will initialize twice
+            // first time is in customRemoteExtensionRegister to get extensionId
+            // second time is really install the extension into vm
+            if (isClassFunc(obj)) {
+                obj = new obj(this.runtime);
+            }
             let extensionId = obj.info && obj.info.extensionId;
             let name = 'custom extension';
             let gandiExtObj;
