@@ -6,6 +6,7 @@ const BlockType = require('./block-type');
 const ArgumentType = require('./argument-type');
 const TargetType = require('./target-type');
 const Cast = require('../util/cast');
+const Color = require('../util/color');
 const createTranslate = require('./tw-l10n');
 
 // These extensions are currently built into the VM repository but should not be loaded at startup.
@@ -1204,6 +1205,9 @@ class ExtensionManager {
                 },
                 get Cast () {
                     return Cast;
+                },
+                get Color () {
+                    return Color;
                 },
                 get translate () {
                     return translate;
