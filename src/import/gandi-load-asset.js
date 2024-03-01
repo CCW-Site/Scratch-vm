@@ -31,10 +31,24 @@ const loadGandiAsset = (md5ext, gandiAsset, runtime) => {
     //     log.error(`No default assets found`);
     //     return Promise.resolve(gandiAsset);
     // }
-
     const AssetType = runtime.storage.AssetType;
-    const DataFormat = runtime.storage.DataFormat;
-    const assetType = (ext === DataFormat.PYTHON) ? AssetType.Python : AssetType.Json;
+    let assetType = null;
+    switch (ext) {
+    case AssetType.Python.runtimeFormat:
+        assetType = AssetType.Python;
+        break;
+    case AssetType.Json.runtimeFormat:
+        assetType = AssetType.Json;
+        break;
+    case AssetType.JavaScript.runtimeFormat:
+        // file ext is .js, use reserve name to check if it is an extension asset
+        // reserve file name: 'extension' , case insensitive
+        assetType = gandiAsset.name.toLowerCase() === AssetType.Extension.name.toLowerCase() ? AssetType.Extension : AssetType.JavaScript;
+        break;
+    default:
+        assetType = AssetType.Json;
+        break;
+    }
 
     const filePromise = runtime.storage.load(assetType, md5, ext);
     if (!filePromise) {

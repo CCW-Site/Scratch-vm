@@ -839,8 +839,8 @@ class VirtualMachine extends EventEmitter {
         this.emitGandiAssetsUpdate({type: 'add', data: obj});
     }
 
-    getGandiAssetsList (type) {
-        return this.runtime.getGandiAssetsList(type);
+    getGandiAssetsList (typesArray) {
+        return this.runtime.getGandiAssetsList(typesArray);
     }
 
     getGandiAssetContent (fileName) {

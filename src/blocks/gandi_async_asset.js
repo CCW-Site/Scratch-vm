@@ -4,7 +4,7 @@ const Cast = require('../util/cast');
 
 class GandiAsyncAssetManager {
 
-    constructor(runtime) {
+    constructor (runtime) {
         this.runtime = runtime;
         this.NS = 'GandiAsyncAssetManager';
         this.formatMessage = runtime.getFormatMessage();

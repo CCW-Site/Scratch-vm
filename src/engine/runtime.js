@@ -3668,10 +3668,10 @@ class Runtime extends EventEmitter {
         return require('format-message');
     }
 
-    getGandiAssetsList (type) {
+    getGandiAssetsList (typesArray) {
         return this.gandi.assets.filter(obj => {
-            if (type) {
-                return obj.dataFormat === type;
+            if (typesArray.length > 0) {
+                return typesArray.includes(obj.dataFormat);
             }
             return true;
         });
@@ -3686,13 +3686,16 @@ class Runtime extends EventEmitter {
     }
 
     getGandiAssetsFileList (type) {
-        const res = this.gandi.assets.filter(obj => {
-            if (type) {
-                return obj.dataFormat === type;
-            }
-            return true;
-        });
-        return res.map(obj => ({name: `${obj.name}.${obj.dataFormat}`, dataFormat: obj.dataFormat}));
+        const types = [];
+        if (typeof type === 'string') {
+            types.push(type);
+        }
+        if (Array.isArray(type)) {
+            types.concat(type);
+        }
+        const res = this.getGandiAssetsList(types);
+
+        return res.map(obj => ({name: `${obj.name}.${obj.dataFormat}`, dataFormat: obj.dataFormat, assetType: obj.asset.assetType, md5ext: obj.md5}));
     }
 
     getGandiAssetFile (fileName) {

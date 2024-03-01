@@ -256,6 +256,11 @@ class Gandi {
         }
         this.runtime.emitProjectChanged();
     }
+
+    getExtensionAssets () {
+        const AssetType = this.runtime.storage.AssetType;
+        return this.assets.filter(item => item.asset.assetType.name === AssetType.Extension.name);
+    }
 }
 
 module.exports = Gandi;
