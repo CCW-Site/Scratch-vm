@@ -522,9 +522,10 @@ class VirtualMachine extends EventEmitter {
     /**
      * Load a Scratch project from a .sb, .sb2, .sb3 or json string.
      * @param {string | object} input A json string, object, or ArrayBuffer representing the project to load.
+     * @param {?function} jsonFormatter A function to format the project json.
      * @return {!Promise} Promise that resolves after targets are installed.
      */
-    loadProject (input) {
+    loadProject (input, jsonFormatter) {
         // If assets are being loaded non-blockingly, they can all be aborted at once.
         if (this.runtime.asyncLoadingProjectAssets) {
             this.runtime.disposeFireWaitingLoadCallbackQueue();
@@ -635,6 +636,9 @@ class VirtualMachine extends EventEmitter {
                         }
 
                         zip = null;
+                    }
+                    if (typeof jsonFormatter === 'function') {
+                        jsonFormatter(json);
                     }
                     return this.deserializeProject(
                         json,
