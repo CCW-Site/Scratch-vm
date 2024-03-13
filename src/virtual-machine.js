@@ -856,7 +856,7 @@ class VirtualMachine extends EventEmitter {
     }
 
     getGandiAssetById (id) {
-        return this.runtime.gandi.assets.find(obj => obj.id === id);
+        return this.runtime.getGandiAssetById(id);
     }
 
     getGandiAssetIndexAndFileById (id) {
@@ -1880,6 +1880,11 @@ class VirtualMachine extends EventEmitter {
             throw new Error(`Asset with name ${newFileFullName} already exists`);
         }
         file.name = newName;
+        const storage = this.runtime.storage;
+        if (file.asset && file.asset.dataFormat === storage.DataFormat.JAVASCRIPT) {
+            // file name 'extension.js' is a reserved name means assetType is Extension
+            file.asset.assetType = file.name.toLowerCase() === storage.AssetType.Extension.name.toLowerCase() ? storage.AssetType.Extension : storage.AssetType.JavaScript;
+        }
         this.emitGandiAssetsUpdate({type: 'update', data: file});
         return file;
     }

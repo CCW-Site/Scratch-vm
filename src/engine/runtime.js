@@ -3685,6 +3685,10 @@ class Runtime extends EventEmitter {
         return null;
     }
 
+    getGandiAssetById (id) {
+        return this.gandi.assets.find(obj => obj.id === id);
+    }
+
     getGandiAssetsFileList (type) {
         const types = [];
         if (typeof type === 'string') {
@@ -3695,7 +3699,13 @@ class Runtime extends EventEmitter {
         }
         const res = this.getGandiAssetsList(types);
 
-        return res.map(obj => ({name: `${obj.name}.${obj.dataFormat}`, dataFormat: obj.dataFormat, assetType: obj.asset.assetType, md5ext: obj.md5}));
+        return res.map(obj => ({
+            id: obj.id,
+            fullName: `${obj.name}.${obj.dataFormat}`,
+            name: obj.name,
+            dataFormat: obj.dataFormat,
+            assetType: obj.asset.assetType,
+            md5ext: obj.md5}));
     }
 
     getGandiAssetFile (fileName) {
