@@ -41,11 +41,15 @@ const loadGandiAsset = (md5ext, gandiAsset, runtime) => {
         assetType = AssetType.Json;
         break;
     case AssetType.JavaScript.runtimeFormat:
-        // file ext is .js, use reserve name to check if it is an extension asset
-        // reserve file name: 'extension' , case insensitive
+        // extension file  is .js, use reserved name to check if it is an extension asset
+        // reserved file name: 'extension' , case insensitive
         assetType = gandiAsset.name.toLowerCase() === AssetType.Extension.name.toLowerCase() ? AssetType.Extension : AssetType.JavaScript;
         break;
+    case AssetType.GLSL.runtimeFormat:
+        assetType = AssetType.GLSL;
+        break;
     default:
+        log.warn('Gandi asset did not match any assetType, treat it as AssetType.Json', gandiAsset);
         assetType = AssetType.Json;
         break;
     }
