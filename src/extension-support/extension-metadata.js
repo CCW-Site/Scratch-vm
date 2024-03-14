@@ -17,6 +17,7 @@
  * @property {string} [func] - the name of the function implementing this block. Can be shared by other blocks/opcodes.
  * @property {BlockType} blockType - the type of block (command, reporter, etc.) being described.
  * @property {string} text - the text on the block, with [PLACEHOLDERS] for arguments.
+ * @property {string} [tooltip] - the human-readable tooltip for this block.
  * @property {Boolean} [hideFromPalette] - true if this block should not appear in the block palette.
  * @property {Boolean} [isTerminal] - true if the block ends a stack - no blocks can be connected after it.
  * @property {Boolean} [disableMonitor] - true if this block is a reporter but should not allow a monitor.

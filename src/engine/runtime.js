@@ -1485,7 +1485,8 @@ class Runtime extends EventEmitter {
             category: categoryInfo.name,
             colour: categoryInfo.color1,
             colourSecondary: categoryInfo.color2,
-            colourTertiary: categoryInfo.color3
+            colourTertiary: categoryInfo.color3,
+            tooltip: blockInfo.tooltip
         };
         const context = {
             // TODO: store this somewhere so that we can map args appropriately after translation.
