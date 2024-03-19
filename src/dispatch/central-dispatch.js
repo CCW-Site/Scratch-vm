@@ -44,7 +44,12 @@ class CentralDispatch extends SharedDispatch {
      * @returns {*} - the return value of the service method.
      */
     callSync (service, method, ...args) {
-        const {provider, isRemote} = this._getServiceProvider(service);
+        const wrappedProvider = this._getServiceProvider(service);
+        if (!wrappedProvider) {
+            // eslint-disable-next-line no-undefined
+            return undefined;
+        }
+        const {provider, isRemote} = wrappedProvider;
         if (provider) {
             if (isRemote) {
                 throw new Error(`Cannot use 'callSync' on remote provider for service ${service}.`);
@@ -106,7 +111,7 @@ class CentralDispatch extends SharedDispatch {
      * Fetch the service provider object for a particular service name.
      * @override
      * @param {string} service - the name of the service to look up
-     * @returns {{provider:(object|Worker), isRemote:boolean}} - the means to contact the service, if found
+     * @returns {{provider:(object|Worker), isRemote:boolean} | undefined} - the means to contact the service, if found
      * @protected
      */
     _getServiceProvider (service) {

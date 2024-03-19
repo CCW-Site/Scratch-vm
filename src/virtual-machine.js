@@ -429,6 +429,7 @@ class VirtualMachine extends EventEmitter {
         this.stopAll();
         this.runtime.disposeAll();
         this.editingTarget = null;
+        this.extensionManager.disposeExtensionServices();
     }
     // powered by xigua end
 

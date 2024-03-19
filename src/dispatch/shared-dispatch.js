@@ -76,7 +76,12 @@ class SharedDispatch {
      */
     transferCall (service, method, transfer, ...args) {
         try {
-            const {provider, isRemote} = this._getServiceProvider(service);
+            const wrappedProvider = this._getServiceProvider(service);
+            if (!wrappedProvider) {
+                // eslint-disable-next-line no-undefined
+                return Promise.resolve(undefined);
+            }
+            const {provider, isRemote} = wrappedProvider;
             if (provider) {
                 if (isRemote) {
                     return this._remoteTransferCall(provider, service, method, transfer, ...args);
@@ -98,7 +103,8 @@ class SharedDispatch {
      * @private
      */
     _isRemoteService (service) {
-        return this._getServiceProvider(service).isRemote;
+        const provider = this._getServiceProvider(service);
+        return !!(provider && provider.isRemote);
     }
 
     /**
@@ -185,6 +191,9 @@ class SharedDispatch {
     _onMessage (worker, event) {
         /** @type {DispatchMessage} */
         const message = event.data;
+        if (typeof message !== 'object') {
+            return;
+        }
         message.args = message.args || [];
         let promise;
         if (message.service) {
