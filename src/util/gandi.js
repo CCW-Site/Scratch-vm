@@ -55,7 +55,24 @@ class Gandi {
                 json: 'ScratchCat.json'
             }
         };
+        // const AssetType = runtime.storage.AssetType;
+        /**
+         * default supported asset types
+         */
+        this._supportedAssetTypes = [];
     }
+
+    get supportedAssetTypes () {
+        return this._supportedAssetTypes;
+    }
+
+    set supportedAssetTypes (types) {
+        // now support only works before loading assets
+        // change supported asset types after loading assets will not change existed assets
+        // maybe it needs to reload assets in the future
+        this._supportedAssetTypes = types;
+    }
+
     /**
      * Checks if all properties are empty.
      * @method
