@@ -3179,8 +3179,8 @@ class Runtime extends EventEmitter {
         this.emit(Runtime.GANDI_SPINE_UPDATE, [type, id, data]);
     }
 
-    emitGandiConfigsUpdate (type, key, value) {
-        this.emit(Runtime.GANDI_CONFIGS_UPDATE, [type, key, value]);
+    emitGandiConfigsUpdate (key, value) {
+        this.emit(Runtime.GANDI_CONFIGS_UPDATE, [key, value]);
     }
 
     emitGandiDynamicMenuItemsUpdate (type, id, data) {

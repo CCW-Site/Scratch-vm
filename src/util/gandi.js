@@ -181,6 +181,7 @@ class Gandi {
     setConfig (key, value) {
         if (key && this.configs[key] !== value) {
             this.configs[key] = value;
+            this.runtime.emitGandiConfigsUpdate(key, value);
             this.runtime.emitProjectChanged();
         }
     }
