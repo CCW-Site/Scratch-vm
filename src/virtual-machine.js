@@ -292,6 +292,9 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.GANDI_SPINE_UPDATE, data => {
             this.emit(Runtime.GANDI_SPINE_UPDATE, data);
         });
+        this.runtime.on(Runtime.GANDI_CONFIGS_UPDATE, data => {
+            this.emit(Runtime.GANDI_CONFIGS_UPDATE, data);
+        });
         this.runtime.on(Runtime.GANDI_DYNAMIC_MENU_ITEMS_UPDATE, data => {
             this.emit(Runtime.GANDI_DYNAMIC_MENU_ITEMS_UPDATE, data);
         });
@@ -1479,12 +1482,11 @@ class VirtualMachine extends EventEmitter {
     }
 
     setGandiConfigProperty (key, value) {
-        this.runtime.gandi.configs[key] = value;
-        this.runtime.emitProjectChanged();
+        this.runtime.gandi.setConfig(key, value);
     }
 
     getGandiConfigProperty (key) {
-        return this.runtime.gandi.configs[key];
+        return this.runtime.gandi.getConfig[key];
     }
 
     getMonitoredKeys () {

@@ -145,6 +145,7 @@ class Gandi {
         if (!this.spine[key]) {
             this.spine[key] = data;
             this.runtime.emitGandiSpineUpdate('add', key, data);
+            this.runtime.emitProjectChanged();
         }
     }
 
@@ -157,6 +158,7 @@ class Gandi {
         if (this.spine[key]) {
             delete this.spine[key];
             this.runtime.emitGandiSpineUpdate('delete', key);
+            this.runtime.emitProjectChanged();
         }
     }
 
@@ -171,6 +173,28 @@ class Gandi {
     }
 
     /**
+     * Sets the value of a configuration item.
+     * @param {string} key - The key of the configuration item.
+     * @param {*} value - The value to set.
+     * @returns {void}
+     */
+    setConfig (key, value) {
+        if (key && this.configs[key] !== value) {
+            this.configs[key] = value;
+            this.runtime.emitProjectChanged();
+        }
+    }
+    
+    /**
+     * Gets the value of a specified configuration item.
+     * @param {string} key - The key of the configuration item to retrieve the value.
+     * @returns {*} The value of the specified configuration item, or undefined if it doesn't exist.
+     */
+    getConfig (key) {
+        return this.configs[key];
+    }
+
+    /**
      * Adds a dynamic menu item.
      * @method
      * @param {string} menuName - The name of the dynamic menu.
@@ -182,6 +206,7 @@ class Gandi {
         }
         this.dynamicMenuItems[menuName].push(menuItem);
         this.runtime.emitGandiDynamicMenuItemsUpdate('add', menuName, menuItem);
+        this.runtime.emitProjectChanged();
     }
 
     /**
@@ -218,6 +243,7 @@ class Gandi {
         } else {
             throw new Error('The menu name must be provided.');
         }
+        this.runtime.emitProjectChanged();
     }
 }
 
