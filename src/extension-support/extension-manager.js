@@ -1238,6 +1238,18 @@ example:
             register: this.customRemoteExtensionRegister(registerURL)
         };
     }
+
+    /**
+     * Remove all extensions from services.
+     * If we don't do so, this will cause memory leak on Single Page Application.
+     */
+    disposeExtensionServices () {
+        Object.keys(dispatch.services).forEach(serviceName => {
+            if (/^extension_\d+_/.test(serviceName)) {
+                delete dispatch.services[serviceName];
+            }
+        });
+    }
     // powered by xigua end
 }
 

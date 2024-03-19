@@ -855,6 +855,10 @@ class Runtime extends EventEmitter {
         return 'GANDI_ASSET_UPDATE';
     }
 
+    static get GANDI_CONFIGS_UPDATE () {
+        return 'GANDI_CONFIGS_UPDATE';
+    }
+
     static get GANDI_SPINE_UPDATE () {
         return 'GANDI_SPINE_UPDATE';
     }
@@ -3173,6 +3177,10 @@ class Runtime extends EventEmitter {
 
     emitGandiSpineUpdate (type, id, data) {
         this.emit(Runtime.GANDI_SPINE_UPDATE, [type, id, data]);
+    }
+
+    emitGandiConfigsUpdate (key, value) {
+        this.emit(Runtime.GANDI_CONFIGS_UPDATE, [key, value]);
     }
 
     emitGandiDynamicMenuItemsUpdate (type, id, data) {
