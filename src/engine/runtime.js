@@ -646,22 +646,6 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * Event name for the project starts loading assets asynchronously
-     * @const {string}
-     */
-    static get PROJECT_ASSETS_ASYNC_LOAD_START () {
-        return 'PROJECT_ASSETS_ASYNC_LOAD_START';
-    }
-
-    /**
-     * Event name for the progress of the project asynchronously loading assets has changed
-     * @const {string}
-     */
-    static get PROJECT_ASSETS_ASYNC_LOAD_PROGRESS_CHANGE () {
-        return 'PROJECT_ASSETS_ASYNC_LOAD_PROGRESS_CHANGE';
-    }
-
-    /**
      * Event name for the project completes loading the assets asynchronously
      * @const {string}
      */
@@ -3394,20 +3378,6 @@ class Runtime extends EventEmitter {
     }
 
     /**
-     * Report that the project starts loading assets asynchronously
-     */
-    emitProjectAssetsAsyncLoadingStart (data) {
-        this.emit(Runtime.PROJECT_ASSETS_ASYNC_LOAD_START, data);
-    }
-
-    /**
-     * Report that the progress of the project asynchronously loading assets has changed
-     */
-    emitProjectAssetsAsyncLoadingProgressChange (data) {
-        this.emit(Runtime.PROJECT_ASSETS_ASYNC_LOAD_PROGRESS_CHANGE, data);
-    }
-
-    /**
      * Report that the project completes loading the assets asynchronously
      */
     emitProjectAssetsAsyncLoadingDone () {
@@ -3739,15 +3709,8 @@ class Runtime extends EventEmitter {
             // The system starts to load cloud resources asynchronously.
             const callbackPromises = this.waitingLoadAssetCallbackQueue.map(callback => callback(true));
             this.waitingLoadAssetCallbackQueue = [];
-            // Report start of loading assets
-            this.emitProjectAssetsAsyncLoadingStart({total: callbackPromises.length, completed: 0});
 
             Promise.allSettled(callbackPromises).then(queue => {
-                // Total number of assets
-                const total = queue.length;
-                // Number of loaded assets
-                let completed = 0;
-
                 let callbackList = CallbackListGenerator(queue.reduce(
                     // eslint-disable-next-line no-confusing-arrow
                     (acc, res) => res.status === 'fulfilled' ? [...acc, res.value] : acc, [])
@@ -3755,8 +3718,6 @@ class Runtime extends EventEmitter {
 
                 const stepLoadAssets = async () => {
                     // Report progress
-                    this.emitProjectAssetsAsyncLoadingProgressChange({total, completed});
-                    completed++;
                     const result = callbackList.next();
                     if (result.done) {
                         this.targets.forEach(target => {

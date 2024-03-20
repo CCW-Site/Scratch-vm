@@ -123,12 +123,6 @@ class VirtualMachine extends EventEmitter {
         this.runtime.on(Runtime.SCRIPT_GLOW_OFF, glowData => {
             this.emit(Runtime.SCRIPT_GLOW_OFF, glowData);
         });
-        this.runtime.on(Runtime.PROJECT_ASSETS_ASYNC_LOAD_START, data => {
-            this.emit(Runtime.PROJECT_ASSETS_ASYNC_LOAD_START, data);
-        });
-        this.runtime.on(Runtime.PROJECT_ASSETS_ASYNC_LOAD_PROGRESS_CHANGE, data => {
-            this.emit(Runtime.PROJECT_ASSETS_ASYNC_LOAD_PROGRESS_CHANGE, data);
-        });
         this.runtime.on(Runtime.PROJECT_ASSETS_ASYNC_LOAD_DONE, () => {
             this.emit(Runtime.PROJECT_ASSETS_ASYNC_LOAD_DONE);
         });
