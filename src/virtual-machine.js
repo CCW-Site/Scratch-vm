@@ -62,6 +62,12 @@ const createRuntimeService = runtime => {
 };
 
 /**
+ * @typedef {object} Progress - Information about the loading progress
+ * @property {number} total - The total number of loaded things
+ * @property {number} loaded - The number of loads completed
+ */
+
+/**
  * Handles connections between blocks, stage, and extensions.
  * @constructor
  */
@@ -103,6 +109,12 @@ class VirtualMachine extends EventEmitter {
          * @type {Target}
          */
         this._dragTarget = null;
+        
+        /**
+         * The current project resource loading progress.
+         * @type {Progress}
+         */
+        this._assetsLoadProgress = null;
 
         // Runtime emits are passed along as VM emits.
         this.runtime.on(Runtime.SCRIPT_GLOW_ON, glowData => {
@@ -297,6 +309,18 @@ class VirtualMachine extends EventEmitter {
         });
         this.runtime.on(Runtime.GANDI_DYNAMIC_MENU_ITEMS_UPDATE, data => {
             this.emit(Runtime.GANDI_DYNAMIC_MENU_ITEMS_UPDATE, data);
+        });
+        this.runtime.on(Runtime.LOAD_ASSETS_PROGRESS, data => {
+            if (data.total) {
+                this._assetsLoadProgress = {total: data.total, loaded: 0};
+                this.emit(Runtime.LOAD_ASSETS_PROGRESS, {...this._assetsLoadProgress});
+            } else {
+                const {total = 0, loaded = 0} = this._assetsLoadProgress || {};
+                if (total >= loaded) {
+                    this._assetsLoadProgress.loaded++;
+                    this.emit(Runtime.LOAD_ASSETS_PROGRESS, {...this._assetsLoadProgress});
+                }
+            }
         });
         this.extensionManager = new ExtensionManager(this.runtime);
 

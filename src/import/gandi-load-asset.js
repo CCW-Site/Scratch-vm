@@ -42,8 +42,9 @@ const loadGandiAsset = (md5ext, gandiAsset, runtime) => {
         return;
     }
 
-    return filePromise.then(res => {
-        gandiAsset.asset = res;
+    return filePromise.then(asset => {
+        runtime.emit('LOAD_ASSETS_PROGRESS', asset);
+        gandiAsset.asset = asset;
         return gandiAsset;
     });
 };

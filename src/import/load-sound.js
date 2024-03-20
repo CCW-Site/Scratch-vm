@@ -37,7 +37,7 @@ const loadSoundFromAsset = function (sound, soundAsset, runtime, soundBank) {
         if (soundBank !== null) {
             soundBank.addSoundPlayer(soundPlayer);
         }
-
+        runtime.emit('LOAD_ASSETS_PROGRESS', sound);
         return sound;
     });
 };

@@ -631,6 +631,13 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for assets loading progress.
+     */
+    static get LOAD_ASSETS_PROGRESS () {
+        return 'LOAD_ASSETS_PROGRESS';
+    }
+
+    /**
      * Event name for start load a project from a Scratch JSON representation.
      * @const {string}
      */

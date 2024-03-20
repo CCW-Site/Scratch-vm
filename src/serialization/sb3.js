@@ -997,8 +997,25 @@ const parseScratchAssets = function (object, runtime, zip) {
         // Only attempt to load the sound after the deserialization
         // process has been completed.
     });
-
     return assets;
+};
+
+const parseGandiAssets = function (object, runtime) {
+    if (!object || !Array.isArray(object.assets)) {
+        return [];
+    }
+    // Gandi assets from JSON
+    return object.assets.map(gandiAssetSource => {
+        const gandiAsset = {
+            asset: null,
+            id: gandiAssetSource.id || uid(),
+            assetId: gandiAssetSource.assetId,
+            name: gandiAssetSource.name,
+            md5: gandiAssetSource.md5ext,
+            dataFormat: gandiAssetSource.dataFormat
+        };
+        return loadGandiAsset(gandiAssetSource.md5ext, gandiAsset, runtime);
+    });
 };
 
 /**
@@ -1346,37 +1363,47 @@ const replaceUnsafeCharsInVariableIds = function (targets) {
     return targets;
 };
 
-const parseGandiObject = (gandiObject, runtime) => {
-    if (gandiObject.configs) {
-        runtime.gandi.configs = gandiObject.configs;
+/**
+ * Parses the gandi object and updates the runtime, assets, and extensions accordingly.
+ * @param {Object} object - The gandi object to parse.
+ * @param {Object} runtime - Runtime object to load all structures into.
+ * @param {Object} gandiAssetsPromises - Promises for assets of this scratch object grouped
+ *   into gandiAssets.
+ * @param {Object} extensions - (in/out) parsed extension information will be stored here.
+ * @returns {Promise<null>} A promise that resolves once the gandi assets have been loaded.
+ */
+const parseGandiObject = (object, runtime, gandiAssetsPromises, extensions) => {
+    if (!object) return null;
+    if (object.configs) {
+        runtime.gandi.configs = object.configs;
     }
-    if (gandiObject.wildExtensions) {
-        runtime.gandi.wildExtensions = gandiObject.wildExtensions;
+    if (object.wildExtensions) {
+        runtime.gandi.wildExtensions = object.wildExtensions;
     }
-    if (gandiObject.dynamicMenuItems) {
-        runtime.gandi.dynamicMenuItems = gandiObject.dynamicMenuItems;
+    if (object.dynamicMenuItems) {
+        runtime.gandi.dynamicMenuItems = object.dynamicMenuItems;
     }
-    if (gandiObject.spine) {
-        runtime.gandi.spine = gandiObject.spine;
+    if (object.spine) {
+        runtime.gandi.spine = object.spine;
     }
-    if (gandiObject.assets && isArray(gandiObject.assets)) {
-        const filePromises = (gandiObject.assets || []).map(file => {
-            const gandiAsset = {
-                asset: null,
-                id: file.id || uid(),
-                assetId: file.assetId,
-                name: file.name,
-                md5: file.md5ext,
-                dataFormat: file.dataFormat
-            };
-            return loadGandiAsset(file.md5ext, gandiAsset, runtime);
+    if (Array.isArray(object.assets)) {
+        // find extension need to load
+        object.assets.forEach(asset => {
+            if (asset.dataFormat === 'py' || asset.dataFormat === 'json') {
+                // py and json file need GandiPython extension to run
+                extensions.extensionIDs.add('GandiPython');
+            }
         });
-        return Promise.all(filePromises).then(gandiAssets => {
-            runtime.gandi.assets = gandiAssets;
-            return null;
+    }
+    if (object.wildExtensions) {
+        Object.values(object.wildExtensions).forEach(extension => {
+            extensions.extensionIDs.add(extension.id);
         });
     }
-    return Promise.resolve(null);
+    return Promise.all(gandiAssetsPromises).then(gandiAssets => {
+        runtime.gandi.assets = gandiAssets;
+        return null;
+    });
 };
 
 /**
@@ -1412,35 +1439,20 @@ const deserialize = function (json, runtime, zip, isSingleSprite) {
 
     // Gandi: extended project.json to include global assets such as python files
     const gandiObjects = json.gandi;
-    const getLoadingGandiObjectsPromise = () => {
-        if (gandiObjects) {
-            if (gandiObjects.assets && isArray(gandiObjects.assets)) {
-                // find extension need to load
-                gandiObjects.assets.forEach(asset => {
-                    if (asset.dataFormat === 'py' || asset.dataFormat === 'json') {
-                        // py and json file need GandiPython extension to run
-                        extensions.extensionIDs.add('GandiPython');
-                    }
-                });
-            }
-            if (gandiObjects.wildExtensions) {
-                Object.values(gandiObjects.wildExtensions).forEach(extension => {
-                    extensions.extensionIDs.add(extension.id);
-                });
-            }
-            return parseGandiObject(gandiObjects, runtime);
-        }
-        return Promise.resolve(null);
-    };
 
-    return Promise.resolve(targetObjects.map(target => parseScratchAssets(target, runtime, zip)))
+    const targetsAssetsPromises = targetObjects.map(target => parseScratchAssets(target, runtime, zip));
+    const gandiAssetsPromises = parseGandiAssets(gandiObjects, runtime);
+
+    const assetsPromisesCount = targetsAssetsPromises.reduce((a, t) => (a + t.costumePromises.length + t.soundPromises.length), 0) + gandiAssetsPromises.length;
+    runtime.emit('LOAD_ASSETS_PROGRESS', {total: assetsPromisesCount});
+
+    return Promise.resolve(targetsAssetsPromises)
         // Force this promise to wait for the next loop in the js tick. Let
         // storage have some time to send off asset requests.
         .then(assets => Promise.resolve(assets))
         .then(assets => Promise.all(targetObjects
             .map((target, index) => parseScratchObject(target, runtime, extensions, zip, assets[index]))
-            // add LoadingGandiObjectsPromise to queue, make all assets download in parallel
-            .concat(getLoadingGandiObjectsPromise())
+            .concat(parseGandiObject(gandiObjects, runtime, gandiAssetsPromises, extensions))
         ))
         .then(targets => targets
             // Remove GandiGandiObjectsPromise result

@@ -33,7 +33,7 @@ const loadVector_ = function (costume, runtime, rotationCenter, optVersion) {
             costume.rotationCenterY = rotationCenter[1];
             costume.bitmapResolution = 1;
         }
-
+        runtime.emit('LOAD_ASSETS_PROGRESS', costume);
         resolve(costume);
     });
 };
@@ -176,6 +176,8 @@ const fetchBitmapCanvas_ = function (costume, runtime, rotationCenter) {
             // Clean up the costume object
             delete costume.textLayerMD5;
             delete costume.textLayerAsset;
+
+            runtime.emit('LOAD_ASSETS_PROGRESS', costume);
 
             return {
                 canvas,
