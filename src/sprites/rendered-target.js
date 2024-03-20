@@ -107,6 +107,11 @@ class RenderedTarget extends Target {
         this._size = 100;
 
         /**
+         * Non-uniform scale dimensions of rendered target as a percent of original size.
+         */
+        this._size2d = [100, 100];
+
+        /**
          * Currently selected costume index.
          * @type {number}
          */
@@ -172,6 +177,13 @@ class RenderedTarget extends Target {
     }
     set size (size) {
         this._size = size;
+        this._size2d = [this.size, this.size];
+    }
+    get size2d () {
+        return this.isModule ? [0, 0] : this._size2d;
+    }
+    set size2d ([width, height]) {
+        this._size2d = [width, height];
     }
 
     get visible () {
@@ -334,7 +346,7 @@ class RenderedTarget extends Target {
     _getRenderedDirectionAndScale () {
         // Default: no changes to `this.direction` or `this.scale`.
         let finalDirection = this.direction;
-        let finalScale = [this.size, this.size];
+        let finalScale = [this._size2d[0], this._size2d[1]];
         if (this.rotationStyle === RenderedTarget.ROTATION_STYLE_NONE) {
             // Force rendered direction to be 90.
             finalDirection = 90;
@@ -342,7 +354,7 @@ class RenderedTarget extends Target {
             // Force rendered direction to be 90, and flip drawable if needed.
             finalDirection = 90;
             const scaleFlip = (this.direction < 0) ? -1 : 1;
-            finalScale = [scaleFlip * this.size, this.size];
+            finalScale = [scaleFlip * this._size2d[0], this._size2d[1]];
         }
         return {direction: finalDirection, scale: finalScale};
     }
@@ -1136,6 +1148,7 @@ class RenderedTarget extends Target {
         newClone.draggable = this.draggable;
         newClone.visible = this.visible;
         newClone.size = this.size;
+        newClone.size2d = this.size2d;
         newClone.currentCostume = this.currentCostume;
         newClone.rotationStyle = this.rotationStyle;
         newClone.effects = Clone.simple(this.effects);
@@ -1161,6 +1174,7 @@ class RenderedTarget extends Target {
             newTarget.draggable = this.draggable;
             newTarget.visible = this.visible;
             newTarget.size = this.size;
+            newTarget.size2d = this.size2d;
             newTarget.currentCostume = this.currentCostume;
             newTarget.rotationStyle = this.rotationStyle;
             newTarget.effects = JSON.parse(JSON.stringify(this.effects));
