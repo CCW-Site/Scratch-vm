@@ -867,7 +867,19 @@ const sb2import = function (json, runtime, optForceSprite, zip) {
         extensionIDs: new Set(),
         extensionURLs: new Map()
     };
-    return Promise.resolve(parseScratchAssets(json, runtime, !optForceSprite, zip))
+    const assetsPromises = parseScratchAssets(json, runtime, !optForceSprite, zip);
+    let assetsPromisesCount = 0;
+    const handleCount = children => {
+        if (!children) return;
+        const {costumePromises, soundPromises} = children;
+        assetsPromisesCount += (costumePromises.length + soundPromises.length);
+        if (children.children) {
+            children.children.forEach(handleCount);
+        }
+    };
+    handleCount(assetsPromises);
+    runtime.emit('LOAD_ASSETS_PROGRESS', {total: assetsPromisesCount});
+    return Promise.resolve(assetsPromises)
         // Force this promise to wait for the next loop in the js tick. Let
         // storage have some time to send off asset requests.
         .then(assets => Promise.resolve(assets))
