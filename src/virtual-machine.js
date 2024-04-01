@@ -109,7 +109,7 @@ class VirtualMachine extends EventEmitter {
          * @type {Target}
          */
         this._dragTarget = null;
-        
+
         /**
          * The current project resource loading progress.
          * @type {Progress}
@@ -548,6 +548,8 @@ class VirtualMachine extends EventEmitter {
      * @return {!Promise} Promise that resolves after targets are installed.
      */
     loadProject (input, jsonFormatter) {
+        // reset render
+        this.renderer.resetBuiltinManager && this.renderer.resetBuiltinManager();
         // If assets are being loaded non-blockingly, they can all be aborted at once.
         if (this.runtime.asyncLoadingProjectAssets) {
             this.runtime.disposeFireWaitingLoadCallbackQueue();

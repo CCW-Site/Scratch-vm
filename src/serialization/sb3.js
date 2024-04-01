@@ -23,7 +23,8 @@ const {loadCostume} = require('../import/load-costume.js');
 const {loadSound} = require('../import/load-sound.js');
 const {deserializeCostume, deserializeSound} = require('./deserialize-assets.js');
 const {loadGandiAsset} = require('../import/gandi-load-asset');
-const {isArray} = require('lodash');
+
+const Gandi = require('../util/gandi.js');
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 
@@ -1373,7 +1374,11 @@ const replaceUnsafeCharsInVariableIds = function (targets) {
  * @returns {Promise<null>} A promise that resolves once the gandi assets have been loaded.
  */
 const parseGandiObject = (object, runtime, gandiAssetsPromises, extensions) => {
-    if (!object) return null;
+    // RESET GANDI OBJECT WHEN LOADING PROJECTS WITHOUT GANDI OBJECT
+    runtime.gandi = new Gandi(runtime);
+    if (!object) {
+        return null;
+    };
     if (object.configs) {
         runtime.gandi.configs = object.configs;
     }
