@@ -1615,12 +1615,18 @@ class VirtualMachine extends EventEmitter {
      * @param {int} soundIndex - the index of the sound to be updated.
      * @param {AudioBuffer} newBuffer - new audio buffer for the audio engine.
      * @param {ArrayBuffer} soundEncoding - the new (wav) encoded sound to be stored
+     * @param {string} targetId - the id of the target to be updated.
      */
-    updateSoundBuffer (soundIndex, newBuffer, soundEncoding) {
-        const sound = this.editingTarget.sprite.sounds[soundIndex];
+    updateSoundBuffer (soundIndex, newBuffer, soundEncoding, targetId) {
+        const target = targetId ? this.runtime.getTargetById(targetId) : this.editingTarget;
+        if (!target) {
+            throw new Error('No target with the provided id.');
+        }
+        const sound = target.sprite.sounds[soundIndex];
+
         const id = sound ? sound.soundId : null;
         if (id && this.runtime && this.runtime.audioEngine) {
-            this.editingTarget.sprite.soundBank.getSoundPlayer(id).buffer =
+            target.sprite.soundBank.getSoundPlayer(id).buffer =
                 newBuffer;
         }
         // Update sound in runtime
@@ -1645,7 +1651,7 @@ class VirtualMachine extends EventEmitter {
             sound.sampleCount = newBuffer.length;
             sound.rate = newBuffer.sampleRate;
         }
-        this.runtime.emitTargetSoundsChanged(this.editingTarget.originalTargetId, ['update', sound.id, sound]);
+        this.runtime.emitTargetSoundsChanged(target.originalTargetId, ['update', sound.id, sound]);
         // If soundEncoding is null, it's because gui had a problem
         // encoding the updated sound. We don't want to store anything in this
         // case, and gui should have logged an error.
@@ -1745,15 +1751,18 @@ class VirtualMachine extends EventEmitter {
      * @param {!number} rotationCenterY y of point about which the costume rotates, relative to its upper left corner
      * @param {!number} bitmapResolution 1 for bitmaps that have 1 pixel per unit of stage,
      *     2 for double-resolution bitmaps
+     * @param {string} targetId ID of a target.
      */
     updateBitmap (
         costumeIndex,
         bitmap,
         rotationCenterX,
         rotationCenterY,
-        bitmapResolution
+        bitmapResolution,
+        targetId
     ) {
-        const costume = this.editingTarget.getCostumes()[costumeIndex];
+        const target = targetId ? this.runtime.getTargetById(targetId) : this.editingTarget;
+        const costume = target.getCostumes()[costumeIndex];
         if (!(costume && this.runtime && this.runtime.renderer)) return;
 
         costume.rotationCenterX = rotationCenterX;
@@ -1798,7 +1807,7 @@ class VirtualMachine extends EventEmitter {
                 );
                 costume.assetId = costume.asset.assetId;
                 costume.md5 = `${costume.assetId}.${costume.dataFormat}`;
-                this.runtime.emitTargetCostumeChanged(this.editingTarget.originalTargetId,
+                this.runtime.emitTargetCostumeChanged(target.originalTargetId,
                     ['update', costume.id, {
                         assetId: costume.assetId,
                         bitmapResolution: costume.bitmapResolution,
@@ -1823,9 +1832,11 @@ class VirtualMachine extends EventEmitter {
      * @param {string} svg - new SVG for the renderer.
      * @param {number} rotationCenterX x of point about which the costume rotates, relative to its upper left corner
      * @param {number} rotationCenterY y of point about which the costume rotates, relative to its upper left corner
+     * @param {string} targetId ID of a target.
      */
-    updateSvg (costumeIndex, svg, rotationCenterX, rotationCenterY) {
-        const costume = this.editingTarget.getCostumes()[costumeIndex];
+    updateSvg (costumeIndex, svg, rotationCenterX, rotationCenterY, targetId) {
+        const target = targetId ? this.runtime.getTargetById(targetId) : this.editingTarget;
+        const costume = target.getCostumes()[costumeIndex];
         if (costume && this.runtime && this.runtime.renderer) {
             costume.rotationCenterX = rotationCenterX;
             costume.rotationCenterY = rotationCenterY;
@@ -1850,8 +1861,7 @@ class VirtualMachine extends EventEmitter {
         costume.assetId = costume.asset.assetId;
         costume.md5 = `${costume.assetId}.${costume.dataFormat}`;
         const {assetId, bitmapResolution, dataFormat, md5, name, id} = costume;
-        const targetId = this.editingTarget.originalTargetId;
-        this.runtime.emitTargetCostumeChanged(targetId, ['update', id, {
+        this.runtime.emitTargetCostumeChanged(target.originalTargetId, ['update', id, {
             assetId,
             bitmapResolution,
             dataFormat,
