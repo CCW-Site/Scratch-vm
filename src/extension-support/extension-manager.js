@@ -20,10 +20,8 @@ const builtinExtensions = {
     // These are the non-core built-in extensions.
     pen: () => require('../extensions/scratch3_pen'),
     wedo2: () => require('../extensions/scratch3_wedo2'),
-    // powered by xigua start
-    // music包太大了，放到异步扩展里去
+    // move to async library
     // music: () => require('../extensions/scratch3_music'),
-    // powered by xigua end
     microbit: () => require('../extensions/scratch3_microbit'),
     text2speech: () => require('../extensions/scratch3_text2speech'),
     translate: () => require('../extensions/scratch3_translate'),
@@ -50,9 +48,9 @@ const scratchExtension = [
 // powered by xigua start
 /** Gandi官方的扩展 */
 const officialExtension = {};
-/** 用户加载的扩展 */
+/** Extensions loaded by the user */
 const customExtension = {};
-// powered by xigua end
+
 
 /**
  * @typedef {object} ArgumentInfo - Information about an extension block argument
@@ -325,26 +323,37 @@ class ExtensionManager {
      * Regenerate blockinfo for any loaded extensions
      * @returns {Promise} resolved once all the extensions have been reinitialized
      */
-    refreshBlocks () {
+    refreshBlocks (targetServiceName) {
+        const refreshExtension = serviceName =>
+            dispatch
+                .call(serviceName, 'getInfo')
+                .then(info => {
+                    info = this._prepareExtensionInfo(serviceName, info);
+                    dispatch.call(
+                        'runtime',
+                        '_refreshExtensionPrimitives',
+                        info
+                    );
+                })
+                .catch(e => {
+                    log.error(
+                        `Failed to refresh built-in extension primitives: ${JSON.stringify(
+                            e
+                        )}`
+                    );
+                });
+
+        if (targetServiceName) {
+            const isExisted = Array.from(this._loadedExtensions.values()).find(
+                name => name === targetServiceName
+            );
+            if (isExisted) {
+                return refreshExtension(targetServiceName);
+            }
+        }
+
         const allPromises = Array.from(this._loadedExtensions.values()).map(
-            serviceName =>
-                dispatch
-                    .call(serviceName, 'getInfo')
-                    .then(info => {
-                        info = this._prepareExtensionInfo(serviceName, info);
-                        dispatch.call(
-                            'runtime',
-                            '_refreshExtensionPrimitives',
-                            info
-                        );
-                    })
-                    .catch(e => {
-                        log.error(
-                            `Failed to refresh built-in extension primitives: ${JSON.stringify(
-                                e
-                            )}`
-                        );
-                    })
+            serviceName => refreshExtension(serviceName)
         );
         return Promise.all(allPromises);
     }
@@ -462,7 +471,6 @@ class ExtensionManager {
             !scratchExtension.includes(extensionInfo.id) &&
             this.showCompatibilityWarning
         ) {
-
             const warningTipText =
                 extensionInfo.warningTipText ||
                 this.runtime.getFormatMessage()({
@@ -495,7 +503,8 @@ class ExtensionManager {
                 } catch (e) {
                     // TODO: more meaningful error reporting
                     log.error(
-                        `Error processing block: ${e.message
+                        `Error processing block: ${
+                            e.message
                         }, Block:\n${JSON.stringify(blockInfo)}`
                     );
                 }
@@ -637,7 +646,9 @@ class ExtensionManager {
             break;
         case BlockType.LABEL:
             if (blockInfo.opcode) {
-                log.warn(`Ignoring opcode "${blockInfo.opcode}" for label: ${blockInfo.text}`);
+                log.warn(
+                    `Ignoring opcode "${blockInfo.opcode}" for label: ${blockInfo.text}`
+                );
             }
             break;
         default: {
@@ -933,21 +944,45 @@ class ExtensionManager {
         script.successCallBack = [onSuccess];
         script.failedCallBack = [onError];
 
+        let scriptError = null;
+        const logError = e => {
+            scriptError = e;
+
+            this.runtime.logSystem.error(
+                formatMessage(
+                    {
+                        id: 'gui.extension.custom.load.ScriptError',
+                        default: `extension script error\n   {msg} {lineno} line {colno} column`
+                    },
+                    {msg: e.message, lineno: e.lineno, colno: e.colno}
+                )
+            );
+        };
+
+        window.addEventListener('error', logError);
+
         script.onload = () => {
-            script.successCallBack.forEach(cb => cb(url));
-            script.successCallBack = [];
+            window.removeEventListener('error', logError);
+            if (scriptError) {
+                script.failedCallBack.forEach(cb => cb?.(scriptError, url));
+                script.failedCallBack = [];
+            } else {
+                script.successCallBack.forEach(cb => cb(url));
+                script.successCallBack = [];
+            }
             document.body.removeChild(script);
         };
+
         script.onerror = e => {
-            script.failedCallBack.forEach(cb => cb?.(e));
+            window.removeEventListener('error', logError);
+            script.failedCallBack.forEach(cb => cb?.(e, url));
             script.failedCallBack = [];
             document.body.removeChild(script);
         };
         try {
             document.body.append(script);
         } catch (error) {
-            // eslint-disable-next-line no-console
-            console.error('load custom extension error:', error);
+            log.error('load custom extension error:', error);
         }
         return script;
     }
