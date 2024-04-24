@@ -51,7 +51,6 @@ const officialExtension = {};
 /** Extensions loaded by the user */
 const customExtension = {};
 
-
 /**
  * @typedef {object} ArgumentInfo - Information about an extension block argument
  * @property {ArgumentType} type - the type of value this argument can take
