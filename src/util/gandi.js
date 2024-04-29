@@ -117,22 +117,32 @@ class Gandi {
      * @param {Object} object - The object to serialize.
      * @param {Set} extensions - Set of extensions.
      */
-    serialize (object, extensions) {
+    serialize (extensions) {
+        let gandiObj;
+        const hasSpine = extensions.has('GandiSpineSkeleton');
         const usedExt = {};
         Object.values(this.wildExtensions).forEach(ext => {
             if (extensions.has(ext.id)) {
                 usedExt[ext.id] = ext;
             }
         });
-        if (!this.isEmpty()) {
-            object.gandi = {
-                assets: this.serializeGandiAssets(extensions),
-                wildExtensions: usedExt,
-                configs: this.configs,
-                dynamicMenuItems: this.dynamicMenuItems,
-                spine: this.spine
-            };
+        if (usedExt && Object.keys(usedExt).length > 0) {
+            gandiObj = Object.assign(gandiObj || {}, {wildExtensions: usedExt});
         }
+        if (hasSpine) {
+            gandiObj = Object.assign(gandiObj || {}, {spine: this.spine});
+        }
+        if (this.dynamicMenuItems && Object.keys(this.dynamicMenuItems).length > 0) {
+            gandiObj = Object.assign(gandiObj || {}, {dynamicMenuItems: this.dynamicMenuItems});
+        }
+        if (this.configs && Object.keys(this.configs).length > 0) {
+            gandiObj = Object.assign(gandiObj || {}, {configs: this.configs});
+        }
+        const assets = this.serializeGandiAssets(extensions);
+        if (assets.length > 0) {
+            gandiObj = Object.assign(gandiObj || {}, {assets});
+        }
+        return gandiObj;
     }
 
     /**
@@ -185,7 +195,7 @@ class Gandi {
             this.runtime.emitProjectChanged();
         }
     }
-    
+
     /**
      * Gets the value of a specified configuration item.
      * @param {string} key - The key of the configuration item to retrieve the value.

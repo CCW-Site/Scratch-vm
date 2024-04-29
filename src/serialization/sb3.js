@@ -610,15 +610,23 @@ const serialize = function (runtime, targetId, {allowOptimization = false, saveV
 
     const serializedTargets = flattenedOriginalTargets.map(t => serializeTarget(t, extensions, saveVarId));
 
+    const gandi = runtime.gandi.serialize(extensions);
+
     if (targetId) {
-        return serializedTargets[0];
+        const target = serializedTargets[0];
+        if (gandi) {
+            target.gandi = gandi;
+        }
+        return target;
+    }
+
+    if (gandi) {
+        obj.gandi = gandi;
     }
 
     obj.targets = serializedTargets;
 
     obj.monitors = serializeMonitors(runtime.getMonitorState(), runtime);
-
-    runtime.gandi.serialize(obj, extensions);
 
     // Assemble extension list
     obj.extensions = Array.from(extensions);
@@ -1375,21 +1383,23 @@ const replaceUnsafeCharsInVariableIds = function (targets) {
  */
 const parseGandiObject = (object, runtime, gandiAssetsPromises, extensions) => {
     // RESET GANDI OBJECT WHEN LOADING PROJECTS WITHOUT GANDI OBJECT
-    runtime.gandi = new Gandi(runtime);
+    if (!runtime.gandi) {
+        runtime.gandi = new Gandi(runtime);
+    }
     if (!object) {
         return null;
-    };
+    }
     if (object.configs) {
-        runtime.gandi.configs = object.configs;
+        runtime.gandi.configs = Object.assign(runtime.gandi.configs || {}, object.configs);
     }
     if (object.wildExtensions) {
-        runtime.gandi.wildExtensions = object.wildExtensions;
+        runtime.gandi.wildExtensions = Object.assign(runtime.gandi.wildExtensions || {}, object.wildExtensions);
     }
     if (object.dynamicMenuItems) {
-        runtime.gandi.dynamicMenuItems = object.dynamicMenuItems;
+        runtime.gandi.dynamicMenuItems = Object.assign(runtime.gandi.dynamicMenuItems || {}, object.dynamicMenuItems);
     }
     if (object.spine) {
-        runtime.gandi.spine = object.spine;
+        runtime.gandi.spine = Object.assign(runtime.gandi.spine || {}, object.spine);
     }
     if (Array.isArray(object.assets)) {
         // find extension need to load
@@ -1406,7 +1416,17 @@ const parseGandiObject = (object, runtime, gandiAssetsPromises, extensions) => {
         });
     }
     return Promise.all(gandiAssetsPromises).then(gandiAssets => {
-        runtime.gandi.assets = gandiAssets;
+        runtime.gandi.assets = runtime.gandi.assets.concat(gandiAssets);
+        // unique assets by id
+        const seenIds = {};
+        const uniqueObjects = [];
+        runtime.gandi.assets.forEach(obj => {
+            if (!seenIds[obj.md5ext]) {
+                seenIds[obj.md5ext] = true;
+                uniqueObjects.push(obj);
+            }
+        });
+        runtime.gandi.assets = uniqueObjects;
         return null;
     });
 };
