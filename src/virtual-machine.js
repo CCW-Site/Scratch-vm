@@ -316,7 +316,7 @@ class VirtualMachine extends EventEmitter {
                 }
             }
         });
-        this.extensionManager = new ExtensionManager(this.runtime);
+        this.extensionManager = new ExtensionManager(this);
 
         // Load core extensions
         for (const id of CORE_EXTENSIONS) {
@@ -2691,11 +2691,11 @@ class VirtualMachine extends EventEmitter {
     // powered by xigua start
 
     loadOfficialExtensionsLibrary () {
-        return this.extensionManager.loadOfficialExtensionsLibrary();
+
     }
 
     loadCustomExtensionsLibrary (url, isManual = false) {
-        return this.extensionManager.loadCustomExtensionsLibrary(url, null, isManual);
+
     }
     // powered by xigua end
 }
