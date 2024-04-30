@@ -155,7 +155,6 @@ class BenchFixture extends Emitter {
     }
 
     get id () {
-        console.log(`${this.projectId}-${this.warmUpTime}-${this.recordingTime}`);
         return `${this.projectId}-${this.warmUpTime}-${this.recordingTime}`;
     }
 

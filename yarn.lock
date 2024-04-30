@@ -993,13 +993,6 @@
   resolved "https://npm.xiguacity.cn/@nicolo-ribaudo%2fchokidar-2/-/chokidar-2-2.1.8-no-fsevents.3.tgz#323d72dd25103d0c4fbdce89dadf574a787b1f9b"
   integrity sha1-Mj1y3SUQPQxPvc6J2t9XSnh7H5s=
 
-"@teana/scratch-analyzer@^1.1.0":
-  version "1.1.0"
-  resolved "https://npm.xiguacity.cn/@teana%2fscratch-analyzer/-/scratch-analyzer-1.1.0.tgz#3aa2a7dc4b8b55db7f7d64d7a59ca113b88ddb35"
-  integrity sha512-k4bX+spaAXi01AsFpNIIaKn27HKqUQKwBr3yDntYgq/gxiQYVF91oBAok53kVaaJ4eQYZRfxJt3DU6OdOfG0cA==
-  dependencies:
-    jszip "^3.5.0"
-
 "@types/babel__core@^7.1.2":
   version "7.1.19"
   resolved "https://npm.xiguacity.cn/@types%2fbabel__core/-/babel__core-7.1.19.tgz#7b497495b7d1b4812bdb9d02804d0576f43ee460"
@@ -1032,11 +1025,6 @@
   integrity sha512-FcFaxOr2V5KZCviw1TnutEMVUVsGt4D2hP1TAfXZAMKuHYW3xQhe3jTxNPWutgCJ3/X1c5yX8ZoGVEItxKbwBg==
   dependencies:
     "@babel/types" "^7.3.0"
-
-"@types/crypto-js@^4.1.1":
-  version "4.1.1"
-  resolved "https://npm.xiguacity.cn/@types%2fcrypto-js/-/crypto-js-4.1.1.tgz#602859584cecc91894eb23a4892f38cfa927890d"
-  integrity sha512-BG7fQKZ689HIoc5h+6D2Dgq1fABRa0RbBWKBd9SP/MVRVXROflpm5fhwyATX5duFmbStzyzyycPB8qUYKDH3NA==
 
 "@types/glob@^7.1.1":
   version "7.2.0"
@@ -1210,23 +1198,6 @@
     "@webassemblyjs/ast" "1.9.0"
     "@webassemblyjs/wast-parser" "1.9.0"
     "@xtuc/long" "4.2.2"
-
-"@xigua/scratch-render@^0.2.8":
-  version "0.2.8"
-  resolved "https://npm.xiguacity.cn/@xigua%2fscratch-render/-/scratch-render-0.2.8.tgz#d36534c141f49a43d8e09c23482cbfe01242f041"
-  integrity sha512-tM+CKLHrBA+Tjjf5jD7b0jXpKAQDNIOcdHFJ4zoag0+ye51buiBkAxmuiIJl1TvE2Tej56SOY/MnL+Rq7gziSQ==
-  dependencies:
-    grapheme-breaker "0.3.2"
-    hull.js "0.2.10"
-    ify-loader "1.0.4"
-    linebreak "0.3.0"
-    lz-string "^1.4.4"
-    minilog "3.1.0"
-    raw-loader "^0.5.1"
-    scratch-storage "^1.0.0"
-    scratch-svg-renderer "0.2.0-prerelease.20210727023023"
-    three "^0.143.0"
-    twgl.js "4.4.0"
 
 "@xtuc/ieee754@^1.2.0":
   version "1.2.0"
@@ -2668,11 +2639,6 @@ crypto-browserify@^3.11.0:
     public-encrypt "^4.0.0"
     randombytes "^2.0.0"
     randomfill "^1.0.3"
-
-crypto-js@^4.1.1:
-  version "4.1.1"
-  resolved "https://npm.xiguacity.cn/crypto-js/-/crypto-js-4.1.1.tgz#9e485bcf03521041bd85844786b83fb7619736cf"
-  integrity sha1-nkhbzwNSEEG9hYRHhrg/t2GXNs8=
 
 cyclist@^1.0.1:
   version "1.0.1"
@@ -5470,7 +5436,7 @@ jszip@3.1.5:
     pako "~1.0.2"
     readable-stream "~2.0.6"
 
-jszip@^3.1.5, jszip@^3.5.0:
+jszip@^3.1.5:
   version "3.10.1"
   resolved "https://npm.xiguacity.cn/jszip/-/jszip-3.10.1.tgz#34aee70eb18ea1faec2f589208a157d1feb091c2"
   integrity sha512-xXDvecyTpGLrqFrvkrUSoxxfJI5AH7U8zxxtVclpsUtMCq4JQ290LY8AW5c7Ggnr/Y/oK+bQMbqK2qmtk3pN4g==
@@ -5641,7 +5607,7 @@ lodash.defaultsdeep@4.6.1:
   resolved "https://npm.xiguacity.cn/lodash.defaultsdeep/-/lodash.defaultsdeep-4.6.1.tgz#512e9bd721d272d94e3d3a63653fa17516741ca6"
   integrity sha1-US6b1yHSctlOPTpjZT+hdRZ0HKY=
 
-lodash@^4.0.0, lodash@^4.17.1, lodash@^4.17.10, lodash@^4.17.11, lodash@^4.17.12, lodash@^4.17.14, lodash@^4.17.19, lodash@^4.17.21, lodash@^4.17.4, lodash@^4.17.5, lodash@^4.3.0:
+lodash@^4.0.0, lodash@^4.17.1, lodash@^4.17.10, lodash@^4.17.11, lodash@^4.17.12, lodash@^4.17.14, lodash@^4.17.19, lodash@^4.17.4, lodash@^4.17.5, lodash@^4.3.0:
   version "4.17.21"
   resolved "https://npm.xiguacity.cn/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha1-Z5WRxWTDv/quhFTPCz3zcMPWkRw=
@@ -5682,11 +5648,6 @@ lru-cache@^5.1.1:
   integrity sha1-HaJ+ZxAnGUdpXa9oSOhH8B2EuSA=
   dependencies:
     yallist "^3.0.2"
-
-lz-string@^1.4.4:
-  version "1.4.4"
-  resolved "https://npm.xiguacity.cn/lz-string/-/lz-string-1.4.4.tgz#c0d8eaf36059f705796e1e344811cf4c498d3a26"
-  integrity sha1-wNjq82BZ9wV5bh40SBHPTEmNOiY=
 
 magic-string@^0.22.4:
   version "0.22.5"
@@ -8482,11 +8443,6 @@ text-table@^0.2.0, text-table@~0.2.0:
   version "0.2.0"
   resolved "https://npm.xiguacity.cn/text-table/-/text-table-0.2.0.tgz#7f5ee823ae805207c00af2df4a84ec3fcfa570b4"
   integrity sha1-f17oI66AUgfACvLfSoTsP8+lcLQ=
-
-three@^0.143.0:
-  version "0.143.0"
-  resolved "https://npm.xiguacity.cn/three/-/three-0.143.0.tgz#1455bca132cc2b20beb7f41d313e10c29e5ed9df"
-  integrity sha512-oKcAGYHhJ46TGEuHjodo2n6TY2R6lbvrkp+feKZxqsUL/WkH7GKKaeu6RHeyb2Xjfk2dPLRKLsOP0KM2VgT8Zg==
 
 through2@^2.0.0, through2@~2.0.3:
   version "2.0.5"
