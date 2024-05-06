@@ -3,11 +3,7 @@ const log = require('../util/log');
 const maybeFormatMessage = require('../util/maybe-format-message');
 const formatMessage = require('format-message');
 const BlockType = require('./block-type');
-const ArgumentType = require('./argument-type');
-const TargetType = require('./target-type');
-const Cast = require('../util/cast');
-const Color = require('../util/color');
-const createTranslate = require('./tw-l10n');
+const {setupScratchAPI, clearScratchAPI} = require('./setup-extension-api');
 
 // These extensions are currently built into the VM repository but should not be loaded at startup.
 // TODO: move these out into a separate repository?
@@ -45,8 +41,7 @@ const scratchExtension = [
     'translate'
 ];
 
-// powered by xigua start
-/** Gandi官方的扩展 */
+/** from Gandi extension host */
 const officialExtension = {};
 /** Extensions loaded by the user */
 const customExtension = {};
@@ -316,6 +311,18 @@ class ExtensionManager {
             ).then(mod => new mod.default());
         }
         return Promise.reject(new Error('Unknown extension worker mode'));
+    }
+
+    /**
+     * Remove all extensions from services.
+     * If we don't do so, this will cause memory leak on Single Page Application.
+     */
+    disposeExtensionServices () {
+        Object.keys(dispatch.services).forEach(serviceName => {
+            if (/^extension_\d+_/.test(serviceName)) {
+                delete dispatch.services[serviceName];
+            }
+        });
     }
 
     /**
@@ -812,7 +819,9 @@ class ExtensionManager {
         if (typeof func === 'function') {
             // all extension is warp in a function, so we need to call it to get the extension class
             // it returns has three possibility by different extension source or template
+            setupScratchAPI(this.vm);
             let extClass = await func();
+            clearScratchAPI();
             if (
                 extClass &&
                 extClass.__esModule &&
@@ -838,28 +847,9 @@ class ExtensionManager {
         throw new Error(`extension class not found: ${extensionId}`);
     }
 
-    async getCustomExtensionClass (extensionId) {
-        const func = customExtension[extensionId];
-        if (typeof func === 'function') {
-            if (isConstructor(func)) {
-                return func;
-            }
-            const extClass = await func();
-            if (extClass.default) {
-                return extClass.default;
-            }
-        } else if (
-            typeof func === 'object' &&
-            typeof func.getInfo === 'function' &&
-            /^class\s/.test(Function.prototype.toString.call(func.constructor))
-        ) {
-            return func.constructor;
-        }
-        throw new Error(`extension class not found: ${extensionId}`);
-    }
-
     async loadExternalExtensionToLibrary (url) {
         return new Promise((resolve, reject) => {
+            setupScratchAPI(this.vm);
             this.createdScriptLoader({
                 url,
                 onSuccess: async () => {
@@ -915,14 +905,17 @@ class ExtensionManager {
                 onError: reject
             });
             // eslint-disable-next-line no-console
-        }).catch(e => log.error('LoadRemoteExtensionError: ', e));
+        })
+            .catch(e => log.error('LoadRemoteExtensionError: ', e))
+            .finally(() => {
+                clearScratchAPI();
+            });
     }
 
     createdScriptLoader ({url, onSuccess, onError}) {
         if (!url) {
             return onError('remote extension url is null');
         }
-        this.setupScratchAPIForExtension(this.vm);
         const exist = document.getElementById(url);
         if (exist) {
             log.warn(`${url} remote extension script already loaded before`);
@@ -957,11 +950,14 @@ class ExtensionManager {
                 )
             );
         };
-
         window.addEventListener('error', logError);
 
-        script.onload = () => {
+        const removeScript = () => {
             window.removeEventListener('error', logError);
+            document.body.removeChild(script);
+        };
+
+        script.onload = () => {
             if (scriptError) {
                 script.failedCallBack.forEach(cb => cb?.(scriptError, url));
                 script.failedCallBack = [];
@@ -969,96 +965,22 @@ class ExtensionManager {
                 script.successCallBack.forEach(cb => cb(url));
                 script.successCallBack = [];
             }
-            document.body.removeChild(script);
+            removeScript();
         };
 
         script.onerror = e => {
-            window.removeEventListener('error', logError);
             script.failedCallBack.forEach(cb => cb?.(e, url));
             script.failedCallBack = [];
-            document.body.removeChild(script);
+            removeScript();
         };
+
         try {
             document.body.append(script);
         } catch (error) {
+            removeScript();
             log.error('load custom extension error:', error);
         }
         return script;
-    }
-
-    // output a Scratch Object contains APIs all extension needed
-    setupScratchAPIForExtension (vm) {
-        const registerExt = extensionInstance => {
-            const info = extensionInstance.getInfo();
-            const extensionId = info.id;
-            if (this.isExtensionLoaded(extensionId)) {
-                const message = `Rejecting attempt to load a second extension with ID ${extensionId}`;
-                log.warn(message);
-                return;
-            }
-
-            const serviceName =
-                this._registerInternalExtension(extensionInstance);
-            this.setLoadedExtension(extensionId, serviceName);
-            this.runtime.compilerRegisterExtension(
-                extensionId,
-                extensionInstance
-            );
-            const extObj = {
-                info: {
-                    name: info.name,
-                    extensionId
-                },
-                Extension: () => extensionInstance.constructor
-            };
-            window.IIFEExtensionInfoList = window.IIFEExtensionInfoList || [];
-            window.IIFEExtensionInfoList.push(extObj);
-            return;
-        };
-        const scratch = {
-            get ArgumentType () {
-                return ArgumentType;
-            },
-            get BlockType () {
-                return BlockType;
-            },
-            get TargetType () {
-                return TargetType;
-            },
-            get Cast () {
-                return Cast;
-            },
-            get Color () {
-                return Color;
-            },
-            get translate () {
-                return createTranslate(vm.runtime);
-            },
-            get renderer () {
-                return vm.runtime.renderer;
-            },
-            get runtime () {
-                return vm.runtime;
-            },
-            get extensions () {
-                return {
-                    register: registerExt
-                };
-            }
-        };
-        global.Scratch = Object.assign(global.Scratch || {}, scratch);
-    }
-
-    /**
-     * Remove all extensions from services.
-     * If we don't do so, this will cause memory leak on Single Page Application.
-     */
-    disposeExtensionServices () {
-        Object.keys(dispatch.services).forEach(serviceName => {
-            if (/^extension_\d+_/.test(serviceName)) {
-                delete dispatch.services[serviceName];
-            }
-        });
     }
 
     getLoadedExtensionURLs () {
@@ -1072,7 +994,6 @@ class ExtensionManager {
             .filter(Boolean);
         return loadURLs;
     }
-    // powered by xigua end
 }
 
 module.exports = ExtensionManager;
