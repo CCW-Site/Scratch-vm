@@ -2693,16 +2693,6 @@ class VirtualMachine extends EventEmitter {
     configureScratchLinkSocketFactory (factory) {
         this.runtime.configureScratchLinkSocketFactory(factory);
     }
-    // powered by xigua start
-
-    loadOfficialExtensionsLibrary () {
-
-    }
-
-    loadCustomExtensionsLibrary (url, isManual = false) {
-
-    }
-    // powered by xigua end
 }
 
 // tw: special value to indicate this is the TurboWarp vm
