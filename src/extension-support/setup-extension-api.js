@@ -10,11 +10,17 @@ const log = require('../util/log');
 let openVM = null;
 let translate = null;
 let needSetup = true;
-const clearScratchAPI = () => {
-    if (global.Scratch) {
+const pending = new Set();
+const clearScratchAPI = id => {
+    if (window.IIFEExtensionInfoList && id) {
+        window.IIFEExtensionInfoList = window.IIFEExtensionInfoList.filter(ext => ext.info.extensionId !== id);
+    }
+    pending.delete(id);
+    if (global.Scratch && pending.size === 0) {
         global.Scratch.extensions = {
-            register: () => {
-                log.warn('call extensions.register too late');
+            register: extensionInstance => {
+                const info = extensionInstance.getInfo();
+                throw new Error(`ScratchAPI: ${info.id} call extensions.register too late`);
             }
         };
         global.Scratch.vm = null;
@@ -24,9 +30,9 @@ const clearScratchAPI = () => {
     }
 };
 
-const setupScratchAPI = vm => {
+const setupScratchAPI = (vm, id) => {
+    pending.add(id);
     if (!needSetup) {
-        // log.warn('Scratch API has been setup already.');
         return;
     }
     const registerExt = extensionInstance => {

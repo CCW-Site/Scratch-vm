@@ -184,9 +184,9 @@ class ExtensionManager {
     }
 
     setLoadedExtension (extensionID, value) {
-        const customExt = this._customExtensionInfo[extensionID] || this._officialExtensionInfo[extensionID];
-        if (customExt && customExt.url) {
-            this.saveWildExtensionsURL(extensionID, customExt.url);
+        const extInfo = this._customExtensionInfo[extensionID] || this._officialExtensionInfo[extensionID];
+        if (extInfo && extInfo.url) {
+            this.saveWildExtensionsURL(extensionID, extInfo.url);
         }
         this._loadedExtensions.set(extensionID, value);
     }
@@ -226,7 +226,7 @@ class ExtensionManager {
     async loadExtensionURL (extensionURL) {
         if (this.isBuiltinExtension(extensionURL)) {
             this.loadExtensionIdSync(extensionURL);
-            return Promise.resolve();
+            return;
         }
 
         if (this.isExternalExtension(extensionURL)) {
@@ -244,9 +244,6 @@ class ExtensionManager {
             );
             const res = await this.loadExternalExtensionToLibrary(extensionURL);
             const allLoader = res.map(extId => {
-                if (this.isExtensionLoaded(extId)) {
-                    return Promise.resolve();
-                }
                 return this.loadExternalExtensionById(extId);
             });
             return Promise.all(allLoader);
@@ -731,11 +728,14 @@ class ExtensionManager {
     }
 
     async loadExternalExtensionById (extensionId) {
+        if (this.isExtensionLoaded(extensionId)) {
+            return;
+        }
         const registerExt = extension => {
             if (this.isExtensionLoaded(extensionId)) {
                 const message = `Rejecting attempt to load a second extension with ID ${extensionId}`;
                 log.warn(message);
-                return Promise.resolve();
+                return;
             }
             const extensionInstance = new extension(this.runtime);
             const serviceName =
@@ -745,16 +745,21 @@ class ExtensionManager {
                 extensionId,
                 extensionInstance
             );
-            return Promise.resolve();
+            return;
         };
-
-        const extension = await this.getExternalExtensionConstructor(
-            extensionId
-        );
+        setupScratchAPI(this.vm, extensionId);
+        const extension = await this.getExternalExtensionConstructor(extensionId);
+        // FOR IIFE extension, it will be registered by scratch.extensions.register in IIFE
+        const registered = window.IIFEExtensionInfoList &&
+            window.IIFEExtensionInfoList.find(obj => obj.info.extensionId === extensionId);
+        clearScratchAPI(extensionId);
+        if (registered) {
+            return;
+        }
         if (extension) {
             return registerExt(extension);
         }
-        return Promise.reject(new Error(`Extension not found: ${extensionId}`));
+        throw new Error(`Extension not found: ${extensionId}`);
     }
 
     isValidExtensionURL (extensionURL) {
@@ -789,24 +794,38 @@ class ExtensionManager {
     }
 
     addOfficialExtensionInfo (obj) {
-        const extensionId = obj.info && obj.info.extensionId;
+        const {Extension, ...ext} = obj;
+        const extensionId = ext.info && ext.info.extensionId;
         if (!extensionId) {
             throw new Error('extensionId not found, add extensionInfo failed');
         }
-        this._officialExtensionInfo[extensionId] = obj;
-        officialExtension[extensionId] = obj.Extension;
+
+        this._officialExtensionInfo[extensionId] = ext;
+        officialExtension[extensionId] = Extension;
     }
 
-    addCustomExtensionInfo (obj) {
-        const extensionId = obj.info && obj.info.extensionId;
+    addCustomExtensionInfo (obj, url) {
+        const {Extension, ...ext} = obj;
+        const extensionId = ext.info && ext.info.extensionId;
         if (!extensionId) {
             throw new Error('extensionId is null in extensionInfo');
         }
-        this._customExtensionInfo[extensionId] = obj;
-        if (isConstructor(obj.Extension)) {
-            customExtension[extensionId] = () => obj.Extension;
+        if (url) {
+            ext.url = url;
+            this.saveWildExtensionsURL(extensionId, url);
+        }
+        this._customExtensionInfo[extensionId] = ext;
+        if (isConstructor(Extension)) {
+            customExtension[extensionId] = () => Extension;
         } else {
-            customExtension[extensionId] = obj.Extension;
+            customExtension[extensionId] = Extension;
+        }
+    }
+
+    updateExternalExtensionConstructor (extensionId, func) {
+        // only exts from gandi ext service need update constructor when it is a IIFE
+        if (officialExtension[extensionId]) {
+            officialExtension[extensionId] = func;
         }
     }
 
@@ -819,9 +838,7 @@ class ExtensionManager {
         if (typeof func === 'function') {
             // all extension is warp in a function, so we need to call it to get the extension class
             // it returns has three possibility by different extension source or template
-            setupScratchAPI(this.vm);
             let extClass = await func();
-            clearScratchAPI();
             if (
                 extClass &&
                 extClass.__esModule &&
@@ -837,10 +854,14 @@ class ExtensionManager {
                 return extClass;
             }
             // 3. return a IIFE which called global Scratch.extensions.register to register
-            //      it will replace officialExtension[extensionId] when register success
-            //      so try get again;
-            extClass = externalExt[extensionId];
+            //      extension obj will be added IIFEExtensionInfoList to when register success
+            //      so try get it;
+            const registered = window.IIFEExtensionInfoList &&
+                window.IIFEExtensionInfoList.find(obj => obj.info.extensionId === extensionId);
+            extClass = registered.Extension();
             if (isConstructor(extClass)) {
+                // update extension constructor
+                this.updateExternalExtensionConstructor(extensionId, extClass);
                 return extClass;
             }
         }
@@ -849,7 +870,7 @@ class ExtensionManager {
 
     async loadExternalExtensionToLibrary (url) {
         return new Promise((resolve, reject) => {
-            setupScratchAPI(this.vm);
+            setupScratchAPI(this.vm, url);
             this.createdScriptLoader({
                 url,
                 onSuccess: async () => {
@@ -857,8 +878,7 @@ class ExtensionManager {
                     if (window.IIFEExtensionInfoList) {
                         // for those extension which registered by scratch.extensions.register in IIFE
                         window.IIFEExtensionInfoList.forEach(obj => {
-                            obj.url = url;
-                            this.addCustomExtensionInfo(obj);
+                            this.addCustomExtensionInfo(obj, url);
                             res.push(obj.info.extensionId);
                         });
                         delete window.IIFEExtensionInfoList;
@@ -868,8 +888,7 @@ class ExtensionManager {
                         const lib = await window.ExtensionLib;
                         Object.keys(lib).forEach(key => {
                             const obj = lib[key];
-                            obj.url = url;
-                            this.addCustomExtensionInfo(obj);
+                            this.addCustomExtensionInfo(obj, url);
                             res.push(obj.info.extensionId);
                         });
                         delete window.ExtensionLib;
@@ -877,8 +896,7 @@ class ExtensionManager {
                     if (window.tempExt) {
                         // for user developing custom extension
                         const obj = window.tempExt;
-                        obj.url = url;
-                        this.addCustomExtensionInfo(obj);
+                        this.addCustomExtensionInfo(obj, url);
                         res.push(obj.info.extensionId);
                         delete window.tempExt;
                     }
@@ -895,7 +913,7 @@ class ExtensionManager {
                             this.addOfficialExtensionInfo(obj);
                             res.push(obj.info && obj.info.extensionId);
                         });
-                        window.scratchExtensions = null;
+                        delete window.scratchExtensions;
                     }
                     if (res.length > 0) {
                         this.runtime.emit('EXTENSION_LIBRARY_UPDATED');
@@ -906,9 +924,9 @@ class ExtensionManager {
             });
             // eslint-disable-next-line no-console
         })
-            .catch(e => log.error('LoadRemoteExtensionError: ', e))
+            // .catch(e => log.error('LoadRemoteExtensionError: ', e))
             .finally(() => {
-                clearScratchAPI();
+                clearScratchAPI(url);
             });
     }
 
