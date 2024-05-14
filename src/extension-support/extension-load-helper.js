@@ -11,11 +11,12 @@ let openVM = null;
 let translate = null;
 let needSetup = true;
 const pending = new Set();
+
 const clearScratchAPI = id => {
-    if (window.IIFEExtensionInfoList && id) {
-        window.IIFEExtensionInfoList = window.IIFEExtensionInfoList.filter(ext => ext.info.extensionId !== id);
-    }
     pending.delete(id);
+    if (window.IIFEExtensionInfoList && id) {
+        window.IIFEExtensionInfoList = window.IIFEExtensionInfoList.filter(({extensionObject}) => extensionObject.info.extensionId !== id);
+    }
     if (global.Scratch && pending.size === 0) {
         global.Scratch.extensions = {
             register: extensionInstance => {
@@ -36,22 +37,9 @@ const setupScratchAPI = (vm, id) => {
         return;
     }
     const registerExt = extensionInstance => {
-        const {extensionManager} = vm;
         const info = extensionInstance.getInfo();
         const extensionId = info.id;
-        if (extensionManager.isExtensionLoaded(extensionId)) {
-            const message = `Rejecting attempt to load a second extension with ID ${extensionId}`;
-            log.warn(message);
-            return;
-        }
-
-        const serviceName = extensionManager._registerInternalExtension(extensionInstance);
-        extensionManager.setLoadedExtension(extensionId, serviceName);
-        extensionManager.runtime.compilerRegisterExtension(
-            extensionId,
-            extensionInstance
-        );
-        const extObj = {
+        const extensionObject = {
             info: {
                 name: info.name,
                 extensionId
@@ -59,7 +47,7 @@ const setupScratchAPI = (vm, id) => {
             Extension: () => extensionInstance.constructor
         };
         window.IIFEExtensionInfoList = window.IIFEExtensionInfoList || [];
-        window.IIFEExtensionInfoList.push(extObj);
+        window.IIFEExtensionInfoList.push({extensionObject, extensionInstance});
         return;
     };
 
@@ -95,4 +83,65 @@ const setupScratchAPI = (vm, id) => {
     needSetup = false;
 };
 
-module.exports = {setupScratchAPI, clearScratchAPI};
+const createdScriptLoader = ({url, onSuccess, onError}) => {
+    if (!url) {
+        return onError('remote extension url is null');
+    }
+    const exist = document.getElementById(url);
+    if (exist) {
+        log.warn(`${url} remote extension script already loaded before`);
+        exist.successCallBack.push(onSuccess);
+        exist.failedCallBack.push(onError);
+        return exist;
+    }
+    if (!url) {
+        log.warn('remote extension url is null');
+    }
+    const script = document.createElement('script');
+
+    script.src = `${url + (url.includes('?') ? '&' : '?')}t=${Date.now()}`;
+    script.id = url;
+    script.defer = true;
+    script.type = 'module';
+
+    script.successCallBack = [onSuccess];
+    script.failedCallBack = [onError];
+
+    let scriptError = null;
+    const logError = e => {
+        scriptError = e;
+    };
+    window.addEventListener('error', logError);
+
+    const removeScript = () => {
+        window.removeEventListener('error', logError);
+        document.body.removeChild(script);
+    };
+
+    script.onload = () => {
+        if (scriptError) {
+            script.failedCallBack.forEach(cb => cb?.(scriptError, url));
+            script.failedCallBack = [];
+        } else {
+            script.successCallBack.forEach(cb => cb(url));
+            script.successCallBack = [];
+        }
+        removeScript();
+    };
+
+    script.onerror = e => {
+        script.failedCallBack.forEach(cb => cb?.(e, url));
+        script.failedCallBack = [];
+        removeScript();
+    };
+
+    try {
+        document.body.append(script);
+    } catch (error) {
+        removeScript();
+        log.error('load custom extension error:', error);
+    }
+    return script;
+};
+
+module.exports = {setupScratchAPI, clearScratchAPI, createdScriptLoader};

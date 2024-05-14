@@ -278,6 +278,11 @@ class Gandi {
         const AssetType = this.runtime.storage.AssetType;
         return this.assets.filter(item => item.asset.assetType.name === AssetType.Extension.name);
     }
+
+    isExtensionURLInGandiAssets (url) {
+        const sb3Exts = this.getExtensionAssets();
+        return sb3Exts.find(v => url.endsWith(v.md5));
+    }
 }
 
 module.exports = Gandi;

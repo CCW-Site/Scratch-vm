@@ -3,7 +3,7 @@ const log = require('../util/log');
 const maybeFormatMessage = require('../util/maybe-format-message');
 const formatMessage = require('format-message');
 const BlockType = require('./block-type');
-const {setupScratchAPI, clearScratchAPI} = require('./setup-extension-api');
+const {setupScratchAPI, clearScratchAPI, createdScriptLoader} = require('./extension-load-helper');
 
 // These extensions are currently built into the VM repository but should not be loaded at startup.
 // TODO: move these out into a separate repository?
@@ -191,6 +191,61 @@ class ExtensionManager {
         this._loadedExtensions.set(extensionID, value);
     }
 
+    registerExtension (extensionId, extension, shouldReplace = false) {
+        log.debug(`Registering extension ${extensionId}`);
+        const loadedExtServiceName = this._loadedExtensions.get(extensionId);
+        if (loadedExtServiceName && !shouldReplace) {
+            const message = `Rejecting attempt to load a second extension with ID ${extensionId}`;
+            log.warn(message);
+            return;
+        }
+        const extensionInstance = isConstructor(extension) ? new extension(this.runtime) : extension;
+        if (loadedExtServiceName && shouldReplace) {
+            const incomingBlocks = extensionInstance.getInfo().blocks;
+            const incomingOpsSet = new Set(incomingBlocks.map(b => b.opcode));
+            const currOpsSet = new Set(this.runtime.targets
+                .map(({blocks}) => Object.values(blocks._blocks).map(b => b.opcode))
+                .flat()
+                .filter(op => op.startsWith(`${extensionId}_`))
+                .map(op => op.substring(extensionId.length + 1))
+            );
+
+            const diff = currOpsSet.difference(incomingOpsSet);
+            if (diff.size > 0) {
+                const detail = Array.from(diff).join(',    ');
+                log.warn(
+                    `Rejecting attempt to replace extension ${extensionId} with new extension that has conflicting opcodes: ${detail}`
+                );
+                throw new Error('opcode not found', {
+                    cause: {code: 'OPCODE_NOT_FOUND', values: diff}
+                });
+            }
+
+            const oldBlocks = dispatch.callSync(loadedExtServiceName, 'getInfo').blocks;
+            // block type check
+            const typeChangedBlocks = oldBlocks.filter(a =>
+                incomingBlocks.find(b => a.opcode === b.opcode && a.blockType !== b.blockType));
+            if (typeChangedBlocks.length > 0) {
+                throw new Error(`extension replace fail id = ${extensionId}`, {
+                    cause: {code: 'BLOCK_TYPE_CHANGED', values: typeChangedBlocks.map(b => b.opcode)}
+                });
+            }
+            // replace the old extension
+            dispatch.setServiceSync(loadedExtServiceName, extensionInstance);
+            this.setLoadedExtension(extensionId, loadedExtServiceName);
+            this.refreshBlocks(extensionId);
+        } else {
+            // register new extension
+            const serviceName = this._registerInternalExtension(extensionInstance);
+            this.setLoadedExtension(extensionId, serviceName);
+            this.runtime.compilerRegisterExtension(
+                extensionId,
+                extensionInstance
+            );
+        }
+        return extensionId;
+    }
+
     /**
      * Synchronously load an internal extension (core or non-core) by ID. This call will
      * fail if the provided id is not does not match an internal extension.
@@ -203,34 +258,23 @@ class ExtensionManager {
             );
             return;
         }
-
-        /** @TODO dupe handling for non-builtin extensions. See commit 670e51d33580e8a2e852b3b038bb3afc282f81b9 */
-        if (this.isExtensionLoaded(extensionId)) {
-            const message = `Rejecting attempt to load a second extension with ID ${extensionId}`;
-            log.warn(message);
-            return;
-        }
-
         const extension = builtinExtensions[extensionId]();
-        const extensionInstance = new extension(this.runtime);
-        const serviceName = this._registerInternalExtension(extensionInstance);
-        this.setLoadedExtension(extensionId, serviceName);
-        this.runtime.compilerRegisterExtension(extensionId, extensionInstance);
+        return this.registerExtension(extension, extensionId);
     }
 
     /**
      * Load an extension by URL or internal extension ID
      * @param {string} extensionURL - the URL for the extension to load OR the ID of an internal extension
+     * @param {bool} shouldReplace - should replace extension that already loaded
      * @returns {Promise} resolved once the extension is loaded and initialized or rejected on failure
      */
-    async loadExtensionURL (extensionURL) {
+    loadExtensionURL (extensionURL, shouldReplace = false) {
         if (this.isBuiltinExtension(extensionURL)) {
-            this.loadExtensionIdSync(extensionURL);
-            return;
+            return this.loadExtensionIdSync(extensionURL);
         }
 
         if (this.isExternalExtension(extensionURL)) {
-            return this.loadExternalExtensionById(extensionURL);
+            return this.loadExternalExtensionById(extensionURL, shouldReplace);
         }
 
         if (!this.isValidExtensionURL(extensionURL)) {
@@ -242,11 +286,10 @@ class ExtensionManager {
             log.warn(
                 `ccw: [${extensionURL}] not found in extensions library,try load as URL`
             );
-            const res = await this.loadExternalExtensionToLibrary(extensionURL);
-            const allLoader = res.map(extId => {
-                return this.loadExternalExtensionById(extId);
+            return this.loadExternalExtensionToLibrary(extensionURL, shouldReplace).then(({onlyAdded, addedAndLoaded}) => {
+                const allLoader = onlyAdded.map(extId => this.loadExternalExtensionById(extId, shouldReplace));
+                return Promise.all(allLoader).then(res => res.concat(addedAndLoaded).flat());
             });
-            return Promise.all(allLoader);
         }
 
         // try ask user to input url to load extension
@@ -264,7 +307,7 @@ class ExtensionManager {
             if (!this.isValidExtensionURL(url)) {
                 throw new Error(`Invalid extension URL: ${extensionURL}`);
             }
-            return this.loadExtensionURL(extensionURL);
+            return this.loadExtensionURL(extensionURL, shouldReplace);
         }
 
         this.loadingAsyncExtensions++;
@@ -272,6 +315,7 @@ class ExtensionManager {
             this.pendingExtensions.push({extensionURL, resolve, reject});
             this.createExtensionWorker()
                 .then(worker => dispatch.addWorker(worker))
+                .then(extensionURL)
                 .catch(_error => {
                     this.runtime.emit('EXTENSION_NOT_FOUND', extensionURL);
                     log.error(_error);
@@ -479,7 +523,7 @@ class ExtensionManager {
                 this.runtime.getFormatMessage()({
                     id: 'gui.extension.compatibilityWarning',
                     default:
-                        'This extension is incompatible with Scratch. Projects made with it cannot be uploaded to the Scratch website. You can share the project on Cocrea. Make sure before you use it.',
+                        'This extension is incompatible with Original Scratch.',
                     description:
                         'Give a warning when an extension is not official in Scratch.'
                 });
@@ -721,45 +765,28 @@ class ExtensionManager {
      * @param {string} url extension url
      */
     saveWildExtensionsURL (id, url) {
-        if (this.runtime.gandi.wildExtensions[id]) return;
-
         this.runtime.gandi.wildExtensions[id] = {id, url};
+
+        // check if wild extension js is in sb3 assets
+        if (this.runtime.gandi.isExtensionURLInGandiAssets(url)) {
+            const extInfo = this._customExtensionInfo[id] || this._officialExtensionInfo[id];
+            extInfo.replaceable = true;
+        }
+
         this.runtime.emitGandiWildExtensionsChanged(['add', id, {id, url}]);
     }
 
-    async loadExternalExtensionById (extensionId) {
-        if (this.isExtensionLoaded(extensionId)) {
+    loadExternalExtensionById (extensionId, shouldReplace = false) {
+        if (this.isExtensionLoaded(extensionId) && !shouldReplace) {
+            // avoid init extension twice if it already loaded
             return;
         }
-        const registerExt = extension => {
-            if (this.isExtensionLoaded(extensionId)) {
-                const message = `Rejecting attempt to load a second extension with ID ${extensionId}`;
-                log.warn(message);
-                return;
-            }
-            const extensionInstance = new extension(this.runtime);
-            const serviceName =
-                this._registerInternalExtension(extensionInstance);
-            this.setLoadedExtension(extensionId, serviceName);
-            this.runtime.compilerRegisterExtension(
-                extensionId,
-                extensionInstance
-            );
-            return;
-        };
         setupScratchAPI(this.vm, extensionId);
-        const extension = await this.getExternalExtensionConstructor(extensionId);
-        // FOR IIFE extension, it will be registered by scratch.extensions.register in IIFE
-        const registered = window.IIFEExtensionInfoList &&
-            window.IIFEExtensionInfoList.find(obj => obj.info.extensionId === extensionId);
-        clearScratchAPI(extensionId);
-        if (registered) {
-            return;
-        }
-        if (extension) {
-            return registerExt(extension);
-        }
-        throw new Error(`Extension not found: ${extensionId}`);
+        return this.getExternalExtensionConstructor(extensionId)
+            .then(extension => this.registerExtension(extensionId, extension, shouldReplace))
+            .finally(() => {
+                clearScratchAPI(extensionId);
+            });
     }
 
     isValidExtensionURL (extensionURL) {
@@ -812,7 +839,6 @@ class ExtensionManager {
         }
         if (url) {
             ext.url = url;
-            this.saveWildExtensionsURL(extensionId, url);
         }
         this._customExtensionInfo[extensionId] = ext;
         if (isConstructor(Extension)) {
@@ -838,7 +864,7 @@ class ExtensionManager {
         if (typeof func === 'function') {
             // all extension is warp in a function, so we need to call it to get the extension class
             // it returns has three possibility by different extension source or template
-            let extClass = await func();
+            const extClass = await func();
             if (
                 extClass &&
                 extClass.__esModule &&
@@ -854,34 +880,37 @@ class ExtensionManager {
                 return extClass;
             }
             // 3. return a IIFE which called global Scratch.extensions.register to register
-            //      extension obj will be added IIFEExtensionInfoList to when register success
-            //      so try get it;
-            const registered = window.IIFEExtensionInfoList &&
-                window.IIFEExtensionInfoList.find(obj => obj.info.extensionId === extensionId);
-            extClass = registered.Extension();
-            if (isConstructor(extClass)) {
+            //      extension obj will be added in IIFEExtensionInfoList
+            const needRegister = window.IIFEExtensionInfoList &&
+            window.IIFEExtensionInfoList.find(({extensionObject}) => extensionObject.info.extensionId === extensionId);
+            if (needRegister) {
                 // update extension constructor
-                this.updateExternalExtensionConstructor(extensionId, extClass);
-                return extClass;
+                this.updateExternalExtensionConstructor(extensionId, needRegister.extensionObject.Extension);
+                return needRegister.extensionInstance;
             }
         }
-        throw new Error(`extension class not found: ${extensionId}`);
+        throw new Error(`Extension not found: ${extensionId}`);
     }
 
-    async loadExternalExtensionToLibrary (url) {
+    async loadExternalExtensionToLibrary (url, shouldReplace = false) {
+        const onlyAdded = [];
+        const addedAndLoaded = []; // exts use Scratch.extensions.register
         return new Promise((resolve, reject) => {
             setupScratchAPI(this.vm, url);
-            this.createdScriptLoader({
+            createdScriptLoader({
                 url,
                 onSuccess: async () => {
-                    const res = [];
                     if (window.IIFEExtensionInfoList) {
                         // for those extension which registered by scratch.extensions.register in IIFE
-                        window.IIFEExtensionInfoList.forEach(obj => {
-                            this.addCustomExtensionInfo(obj, url);
-                            res.push(obj.info.extensionId);
+                        window.IIFEExtensionInfoList.forEach(({extensionObject, extensionInstance}) => {
+                            try {
+                                this.addCustomExtensionInfo(extensionObject, url);
+                                this.registerExtension(extensionObject.info.extensionId, extensionInstance, shouldReplace);
+                                addedAndLoaded.push(extensionObject.info.extensionId);
+                            } catch (error) {
+                                reject(error);
+                            }
                         });
-                        delete window.IIFEExtensionInfoList;
                     }
                     if (window.ExtensionLib) {
                         // for those extension which developed by user using ccw-customExt-tool
@@ -889,7 +918,7 @@ class ExtensionManager {
                         Object.keys(lib).forEach(key => {
                             const obj = lib[key];
                             this.addCustomExtensionInfo(obj, url);
-                            res.push(obj.info.extensionId);
+                            onlyAdded.push(obj.info.extensionId);
                         });
                         delete window.ExtensionLib;
                     }
@@ -897,7 +926,7 @@ class ExtensionManager {
                         // for user developing custom extension
                         const obj = window.tempExt;
                         this.addCustomExtensionInfo(obj, url);
-                        res.push(obj.info.extensionId);
+                        onlyAdded.push(obj.info.extensionId);
                         delete window.tempExt;
                     }
                     if (window.scratchExtensions) {
@@ -911,14 +940,10 @@ class ExtensionManager {
                                 obj.info.extensionId = key;
                             }
                             this.addOfficialExtensionInfo(obj);
-                            res.push(obj.info && obj.info.extensionId);
+                            onlyAdded.push(obj.info && obj.info.extensionId);
                         });
-                        delete window.scratchExtensions;
                     }
-                    if (res.length > 0) {
-                        this.runtime.emit('EXTENSION_LIBRARY_UPDATED');
-                    }
-                    resolve(res);
+                    resolve({onlyAdded, addedAndLoaded});
                 },
                 onError: reject
             });
@@ -927,78 +952,14 @@ class ExtensionManager {
             // .catch(e => log.error('LoadRemoteExtensionError: ', e))
             .finally(() => {
                 clearScratchAPI(url);
+                if (onlyAdded.length > 0 || addedAndLoaded.length > 0) {
+                    this.runtime.emit('EXTENSION_LIBRARY_UPDATED');
+                }
+                delete window.scratchExtensions;
+                delete window.tempExt;
+                delete window.ExtensionLib;
+                delete window.IIFEExtensionInfoList;
             });
-    }
-
-    createdScriptLoader ({url, onSuccess, onError}) {
-        if (!url) {
-            return onError('remote extension url is null');
-        }
-        const exist = document.getElementById(url);
-        if (exist) {
-            log.warn(`${url} remote extension script already loaded before`);
-            exist.successCallBack.push(onSuccess);
-            exist.failedCallBack.push(onError);
-            return exist;
-        }
-        if (!url) {
-            log.warn('remote extension url is null');
-        }
-        const script = document.createElement('script');
-
-        script.src = `${url + (url.includes('?') ? '&' : '?')}t=${Date.now()}`;
-        script.id = url;
-        script.defer = true;
-        script.type = 'module';
-
-        script.successCallBack = [onSuccess];
-        script.failedCallBack = [onError];
-
-        let scriptError = null;
-        const logError = e => {
-            scriptError = e;
-
-            this.runtime.logSystem.error(
-                formatMessage(
-                    {
-                        id: 'gui.extension.custom.load.ScriptError',
-                        default: `extension script error\n   {msg} {lineno} line {colno} column`
-                    },
-                    {msg: e.message, lineno: e.lineno, colno: e.colno}
-                )
-            );
-        };
-        window.addEventListener('error', logError);
-
-        const removeScript = () => {
-            window.removeEventListener('error', logError);
-            document.body.removeChild(script);
-        };
-
-        script.onload = () => {
-            if (scriptError) {
-                script.failedCallBack.forEach(cb => cb?.(scriptError, url));
-                script.failedCallBack = [];
-            } else {
-                script.successCallBack.forEach(cb => cb(url));
-                script.successCallBack = [];
-            }
-            removeScript();
-        };
-
-        script.onerror = e => {
-            script.failedCallBack.forEach(cb => cb?.(e, url));
-            script.failedCallBack = [];
-            removeScript();
-        };
-
-        try {
-            document.body.append(script);
-        } catch (error) {
-            removeScript();
-            log.error('load custom extension error:', error);
-        }
-        return script;
     }
 
     getLoadedExtensionURLs () {
@@ -1012,6 +973,94 @@ class ExtensionManager {
             .filter(Boolean);
         return loadURLs;
     }
+
+    deleteExtensionById (extensionId) {
+        const inUseBlockOps = new Set(this.runtime.targets
+            .map(({blocks}) => Object.values(blocks._blocks).map(b => b.opcode))
+            .flat()
+            .filter(op => op.startsWith(`${extensionId}_`))
+            .map(op => op.substring(extensionId.length + 1))
+        );
+        if (inUseBlockOps.size > 0) {
+            throw new Error(`delete extension failed id=${extensionId}`, {
+                cause: {code: 'OPCODE_IN_USE', values: [inUseBlockOps]}
+            });
+        }
+
+        // delete extension service
+        const serviceName = this._loadedExtensions.get(extensionId);
+        delete dispatch.services[serviceName];
+        this._loadedExtensions.delete(extensionId);
+        // delete extension info
+        delete this._customExtensionInfo[extensionId];
+        delete customExtension[extensionId];
+        // delete extension in runtime
+        this.runtime.removeExtensionPrimitives(extensionId);
+    }
+
+    getReplaceableExtensionInfo () {
+        const allExtInfo = {...this._customExtensionInfo,
+            ...this._officialExtensionInfo};
+        const allReplaceable = Object.values(allExtInfo).filter(ext => ext.replaceable);
+        const allLoaded = Array.from((this._loadedExtensions.keys()));
+        return allReplaceable.filter(elem => allLoaded.includes(elem.info.extensionId));
+    }
+
+    getExtensionInfoById (extensionId) {
+        return this._customExtensionInfo[extensionId] || this._officialExtensionInfo[extensionId];
+    }
+
+    replaceExtensionWithId (newId, oldId) {
+        const runtime = this.runtime;
+        const incomingExt = runtime._blockInfo.find(block => block.id === newId);
+        const incomingBlocks = incomingExt.blocks;
+        const incomingOpsSet = new Set(incomingBlocks.map(b => b.info.opcode).filter(Boolean));
+
+        const oldExt = runtime._blockInfo.find(block => block.id === oldId);
+
+        const currOpsSet = new Set(
+            runtime.targets
+                .map(({blocks}) => Object.values(blocks._blocks).map(b => b.opcode))
+                .flat()
+                .filter(op => op.startsWith(`${oldExt.id}_`))
+                .map(op => op.substring(oldExt.id.length + 1))
+        );
+        const diff = currOpsSet.difference(incomingOpsSet);
+        if (diff.size > 0) {
+            // opcode in use are not fully match,revert replacement
+            this.deleteExtensionById(incomingExt.id);
+            throw new Error(`opcodes are not fully covered in new extension ${incomingExt.id}`, {
+                cause: {code: 'OPCODE_NOT_FOUND', values: diff}
+            });
+        } else {
+            // TODO: allow type change, auto fix all block connection error cause by type change
+            const typeChangedBlocks = oldExt.blocks.filter(a => incomingBlocks.find(b => {
+                if (a.info && b.info) {
+                    return a.info.opcode === b.info.opcode && a.info.blockType !== b.info.blockType;
+                }
+                return false;
+            }));
+            if (typeChangedBlocks.length > 0) {
+                throw new Error(`extension replace fail new = ${newId} old=${oldId}`, {
+                    cause: {code: 'BLOCK_TYPE_CHANGED', values: typeChangedBlocks.map(b => b.info.opcode)}
+                });
+            }
+            // do fully replace
+            runtime.targets.forEach(
+                ({blocks}) => Object.values(blocks._blocks).forEach(
+                    b => {
+                        if (b.opcode.startsWith(`${oldExt.id}_`)) {
+                            b.opcode = `${incomingExt.id}_${b.opcode.substring(oldExt.id.length + 1)}`;
+                        }
+                    }
+                )
+            );
+            // reset cache
+            runtime.resetAllCaches();
+            this.deleteExtensionById(oldExt.id);
+        }
+    }
+
 }
 
 module.exports = ExtensionManager;
