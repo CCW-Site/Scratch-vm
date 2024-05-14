@@ -923,6 +923,14 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for reporting that an extension was deleted.
+     * @const {string}
+     */
+    static get EXTENSION_DELETED () {
+        return 'EXTENSION_DELETED';
+    }
+
+    /**
      * Event name for reporting that an extension as asked for a custom field to be added
      * @const {string}
      */
@@ -1226,6 +1234,29 @@ class Runtime extends EventEmitter {
         }
 
         this.emit(Runtime.EXTENSION_ADDED, categoryInfo);
+    }
+
+    /**
+     * remove extension
+     * @param  {string} extensionId - id of extension to remove
+     */
+    removeExtensionPrimitives (extensionId) {
+        const index = this._blockInfo.findIndex(info => info.id === extensionId);
+        const categoryInfo = this._blockInfo[index];
+        categoryInfo.blocks.forEach(({info}) => {
+            if (info.opcode) {
+                const opcode = `${categoryInfo.id}_${info.opcode}`;
+                if (info.blockType !== BlockType.EVENT) {
+                    delete this._primitives[opcode];
+                }
+                if (info.blockType === BlockType.EVENT || info.blockType === BlockType.HAT) {
+                    delete this._hats[opcode];
+                }
+            }
+        });
+        this._blockInfo.splice(index, 1);
+        delete this[`ext_${extensionId}`];
+        this.emit(Runtime.EXTENSION_DELETED, categoryInfo);
     }
 
     /**
