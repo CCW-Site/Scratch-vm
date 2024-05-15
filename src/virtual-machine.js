@@ -1506,7 +1506,7 @@ class VirtualMachine extends EventEmitter {
                         const newArgTypes = block.mutation.proccode.match(/ %[b|s]/g) || [];
                         newArgIds.forEach((argId, idx) => {
                             // add new input block except boolean
-                            if (!oldArgIds.includes(argId) && newArgTypes[idx] !== 'b') {
+                            if (!oldArgIds.includes(argId) && newArgTypes[idx] !== ' %b') {
                                 const textBlockId = generateUid();
                                 target.blocks._blocks[textBlockId] = {
                                     id: textBlockId,
