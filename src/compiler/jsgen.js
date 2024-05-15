@@ -669,6 +669,9 @@ class JSGenerator {
             // if (!source) break;
             return new TypedInput(source, TYPE_PROCEDURE_RETURN);
         }
+        case 'noop': {
+            return new TypedInput('""', TYPE_STRING);
+        }
         default:
             log.warn(`JS: Unknown input: ${node.kind}`, node);
             throw new Error(`JS: Unknown input: ${node.kind}`);
@@ -947,8 +950,7 @@ class JSGenerator {
             this.source += `runtime.ext_scratch3_motion._moveSteps(${this.descendInput(node.grids).asNumber() * 40}, target);\n`;
             break;
         case 'noop':
-            // todo: remove noop entirely
-            break;
+            return new TypedInput('""', TYPE_STRING);
 
         case 'pen.clear':
             this.source += `${PEN_EXT}.clear();\n`;
