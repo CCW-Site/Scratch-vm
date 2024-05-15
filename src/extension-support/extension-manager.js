@@ -892,7 +892,7 @@ class ExtensionManager {
         throw new Error(`Extension not found: ${extensionId}`);
     }
 
-    async loadExternalExtensionToLibrary (url, shouldReplace = false) {
+    async loadExternalExtensionToLibrary (url, shouldReplace = false, disallowIIFERegister = false) {
         const onlyAdded = [];
         const addedAndLoaded = []; // exts use Scratch.extensions.register
         return new Promise((resolve, reject) => {
@@ -905,8 +905,12 @@ class ExtensionManager {
                         window.IIFEExtensionInfoList.forEach(({extensionObject, extensionInstance}) => {
                             try {
                                 this.addCustomExtensionInfo(extensionObject, url);
-                                this.registerExtension(extensionObject.info.extensionId, extensionInstance, shouldReplace);
-                                addedAndLoaded.push(extensionObject.info.extensionId);
+                                if (disallowIIFERegister) {
+                                    onlyAdded.push(extensionObject.info.extensionId);
+                                } else {
+                                    this.registerExtension(extensionObject.info.extensionId, extensionInstance, shouldReplace);
+                                    addedAndLoaded.push(extensionObject.info.extensionId);
+                                }
                             } catch (error) {
                                 reject(error);
                             }
