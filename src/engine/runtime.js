@@ -1268,7 +1268,28 @@ class Runtime extends EventEmitter {
         const categoryInfo = this._blockInfo.find(info => info.id === extensionInfo.id);
         if (categoryInfo) {
             categoryInfo.name = maybeFormatMessage(extensionInfo.name);
+            categoryInfo.showStatusButton = extensionInfo.showStatusButton;
             categoryInfo.warningTipText = extensionInfo.warningTipText;
+            categoryInfo.blockIconURI = extensionInfo.blockIconURI;
+            categoryInfo.menuIconURI = extensionInfo.menuIconURI;
+    
+            if (extensionInfo.color1) {
+                categoryInfo.color1 = extensionInfo.color1;
+                categoryInfo.color2 = extensionInfo.color2;
+                categoryInfo.color3 = extensionInfo.color3;
+            } else {
+                categoryInfo.color1 = defaultExtensionColors[0];
+                categoryInfo.color2 = defaultExtensionColors[1];
+                categoryInfo.color3 = defaultExtensionColors[2];
+            }
+            
+            // add compatible warning
+            categoryInfo.warningTipText = extensionInfo.warningTipText;
+            // hidden
+            if (extensionInfo.onlyVisibleOnShortcut) {
+                categoryInfo.onlyVisibleOnShortcut = true;
+            }
+            
             this._fillExtensionCategory(categoryInfo, extensionInfo);
 
             this.emit(Runtime.BLOCKSINFO_UPDATE, categoryInfo);
