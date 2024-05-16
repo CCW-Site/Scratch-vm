@@ -203,14 +203,14 @@ class ExtensionManager {
         if (loadedExtServiceName && shouldReplace) {
             const incomingBlocks = extensionInstance.getInfo().blocks;
             const incomingOpsSet = new Set(incomingBlocks.map(b => b.opcode));
-            const currOpsSet = new Set(this.runtime.targets
+            const opsInUseSet = new Set(this.runtime.targets
                 .map(({blocks}) => Object.values(blocks._blocks).map(b => b.opcode))
                 .flat()
                 .filter(op => op.startsWith(`${extensionId}_`))
                 .map(op => op.substring(extensionId.length + 1))
             );
 
-            const diff = currOpsSet.difference(incomingOpsSet);
+            const diff = opsInUseSet.difference(incomingOpsSet);
             if (diff.size > 0) {
                 const detail = Array.from(diff).join(',    ');
                 log.warn(
@@ -224,7 +224,7 @@ class ExtensionManager {
             const oldBlocks = dispatch.callSync(loadedExtServiceName, 'getInfo').blocks;
             // block type check
             const typeChangedBlocks = oldBlocks.filter(a =>
-                incomingBlocks.find(b => a.opcode === b.opcode && a.blockType !== b.blockType));
+                incomingBlocks.find(b => opsInUseSet.has(a.opcode) && a.opcode === b.opcode && a.blockType !== b.blockType));
             if (typeChangedBlocks.length > 0) {
                 throw new Error(`extension replace fail id = ${extensionId}`, {
                     cause: {code: 'BLOCK_TYPE_CHANGED', values: typeChangedBlocks.map(b => b.opcode)}
