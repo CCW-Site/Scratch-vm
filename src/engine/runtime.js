@@ -1014,8 +1014,8 @@ class Runtime extends EventEmitter {
      * Event name to indicate that the custom blocks have been added or deleted.
      * @const {string}
      */
-    static get CUSTOM_BLOCKS_LENGTH_CHANGED () {
-        return 'CUSTOM_BLOCKS_LENGTH_CHANGED';
+    static get CUSTOM_BLOCK_ARGUMENTS_LENGTH_CHANGED () {
+        return 'CUSTOM_BLOCK_ARGUMENTS_LENGTH_CHANGED';
     }
 
     // powered by xigua start
@@ -3417,8 +3417,8 @@ class Runtime extends EventEmitter {
         this.emit(Runtime.PROJECT_CHANGED);
     }
 
-    emitCustomBlocksLengthChanged () {
-        this.emit(Runtime.CUSTOM_BLOCKS_LENGTH_CHANGED);
+    emitCustomBlockArgumentsLengthChanged () {
+        this.emit(Runtime.CUSTOM_BLOCK_ARGUMENTS_LENGTH_CHANGED);
     }
 
     emitGandiAssetsUpdate (action) {

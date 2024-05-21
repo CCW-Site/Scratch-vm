@@ -830,8 +830,8 @@ class Blocks {
         }
     }
 
-    emitCustomBlocksLengthChanged () {
-        this.runtime.emitCustomBlocksLengthChanged();
+    emitCustomBlockArgumentsLengthChanged () {
+        this.runtime.emitCustomBlockArgumentsLengthChanged();
     }
 
     /**
@@ -858,7 +858,7 @@ class Blocks {
 
         // When custom blocks are added or deleted, it may be necessary to update the toolbox
         if (source === 'default' && block.opcode === 'procedures_definition') {
-            this.emitCustomBlocksLengthChanged();
+            this.emitCustomBlockArgumentsLengthChanged();
         }
 
         // A new block was actually added to the block container,
@@ -1015,8 +1015,16 @@ class Blocks {
         }
         }
 
+        this.emitProjectChanged();
+
+        this.resetCache();
+    }
+
+    updateBlockMutation (block, args) {
+        block.mutation = mutationAdapter(args.value);
+        this.runtime.emitTargetBlocksChanged(args.targetId, ['update', {[block.id]: {mutation: block.mutation}}]);
         // Verify if the parameter blocks in inputs are being used.
-        if (block.opcode.startsWith('procedures_prototype')) {
+        if (block.opcode.startsWith('procedures_')) {
             const argumentIds = JSON.parse(block.mutation.argumentids);
             let hasUnusedArguments = false;
             Object.keys(block.inputs).forEach(name => {
@@ -1031,14 +1039,10 @@ class Blocks {
                 }
             });
             // If there are unused parameter blocks, the state of the toolbox needs to be updated.
-            if (!args.recordUndo && hasUnusedArguments) {
-                this.emitCustomBlocksLengthChanged();
+            if (block.opcode === 'procedures_prototype' && !args.recordUndo && hasUnusedArguments) {
+                this.emitCustomBlockArgumentsLengthChanged();
             }
         }
-
-        this.emitProjectChanged();
-
-        this.resetCache();
     }
 
     /**
@@ -1206,7 +1210,7 @@ class Blocks {
 
         // When custom blocks are added or deleted, it may be necessary to update the toolbox
         if (params.source === 'default' && block.opcode === 'procedures_definition') {
-            this.emitCustomBlocksLengthChanged();
+            this.emitCustomBlockArgumentsLengthChanged();
         }
         if (params.source === 'default') {
             this.runtime.emitTargetBlocksChanged(params.targetId, ['delete', blockId]);
