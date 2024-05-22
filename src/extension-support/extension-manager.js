@@ -259,7 +259,7 @@ class ExtensionManager {
             return;
         }
         const extension = builtinExtensions[extensionId]();
-        return this.registerExtension(extension, extensionId);
+        return this.registerExtension(extensionId, extension);
     }
 
     /**
