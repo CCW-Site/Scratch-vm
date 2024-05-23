@@ -1421,8 +1421,8 @@ const parseGandiObject = (object, runtime, gandiAssetsPromises, extensions) => {
         const seenIds = {};
         const uniqueObjects = [];
         runtime.gandi.assets.forEach(obj => {
-            if (!seenIds[obj.md5ext]) {
-                seenIds[obj.md5ext] = true;
+            if (!seenIds[obj.md5]) {
+                seenIds[obj.md5] = true;
                 uniqueObjects.push(obj);
             }
         });
