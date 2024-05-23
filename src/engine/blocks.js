@@ -944,8 +944,7 @@ class Blocks {
             }
             break;
         } case 'mutation':
-            block.mutation = mutationAdapter(args.value);
-            this.runtime.emitTargetBlocksChanged(args.targetId, ['update', {[block.id]: {mutation: block.mutation}}]);
+            this.updateBlockMutation(block, args);
             break;
         case 'checkbox': {
             // A checkbox usually has a one to one correspondence with the monitor
@@ -1024,12 +1023,12 @@ class Blocks {
         block.mutation = mutationAdapter(args.value);
         this.runtime.emitTargetBlocksChanged(args.targetId, ['update', {[block.id]: {mutation: block.mutation}}]);
         // Verify if the parameter blocks in inputs are being used.
-        if (block.opcode.startsWith('procedures_')) {
+        if (block.mutation.argumentids) {
             const argumentIds = JSON.parse(block.mutation.argumentids);
             let hasUnusedArguments = false;
             Object.keys(block.inputs).forEach(name => {
                 if (!argumentIds.includes(name)) {
-                    this.deleteBlock(block.inputs[name].block, {
+                    this.deleteBlock(block.inputs[name].shadow, {
                         source: args.source,
                         targetId: args.targetId
                     });
@@ -1079,7 +1078,7 @@ class Blocks {
         // Remove from any old parent.
         if (typeof e.oldParent !== 'undefined') {
             const oldParent = this._blocks[e.oldParent];
-            if (typeof e.oldInput !== 'undefined' &&
+            if (typeof e.oldInput !== 'undefined' && oldParent.inputs[e.oldInput] &&
                 oldParent.inputs[e.oldInput].block === e.id) {
                 // This block was connected to the old parent's input.
                 oldParent.inputs[e.oldInput].block = null;
