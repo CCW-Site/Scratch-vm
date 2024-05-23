@@ -192,7 +192,6 @@ class ExtensionManager {
     }
 
     registerExtension (extensionId, extension, shouldReplace = false) {
-        log.debug(`Registering extension ${extensionId}`);
         const loadedExtServiceName = this._loadedExtensions.get(extensionId);
         if (loadedExtServiceName && !shouldReplace) {
             const message = `Rejecting attempt to load a second extension with ID ${extensionId}`;
