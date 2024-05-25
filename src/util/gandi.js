@@ -16,7 +16,15 @@ class Gandi {
          * @member {Array}
          */
         this.properties = ['assets', 'wildExtensions', 'configs', 'dynamicMenuItems', 'spine'];
+        // const AssetType = runtime.storage.AssetType;
+        /**
+         * default supported asset types
+         */
+        this._supportedAssetTypes = [];
+        this.setup();
+    }
 
+    setup () {
         /**
          * Array to store assets.
          * @member {Array}
@@ -55,11 +63,6 @@ class Gandi {
                 json: 'ScratchCat.json'
             }
         };
-        // const AssetType = runtime.storage.AssetType;
-        /**
-         * default supported asset types
-         */
-        this._supportedAssetTypes = [];
     }
 
     get supportedAssetTypes () {
@@ -71,6 +74,10 @@ class Gandi {
         // change supported asset types after loading assets will not change existed assets
         // maybe it needs to reload assets in the future
         this._supportedAssetTypes = types;
+    }
+
+    clear () {
+        this.setup();
     }
 
     /**

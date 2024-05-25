@@ -1272,7 +1272,7 @@ class Runtime extends EventEmitter {
             categoryInfo.warningTipText = extensionInfo.warningTipText;
             categoryInfo.blockIconURI = extensionInfo.blockIconURI;
             categoryInfo.menuIconURI = extensionInfo.menuIconURI;
-    
+
             if (extensionInfo.color1) {
                 categoryInfo.color1 = extensionInfo.color1;
                 categoryInfo.color2 = extensionInfo.color2;
@@ -1282,14 +1282,14 @@ class Runtime extends EventEmitter {
                 categoryInfo.color2 = defaultExtensionColors[1];
                 categoryInfo.color3 = defaultExtensionColors[2];
             }
-            
+
             // add compatible warning
             categoryInfo.warningTipText = extensionInfo.warningTipText;
             // hidden
             if (extensionInfo.onlyVisibleOnShortcut) {
                 categoryInfo.onlyVisibleOnShortcut = true;
             }
-            
+
             this._fillExtensionCategory(categoryInfo, extensionInfo);
 
             this.emit(Runtime.BLOCKSINFO_UPDATE, categoryInfo);
@@ -2508,9 +2508,8 @@ class Runtime extends EventEmitter {
         this.addCloudVariable = this._initializeAddCloudVariable(newCloudDataManager);
         this.removeCloudVariable = this._initializeRemoveCloudVariable(newCloudDataManager);
 
-        // powered by xigua start
         this._blockInfo = [];
-        // powered by xigua end
+        this.gandi.clear();
     }
 
     // powered by xigua start
