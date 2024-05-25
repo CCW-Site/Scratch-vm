@@ -308,7 +308,7 @@ class VirtualMachine extends EventEmitter {
             this.emit(Runtime.GANDI_DYNAMIC_MENU_ITEMS_UPDATE, data);
         });
         this.runtime.on(Runtime.LOAD_ASSETS_PROGRESS, data => {
-            if (data.total) {
+            if (data && data.total) {
                 this._assetsLoadProgress = {total: data.total, loaded: 0};
                 this.emit(Runtime.LOAD_ASSETS_PROGRESS, {...this._assetsLoadProgress});
             } else {
