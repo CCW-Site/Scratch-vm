@@ -56,7 +56,7 @@ const loadGandiAsset = (md5ext, gandiAsset, runtime) => {
 
     const isSupported = runtime.gandi.supportedAssetTypes.some(type => type.name === assetType.name);
     if (!isSupported && !runtime.isPlayerOnly) {
-        log.info(`unsupported assets type: ${assetType.name} ${md5ext}`);
+        log.error(`unsupported assets type: ${assetType.name} ${md5ext}`);
         return Promise.resolve(null);
     }
 
