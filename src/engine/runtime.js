@@ -3755,7 +3755,7 @@ class Runtime extends EventEmitter {
             fullName: `${obj.name}.${obj.dataFormat}`,
             name: obj.name,
             dataFormat: obj.dataFormat,
-            assetType: obj.asset.assetType,
+            assetType: obj.assetType,
             md5ext: obj.md5}));
     }
 

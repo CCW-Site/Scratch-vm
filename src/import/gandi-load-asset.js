@@ -54,20 +54,25 @@ const loadGandiAsset = (md5ext, gandiAsset, runtime) => {
         break;
     }
 
+    gandiAsset.assetType = assetType;
+
     const isSupported = runtime.gandi.supportedAssetTypes.some(type => type.name === assetType.name);
     if (!isSupported && !runtime.isPlayerOnly) {
         log.error(`unsupported assets type: ${assetType.name} ${md5ext}`);
-        return Promise.resolve(null);
+        return Promise.resolve(gandiAsset);
     }
 
     const filePromise = runtime.storage.load(assetType, md5, ext);
     if (!filePromise) {
         log.error(`Couldn't fetch costume asset: ${md5ext}`);
-        return Promise.resolve(null);
+        return Promise.resolve(gandiAsset);
     }
 
     return filePromise.then(asset => {
-        runtime.emit('LOAD_ASSETS_PROGRESS', asset);
+        if (!asset) {
+            log.error(`Couldn't fetch asset: ${md5ext}, fileName: ${gandiAsset.name}.${gandiAsset.dataFormat}`);
+        }
+        runtime.emit('LOAD_ASSETS_PROGRESS', gandiAsset);
         gandiAsset.asset = asset;
         return gandiAsset;
     });
