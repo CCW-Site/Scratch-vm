@@ -834,6 +834,7 @@ class VirtualMachine extends EventEmitter {
             null,
             true // generate md5
         );
+        obj.assetType = assetType;
         obj.id = generateUid(); // unique id for this asset, used in cloud project
         obj.assetId = obj.asset.assetId;
         obj.md5 = `${obj.assetId}.${obj.dataFormat}`;
