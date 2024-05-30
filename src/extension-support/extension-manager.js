@@ -267,7 +267,10 @@ class ExtensionManager {
      * @param {bool} shouldReplace - should replace extension that already loaded
      * @returns {Promise} resolved once the extension is loaded and initialized or rejected on failure
      */
-    loadExtensionURL (extensionURL, shouldReplace = false) {
+    async loadExtensionURL (extensionURL, shouldReplace = false) {
+        if (!extensionURL) {
+            throw new Error('extension Id is null');
+        }
         if (this.isBuiltinExtension(extensionURL)) {
             return this.loadExtensionIdSync(extensionURL);
         }
@@ -276,39 +279,53 @@ class ExtensionManager {
             return this.loadExternalExtensionById(extensionURL, shouldReplace);
         }
 
+        let extFileURL = extensionURL;
         if (!this.isValidExtensionURL(extensionURL)) {
             const wildExt = this.runtime.gandi.wildExtensions[extensionURL];
-            extensionURL = wildExt ? wildExt.url : '';
+            extFileURL = wildExt ? wildExt.url : '';
         }
 
-        if (this.isValidExtensionURL(extensionURL)) {
-            log.warn(
-                `ccw: [${extensionURL}] not found in extensions library,try load as URL`
-            );
-            return this.loadExternalExtensionToLibrary(extensionURL, shouldReplace).then(({onlyAdded, addedAndLoaded}) => {
+        if (!extFileURL && this.runtime.ccwAPI.getExtensionURLById) {
+            // try get extension url from ccwAPI
+            // NOTE: issue - may get a extension which id is same but not compatible with current blocks
+            // TODO: let user choose which load it or input a new URL
+            extFileURL = await this.runtime.ccwAPI.getExtensionURLById(extensionURL);
+        }
+
+        if (!extFileURL) {
+            // try ask user to input url to load extension
+            // eslint-disable-next-line no-alert
+            extFileURL = prompt(
+                formatMessage({
+                    id: 'gui.extension.custom.load.inputURLTip',
+                    default: `input custom extension [${extensionURL}]'s URL`
+                },
+                {extName: `${extensionURL}\n`}));
+            if (!this.isValidExtensionURL(extFileURL)) {
+                throw new Error(`Invalid extension URL: ${extensionURL}`);
+            }
+        }
+
+        if (this.isValidExtensionURL(extFileURL)) {
+            return this.loadExternalExtensionToLibrary(extFileURL, shouldReplace).then(({onlyAdded, addedAndLoaded}) => {
                 const allLoader = onlyAdded.map(extId => this.loadExternalExtensionById(extId, shouldReplace));
                 return Promise.all(allLoader).then(res => res.concat(addedAndLoaded).flat());
             });
         }
+        log.error(` load extension failed Id: ${extensionURL}, URL: `, extFileURL);
+        // EXTENSION_NOT_FOUND
+        this.runtime.emit('EXTENSION_NOT_FOUND', extensionURL);
+        throw new Error(`Extension not found: ${extensionURL}`);
+    }
 
-        // try ask user to input url to load extension
-        if (extensionURL && !extensionURL.startsWith('http')) {
-            // eslint-disable-next-line no-alert
-            const url = prompt(
-                formatMessage(
-                    {
-                        id: 'gui.extension.custom.load.inputURLTip',
-                        default: `input custom extension [${extensionURL}]'s URL`
-                    },
-                    {extName: `${extensionURL}\n`}
-                )
-            );
-            if (!this.isValidExtensionURL(url)) {
-                throw new Error(`Invalid extension URL: ${extensionURL}`);
-            }
-            return this.loadExtensionURL(extensionURL, shouldReplace);
-        }
 
+    /**
+     * Loads an extension URL in a worker.
+     *
+     * @param {string} extensionURL - The URL of the extension to load.
+     * @returns {Promise} A promise that resolves when the extension is loaded successfully, or rejects with an error if the extension is not found.
+     */
+    loadExtensionURLInWorker (extensionURL) {
         this.loadingAsyncExtensions++;
         return new Promise((resolve, reject) => {
             this.pendingExtensions.push({extensionURL, resolve, reject});
