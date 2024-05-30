@@ -21,16 +21,16 @@ const loadGandiAsset = (md5ext, gandiAsset, runtime) => {
     //     return loadCostumeFromAsset(costume, runtime, optVersion);
     // }
 
-    // Need to load the costume from storage. The server should have a reference to this md5.
+    // Need to load the gandi asset from storage. The server should have a reference to this md5.
     if (!runtime.storage) {
-        log.error('No storage module present; cannot load costume asset: ', md5ext);
+        log.error('No storage module present; cannot load asset: ', md5ext);
         return Promise.resolve(gandiAsset);
     }
 
-    // if (!runtime.storage.defaultAssetId) {
-    //     log.error(`No default assets found`);
-    //     return Promise.resolve(gandiAsset);
-    // }
+    if (!runtime.storage.defaultAssetId) {
+        log.error(`No default assets found`);
+        return Promise.resolve(gandiAsset);
+    }
     const AssetType = runtime.storage.AssetType;
     let assetType = null;
     switch (ext) {
@@ -70,9 +70,38 @@ const loadGandiAsset = (md5ext, gandiAsset, runtime) => {
 
     return filePromise.then(asset => {
         if (!asset) {
-            log.error(`Couldn't fetch asset: ${md5ext}, fileName: ${gandiAsset.name}.${gandiAsset.dataFormat}`);
+            log.warn('Failed to find file data: ', gandiAsset.md5);
+            // Use default asset if original fails to load
+            switch (ext) {
+            case AssetType.Python.runtimeFormat:
+                gandiAsset.assetId = runtime.storage.defaultAssetId.Python;
+                break;
+            case AssetType.Json.runtimeFormat:
+                gandiAsset.assetId = runtime.storage.defaultAssetId.Json;
+                break;
+            case AssetType.Extension.runtimeFormat:
+                gandiAsset.assetId = runtime.storage.defaultAssetId.JavaScript;
+                break;
+            case AssetType.JavaScript.runtimeFormat:
+                gandiAsset.assetId = runtime.storage.defaultAssetId.JavaScript;
+                break;
+            case AssetType.GLSL.runtimeFormat:
+                gandiAsset.assetId = runtime.storage.defaultAssetId.GLSL;
+                break;
+            default:
+                break;
+            }
+            gandiAsset.broken = {};
+            gandiAsset.broken.assetId = gandiAsset.assetId;
+            gandiAsset.broken.md5 = gandiAsset.md5;
+            gandiAsset.broken.dataFormat = gandiAsset.dataFormat;
+
+            runtime.emit('LOAD_ASSET_FAILED', {name: gandiAsset.name, assetId: gandiAsset.assetId});
+
+            gandiAsset.asset = runtime.storage.get(gandiAsset.assetId);
+            gandiAsset.md5 = `${gandiAsset.assetId}.${gandiAsset.asset.dataFormat}`;
+            return gandiAsset;
         }
-        runtime.emit('LOAD_ASSETS_PROGRESS', gandiAsset);
         gandiAsset.asset = asset;
         return gandiAsset;
     });

@@ -319,6 +319,9 @@ class VirtualMachine extends EventEmitter {
                 }
             }
         });
+        this.runtime.on(Runtime.LOAD_ASSET_FAILED, info => {
+            this.emit(Runtime.LOAD_ASSET_FAILED, info);
+        });
         this.extensionManager = new ExtensionManager(this);
 
         // Load core extensions

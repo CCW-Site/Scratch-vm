@@ -637,6 +637,11 @@ class Runtime extends EventEmitter {
         return 'LOAD_ASSETS_PROGRESS';
     }
 
+    static get LOAD_ASSET_FAILED () {
+        return 'LOAD_ASSET_FAILED';
+    }
+
+
     /**
      * Event name for start load a project from a Scratch JSON representation.
      * @const {string}
@@ -1868,39 +1873,6 @@ class Runtime extends EventEmitter {
         return `%${argNum}`;
     }
 
-    /**
-     * @param {string} id - The ID of the costume
-     */
-    getCostumeInfo (id) {
-        return new Promise((resolve, reject) => {
-            const finder = () => {
-                for (let i = 0; i < this.targets.length; i++) {
-                    const target = this.targets[i];
-                    const costume = target.sprite.costumes_.find(item => item.assetId === id);
-                    if (costume) {
-                        return resolve({
-                            targetId: target.id,
-                            targetName: target.sprite.name,
-                            costumeId: id,
-                            costumeName: costume.name
-                        });
-                    }
-                }
-                reject(new Error(`Couldn't find costume(${id}) in targets`));
-            };
-            if (this.targets.length) {
-                finder();
-            } else {
-                const handler = () => {
-                    if (this.targets.length) {
-                        this.removeListener(Runtime.PROJECT_LOADED, handler);
-                        finder();
-                    }
-                };
-                this.addListener(Runtime.PROJECT_LOADED, handler);
-            }
-        });
-    }
 
     /**
      * @returns {Array.<object>} scratch-blocks XML for each category of extension blocks, in category order.
@@ -2125,7 +2097,6 @@ class Runtime extends EventEmitter {
      */
     attachStorage (storage) {
         this.storage = storage;
-        this.storage._getCostumeInfo = this.getCostumeInfo.bind(this);
         this.storage.onLoadCostumeError = this.storage.onLoadCostumeError || (() => {});
     }
 
