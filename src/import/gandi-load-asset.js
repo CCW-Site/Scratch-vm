@@ -71,6 +71,14 @@ const loadGandiAsset = (md5ext, gandiAsset, runtime) => {
     return filePromise.then(asset => {
         if (!asset) {
             log.warn('Failed to find file data: ', gandiAsset.md5);
+            // Keeping track of the original sound metadata in a `broken` field.
+            gandiAsset.broken = {};
+            gandiAsset.broken.assetId = gandiAsset.assetId;
+            gandiAsset.broken.md5 = gandiAsset.md5;
+            gandiAsset.broken.dataFormat = gandiAsset.dataFormat;
+
+            runtime.emit('LOAD_ASSET_FAILED', {name: gandiAsset.name, assetId: gandiAsset.assetId});
+
             // Use default asset if original fails to load
             switch (ext) {
             case AssetType.Python.runtimeFormat:
@@ -80,7 +88,7 @@ const loadGandiAsset = (md5ext, gandiAsset, runtime) => {
                 gandiAsset.assetId = runtime.storage.defaultAssetId.Json;
                 break;
             case AssetType.Extension.runtimeFormat:
-                gandiAsset.assetId = runtime.storage.defaultAssetId.JavaScript;
+                gandiAsset.assetId = runtime.storage.defaultAssetId.Extension;
                 break;
             case AssetType.JavaScript.runtimeFormat:
                 gandiAsset.assetId = runtime.storage.defaultAssetId.JavaScript;
@@ -91,13 +99,6 @@ const loadGandiAsset = (md5ext, gandiAsset, runtime) => {
             default:
                 break;
             }
-            gandiAsset.broken = {};
-            gandiAsset.broken.assetId = gandiAsset.assetId;
-            gandiAsset.broken.md5 = gandiAsset.md5;
-            gandiAsset.broken.dataFormat = gandiAsset.dataFormat;
-
-            runtime.emit('LOAD_ASSET_FAILED', {name: gandiAsset.name, assetId: gandiAsset.assetId});
-
             gandiAsset.asset = runtime.storage.get(gandiAsset.assetId);
             gandiAsset.md5 = `${gandiAsset.assetId}.${gandiAsset.asset.dataFormat}`;
             return gandiAsset;

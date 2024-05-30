@@ -42,9 +42,18 @@ const loadSoundFromAsset = function (sound, soundAsset, runtime, soundBank) {
     });
 };
 
-// Handle sound loading errors by replacing the runtime sound with the
-// default sound from storage, but keeping track of the original sound metadata
-// in a `broken` field
+/**
+ * Handle sound loading errors by replacing the runtime sound with the
+ * default sound from storage, but keeping track of the original sound metadata
+ * in a `broken` field.
+ *
+ * @param {Object} sound - The sound object that failed to load.
+ * @param {Object} runtime - The runtime environment.
+ * @param {Object} runtime.storage - Storage related methods and properties.
+ * @param {Function} runtime.emit - Function to emit events.
+ * @param {Object} soundBank - The sound bank that manages loaded sounds.
+ * @returns {Promise<Object>} A promise that resolves to the loaded sound.
+ */
 const handleSoundLoadError = function (sound, runtime, soundBank) {
 
     // Keep track of the old asset information until we're done loading the default sound

@@ -259,9 +259,17 @@ const loadBitmap_ = function (costume, runtime, _rotationCenter) {
         });
 };
 
-// Handle all manner of costume errors with a Gray Question Mark (default costume)
-// and preserve as much of the original costume data as possible
-// Returns a promise of a costume
+/**
+ * Handle all manner of costume errors with a Gray Question Mark (default costume)
+ * and preserve as much of the original costume data as possible.
+ * Returns a promise of a costume.
+ *
+ * @param {Object} costume - The costume object that failed to load.
+ * @param {Object} runtime - The runtime environment.
+ * @param {Object} runtime.storage - Storage related methods and properties.
+ * @param {Function} runtime.emit - Function to emit events.
+ * @returns {Promise<Object>} A promise that resolves to the loaded costume.
+ */
 const handleCostumeLoadError = function (costume, runtime) {
     // Keep track of the old asset information until we're done loading the default costume
     const oldAsset = costume.asset; // could be null
