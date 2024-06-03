@@ -614,7 +614,7 @@ const serialize = function (runtime, targetId, {allowOptimization = false, saveV
 
     if (targetId) {
         const target = serializedTargets[0];
-        if (gandi) {
+        if (target && gandi) {
             target.gandi = gandi;
         }
         return target;
