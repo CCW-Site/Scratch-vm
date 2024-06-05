@@ -167,24 +167,25 @@ class Cloud {
 
         // fix: server cloud var service is messed up with other services, it store Array as String in MangoDB sometimes, here is a temp fix.
         // hope server will fix it soon.
-
-        // console.log('updateCloudVariable', varUpdate);
-        if (isList && typeof varUpdate.value === 'string') {
-            try {
-                // console.log(' >>>>> is list string,need to parse', varUpdate.value);
-                const value = JSON.parse(varUpdate.value);
-                if (Array.isArray(value)) {
-                    // console.log('    >>>> parse suc', value);
-                    variable.value = value;
-                } else {
-                    // console.log('    >>>> parse suc but not array', value);
-                    variable.value = varUpdate.value;
+        if (isList && !Array.isArray(varUpdate.value)) {
+            let newValue = [];
+            // The value can be of non-array types, such as number, string, etc.
+            // Here, all of them need to be handled as arrays.
+            if (typeof varUpdate.value === 'string') {
+                try {
+                    const value = JSON.parse(varUpdate.value);
+                    if (Array.isArray(value)) {
+                        newValue = value;
+                    } else {
+                        newValue = [varUpdate.value];
+                    }
+                } catch (error) {
+                    newValue = [varUpdate.value];
                 }
-            } catch (error) {
-                log.warn('updateCloudVariable list parse fail', varUpdate);
-                variable.value = [];
-
+            } else {
+                newValue = [String(varUpdate.value)];
             }
+            variable.value = newValue;
         } else {
             variable.value = varUpdate.value;
         }
