@@ -2543,14 +2543,7 @@ class VirtualMachine extends EventEmitter {
         this.runtime.targets = MathUtil.moveArrayElement(targets, fromIndex, toIndex).array;
 
         if (!isRemoteOperation) {
-            const max = Math.max(processedData.fromIndex, processedData.toIndex) + 1;
-            const min = Math.min(processedData.fromIndex, processedData.toIndex);
-            const list = [];
-            for (let index = min; index < max; index++) {
-                const _target = processedData.array[index];
-                list.push([_target.id, {order: index}]);
-            }
-            this.runtime.emitTargetSimplePropertyChanged(list);
+            this.runtime.emitTargetsIndexChanged([{id: target.id, currentIndex: processedData.toIndex}]);
         }
         this.emitTargetsUpdate();
         return true;

@@ -794,7 +794,7 @@ class RenderedTarget extends Target {
                 [this.originalTargetId, {currentCostume: this.currentCostume}]
             ]);
         }
-        this.runtime.emitTargetCostumeChanged(this.originalTargetId, ['reorder', [{id: currentCostume.id, index: newIndex}]]);
+        this.runtime.emitTargetCostumeChanged(this.originalTargetId, ['reorder', [{id: currentCostume.id, currentIndex: newIndex}]]);
         return true;
     }
 
@@ -813,7 +813,7 @@ class RenderedTarget extends Target {
         const sound = this.sprite.sounds[soundIndex];
         this.deleteSound(soundIndex);
         this.addSound(sound, newIndex);
-        this.runtime.emitTargetSoundsChanged(this.originalTargetId, ['reorder', [{id: sound.id, index: newIndex}]]);
+        this.runtime.emitTargetSoundsChanged(this.originalTargetId, ['reorder', [{id: sound.id, currentIndex: newIndex}]]);
         return true;
     }
 
