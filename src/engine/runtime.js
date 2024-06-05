@@ -2459,6 +2459,10 @@ class Runtime extends EventEmitter {
         }
         this.emit(Runtime.RUNTIME_DISPOSED);
         this.ioDevices.clock.resetProjectTimer();
+        // Reset all managers on the renderer.
+        if (this.renderer && this.renderer.resetBuiltinManager) {
+            this.renderer.resetBuiltinManager();
+        }
         // @todo clear out extensions? turboMode? etc.
 
         // *********** Cloud *******************
