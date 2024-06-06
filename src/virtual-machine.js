@@ -300,7 +300,7 @@ class VirtualMachine extends EventEmitter {
             this.emit(Runtime.GANDI_WILD_EXTENSIONS_CHANGED, data);
 
         });
-        this.runtime.on(Runtime.GANDI_ASSETS_UPDATE, ({data, type}) => {
+        this.runtime.on(Runtime.GANDI_ASSET_UPDATE, ({data, type}) => {
             // For collaborative editing
             const {id, assetId, dataFormat, name, asset} = data;
             const md5ext = `${assetId}.${dataFormat}`;
