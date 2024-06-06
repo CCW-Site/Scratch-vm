@@ -115,12 +115,12 @@ const loadSound = function (sound, runtime, soundBank) {
         runtime.storage.load(runtime.storage.AssetType.Sound, md5, ext)
     ).then(soundAsset => {
         if (!soundAsset) {
+            log.warn('Failed to find sound data: ', sound.md5);
             return handleSoundLoadError(sound, runtime, soundBank);
         }
         sound.asset = soundAsset;
         sound.assetUnInit = false;
         if (asyncLoading) {
-            log.warn('Failed to find sound data: ', sound.md5);
             return () => loadSoundFromAsset(sound, soundAsset, runtime, soundBank);
         }
         return loadSoundFromAsset(sound, soundAsset, runtime, soundBank);
