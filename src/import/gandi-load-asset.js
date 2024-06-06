@@ -69,7 +69,9 @@ const loadGandiAsset = (md5ext, gandiAsset, runtime) => {
     }
 
     return filePromise.then(asset => {
-        if (!asset) {
+        if (asset) {
+            gandiAsset.asset = asset;
+        } else {
             log.warn('Failed to find file data: ', gandiAsset.md5);
             // Keeping track of the original sound metadata in a `broken` field.
             gandiAsset.broken = {};
@@ -101,9 +103,8 @@ const loadGandiAsset = (md5ext, gandiAsset, runtime) => {
             }
             gandiAsset.asset = runtime.storage.get(gandiAsset.assetId);
             gandiAsset.md5 = `${gandiAsset.assetId}.${gandiAsset.asset.dataFormat}`;
-            return gandiAsset;
         }
-        gandiAsset.asset = asset;
+        runtime.emit('LOAD_ASSETS_PROGRESS', gandiAsset);
         return gandiAsset;
     });
 };
