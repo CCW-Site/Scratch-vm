@@ -46,6 +46,12 @@ const officialExtension = {};
 /** Extensions loaded by the user */
 const customExtension = {};
 
+const reservedExtId = [
+    'control', 'event', 'looks',
+    'motion', 'operator', 'sound',
+    'sensing', 'data', 'procedures',
+    'argument', 'ccw', 'Gandi'];
+
 /**
  * @typedef {object} ArgumentInfo - Information about an extension block argument
  * @property {ArgumentType} type - the type of value this argument can take
@@ -853,6 +859,9 @@ class ExtensionManager {
         if (!extensionId) {
             throw new Error('extensionId is null in extensionInfo');
         }
+        if (this.isExtensionIdReserved(extensionId)) {
+            throw new Error(`extensionId: '${extensionId}' is reserved in Scratch, please change another one.`);
+        }
         if (url) {
             ext.url = url;
         }
@@ -908,6 +917,17 @@ class ExtensionManager {
         throw new Error(`Extension not found: ${extensionId}`);
     }
 
+    /**
+     * Loads an external extension to the library.
+     *
+     * @param {string} url - The URL of the external extension.
+     * @param {boolean} [shouldReplace=false] - Whether to replace existing extensions with the same ID.
+     * @param {boolean} [disallowIIFERegister=false] - Whether to disallow registering extensions using IIFE.
+     * @returns {Promise<{onlyAdded: string[], addedAndLoaded: string[]}>} - A promise that resolves with an object containing two arrays: `onlyAdded` and `addedAndLoaded`.
+     * - `onlyAdded` contains the IDs of the extensions that were only added to the library.
+     * - `addedAndLoaded` contains the IDs of the extensions that were both added to the library and loaded.
+     * @throws {Error} - If an error occurs while loading the extension.
+     */
     async loadExternalExtensionToLibrary (url, shouldReplace = false, disallowIIFERegister = false) {
         const onlyAdded = [];
         const addedAndLoaded = []; // exts use Scratch.extensions.register
@@ -916,10 +936,10 @@ class ExtensionManager {
             createdScriptLoader({
                 url,
                 onSuccess: async () => {
-                    if (window.IIFEExtensionInfoList) {
+                    try {
+                        if (window.IIFEExtensionInfoList) {
                         // for those extension which registered by scratch.extensions.register in IIFE
-                        window.IIFEExtensionInfoList.forEach(({extensionObject, extensionInstance}) => {
-                            try {
+                            window.IIFEExtensionInfoList.forEach(({extensionObject, extensionInstance}) => {
                                 this.addCustomExtensionInfo(extensionObject, url);
                                 if (disallowIIFERegister) {
                                     onlyAdded.push(extensionObject.info.extensionId);
@@ -927,47 +947,46 @@ class ExtensionManager {
                                     this.registerExtension(extensionObject.info.extensionId, extensionInstance, shouldReplace);
                                     addedAndLoaded.push(extensionObject.info.extensionId);
                                 }
-                            } catch (error) {
-                                reject(error);
-                            }
-                        });
-                    }
-                    if (window.ExtensionLib) {
+                            });
+                        }
+                        if (window.ExtensionLib) {
                         // for those extension which developed by user using ccw-customExt-tool
-                        const lib = await window.ExtensionLib;
-                        Object.keys(lib).forEach(key => {
-                            const obj = lib[key];
+                            const lib = await window.ExtensionLib;
+                            Object.keys(lib).forEach(key => {
+                                const obj = lib[key];
+                                this.addCustomExtensionInfo(obj, url);
+                                onlyAdded.push(obj.info.extensionId);
+                            });
+                            delete window.ExtensionLib;
+                        }
+                        if (window.tempExt) {
+                        // for user developing custom extension
+                            const obj = window.tempExt;
                             this.addCustomExtensionInfo(obj, url);
                             onlyAdded.push(obj.info.extensionId);
-                        });
-                        delete window.ExtensionLib;
-                    }
-                    if (window.tempExt) {
-                        // for user developing custom extension
-                        const obj = window.tempExt;
-                        this.addCustomExtensionInfo(obj, url);
-                        onlyAdded.push(obj.info.extensionId);
-                        delete window.tempExt;
-                    }
-                    if (window.scratchExtensions) {
+                            delete window.tempExt;
+                        }
+                        if (window.scratchExtensions) {
                         // for Gandi extension service
-                        const {default: lib} =
+                            const {default: lib} =
                             await window.scratchExtensions.default();
-                        Object.entries(lib).forEach(([key, obj]) => {
-                            if (!(obj.info && obj.info.extensionId)) {
+                            Object.entries(lib).forEach(([key, obj]) => {
+                                if (!(obj.info && obj.info.extensionId)) {
                                 // compatible with some legacy gandi extension service
-                                obj.info = obj.info || {};
-                                obj.info.extensionId = key;
-                            }
-                            this.addOfficialExtensionInfo(obj);
-                            onlyAdded.push(obj.info && obj.info.extensionId);
-                        });
+                                    obj.info = obj.info || {};
+                                    obj.info.extensionId = key;
+                                }
+                                this.addOfficialExtensionInfo(obj);
+                                onlyAdded.push(obj.info && obj.info.extensionId);
+                            });
+                        }
+                        resolve({onlyAdded, addedAndLoaded});
+                    } catch (error) {
+                        reject(error);
                     }
-                    resolve({onlyAdded, addedAndLoaded});
                 },
                 onError: reject
             });
-            // eslint-disable-next-line no-console
         })
             // .catch(e => log.error('LoadRemoteExtensionError: ', e))
             .finally(() => {
@@ -980,6 +999,23 @@ class ExtensionManager {
                 delete window.ExtensionLib;
                 delete window.IIFEExtensionInfoList;
             });
+    }
+
+
+    /**
+     * Checks if an extension ID is reserved.
+     *
+     * @param {string} extensionId - The extension ID to check.
+     * @returns {boolean} - Returns `false` if the extension ID is not reserved, `true` otherwise.
+     */
+    isExtensionIdReserved (extensionId) {
+        if (reservedExtId.includes(extensionId)) {
+            return true;
+        }
+        if (reservedExtId.find(prefix => extensionId.startsWith(`${prefix}_`))) {
+            return true;
+        }
+        return false;
     }
 
     getLoadedExtensionURLs () {
