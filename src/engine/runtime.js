@@ -851,6 +851,11 @@ class Runtime extends EventEmitter {
         return 'GANDI_ASSET_UPDATE';
     }
 
+    static get GANDI_ASSET_UPDATE_FROM_SERVER () {
+        return 'GANDI_ASSET_UPDATE_FROM_SERVER';
+    }
+
+
     static get GANDI_CONFIGS_UPDATE () {
         return 'GANDI_CONFIGS_UPDATE';
     }
@@ -3397,6 +3402,10 @@ class Runtime extends EventEmitter {
 
     emitGandiAssetsUpdate (action) {
         this.emit(Runtime.GANDI_ASSET_UPDATE, action);
+    }
+
+    emitGandiAssetsUpdateFromServer (action) {
+        this.emit(Runtime.GANDI_ASSET_UPDATE_FROM_SERVER, action);
     }
 
     emitGandiWildExtensionsChanged (data) {

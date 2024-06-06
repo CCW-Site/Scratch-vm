@@ -31,6 +31,7 @@ const {
 const {loadGandiAsset} = require('./import/gandi-load-asset');
 const generateUid = require('./util/uid');
 const mutationAdapter = require('./engine/mutation-adapter.js');
+const Gandi = require('./util/gandi.js');
 require('canvas-toBlob');
 
 const RESERVED_NAMES = ['_mouse_', '_stage_', '_edge_', '_myself_', '_random_'];
@@ -297,7 +298,16 @@ class VirtualMachine extends EventEmitter {
         });
         this.runtime.on(Runtime.GANDI_WILD_EXTENSIONS_CHANGED, data => {
             this.emit(Runtime.GANDI_WILD_EXTENSIONS_CHANGED, data);
+
         });
+        this.runtime.on(Runtime.GANDI_ASSETS_UPDATE, ({data, type}) => {
+            // For collaborative editing
+            const {id, assetId, dataFormat, name, asset} = data;
+            const md5ext = `${assetId}.${dataFormat}`;
+            this.emit(Runtime.GANDI_ASSET_UPDATE, {data: {assetId, dataFormat, name, md5ext, asset, id}, type, id});
+
+        });
+
         this.runtime.on(Runtime.GANDI_SPINE_UPDATE, data => {
             this.emit(Runtime.GANDI_SPINE_UPDATE, data);
         });
@@ -1030,6 +1040,7 @@ class VirtualMachine extends EventEmitter {
      * Install `deserialize` results: zero or more targets after the extensions (if any) used by those targets.
      * @param {Array.<Target>} targets - the targets to be installed
      * @param {ImportedExtensionsInfo} extensions - metadata about extensions used by these targets
+     * @param {Gandi} gandiObject - the gandi Object to be merged
      * @param {boolean} wholeProject - set to true if installing a whole project, as opposed to a single sprite.
      * @param {number} _projectProcessingUniqueId 加载project的Id
      * @param {boolean} isRemoteOperation - set to true if this is a remote operation
@@ -1844,7 +1855,7 @@ class VirtualMachine extends EventEmitter {
                         this.runtime.gandi.assets[index] = gandiAssetObj;
                     }
                 });
-                this.runtime.emitGandiAssetsUpdate({type: 'update', data: gandiAssetObj, isFromRemote: true});
+                this.runtime.emitGandiAssetsUpdateFromServer({type: 'update', data: gandiAssetObj});
             }
         });
     }
@@ -1860,7 +1871,7 @@ class VirtualMachine extends EventEmitter {
         };
         loadGandiAsset(newAsset.md5ext, file, this.runtime).then(gandiAssetObj => {
             this.runtime.gandi.assets.push(gandiAssetObj);
-            this.runtime.emitGandiAssetsUpdate({type: 'add', data: gandiAssetObj, isFromRemote: true});
+            this.runtime.emitGandiAssetsUpdateFromServer({type: 'add', data: gandiAssetObj});
         });
     }
 
@@ -1870,7 +1881,7 @@ class VirtualMachine extends EventEmitter {
             if (index > -1) {
                 const deleted = this.runtime.gandi.assets.splice(index, 1);
                 if (deleted.length > 0) {
-                    this.runtime.emitGandiAssetsUpdate({type: 'delete', data: deleted[0], isFromRemote: true});
+                    this.runtime.emitGandiAssetsUpdateFromServer({type: 'delete', data: deleted[0]});
                 }
             } else {
                 log.warn(`deleteGandiAssetFromRemote: id:${id} not found`);
@@ -2479,20 +2490,12 @@ class VirtualMachine extends EventEmitter {
      * Emit metadata about Gandi assets file.
      * An editor UI could use this to display a list of files and show
      * the currently editing one.
-     * @param {{data:object, type: 'add'|'update'|'delete'}} action If true, also emit a project changed event.
-     * @param {boolean} triggerProjectChange If true, also emit a project changed event.
-     * Disabled selectively by updates that don't affect project serialization.
+     * @param {{data:object, type: 'add'|'update'|'delete', isFromRemote:bool}} action If true, also emit a project changed event.
      * Defaults to true.
      */
-    emitGandiAssetsUpdate ({data, type}, triggerProjectChange = true) {
-        // For collaborative editing
-        const {id, assetId, dataFormat, name, asset} = data;
-        const md5ext = `${assetId}.${dataFormat}`;
-        this.emit(Runtime.GANDI_ASSET_UPDATE, {data: {assetId, dataFormat, name, md5ext, asset, id}, type, id});
+    emitGandiAssetsUpdate ({data, type}) {
         this.runtime.emitGandiAssetsUpdate({data, type});
-        if (triggerProjectChange) {
-            this.runtime.emitProjectChanged();
-        }
+        this.runtime.emitProjectChanged();
     }
 
     /**
