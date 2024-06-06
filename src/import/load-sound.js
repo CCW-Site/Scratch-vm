@@ -65,7 +65,7 @@ const handleSoundLoadError = function (sound, runtime, soundBank) {
     const oldDataFormat = sound.dataFormat;
 
     runtime.emit('LOAD_ASSET_FAILED', {assetType: 'sound', name: sound.name, assetId: sound.assetId});
-                
+
     // Use default asset if original fails to load
     sound.assetId = runtime.storage.defaultAssetId.Sound;
     sound.asset = runtime.storage.get(sound.assetId);
@@ -78,12 +78,12 @@ const handleSoundLoadError = function (sound, runtime, soundBank) {
 
         // Should be null if we got here because the sound was missing
         loadedSound.broken.asset = oldAsset;
-        
+
         loadedSound.broken.sampleCount = oldSample;
         loadedSound.broken.rate = oldRate;
         loadedSound.broken.format = oldFormat;
         loadedSound.broken.dataFormat = oldDataFormat;
-        
+
         return loadedSound;
     });
 };
@@ -115,7 +115,7 @@ const loadSound = function (sound, runtime, soundBank) {
         runtime.storage.load(runtime.storage.AssetType.Sound, md5, ext)
     ).then(soundAsset => {
         if (!soundAsset) {
-            log.warn('Failed to find sound data: ', sound.md5);
+            log.warn('Failed to load sound data: ', sound.md5);
             return handleSoundLoadError(sound, runtime, soundBank);
         }
         sound.asset = soundAsset;
