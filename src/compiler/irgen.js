@@ -1172,7 +1172,7 @@ class ScriptTreeGenerator {
                 const blockInfo = this.getBlockInfo(block.opcode);
                 if (blockInfo) {
                     const type = blockInfo.info.blockType;
-                    if (type === BlockType.COMMAND) {
+                    if (type === BlockType.COMMAND || type === BlockType.CONDITIONAL || type === BlockType.LOOP) {
                         return this.descendCompatLayer(block);
                     }
                 }
@@ -1180,7 +1180,7 @@ class ScriptTreeGenerator {
 
             // When this thread was triggered by a stack click, attempt to compile as an input.
             // TODO: perhaps this should be moved to generate()?
-            if (this.thread.stackClick) {
+            if (this.thread.stackClick || block.next) {
                 try {
                     const inputNode = this.descendInput(block);
                     return {
@@ -1423,11 +1423,23 @@ class ScriptTreeGenerator {
         if (block.mutation?.blockInfo?.isDynamic) {
             inputs.mutation = {kind: 'gandi.blockMutation', value: block.mutation};
         }
+        const blockInfo = this.getBlockInfo(block.opcode);
+        const blockType = (blockInfo && blockInfo.info && blockInfo.info.blockType) || BlockType.COMMAND;
+        const substacks = [];
+        if (blockType === BlockType.CONDITIONAL || blockType === BlockType.LOOP) {
+            const branchCount = blockInfo.info.branchCount;
+            for (let i = 0; i < branchCount; i++) {
+                const inputName = i === 0 ? 'SUBSTACK' : `SUBSTACK${i + 1}`;
+                substacks.push(this.descendSubstack(block, inputName));
+            }
+        }
         return {
             kind: 'compat',
             opcode: block.opcode,
+            blockType,
             inputs,
-            fields
+            fields,
+            substacks
         };
     }
 
