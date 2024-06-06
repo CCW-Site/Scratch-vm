@@ -1007,7 +1007,7 @@ class VirtualMachine extends EventEmitter {
             }
             return Promise.reject('Unable to verify Scratch Project version.');
         };
-        return deserializePromise().then(({targets, extensions}) => {
+        return deserializePromise().then(({targets, extensions, gandi}) => {
             if (typeof performance !== 'undefined') {
                 performance.mark('scratch-vm-deserialize-end');
                 performance.measure(
@@ -1019,8 +1019,9 @@ class VirtualMachine extends EventEmitter {
             return this.installTargets(
                 targets,
                 extensions,
+                gandi,
                 true,
-                _projectProcessingUniqueId
+                _projectProcessingUniqueId,
             );
         });
     }
@@ -1037,12 +1038,18 @@ class VirtualMachine extends EventEmitter {
     async installTargets (
         targets,
         extensions,
+        gandiObject,
         wholeProject,
         _projectProcessingUniqueId,
-        isRemoteOperation
+        isRemoteOperation,
     ) {
         await this.extensionManager.allAsyncExtensionsLoaded();
-
+        if (gandiObject) {
+            if (!this.runtime.gandi) {
+                this.runtime.gandi = new Gandi();
+            }
+            this.runtime.gandi.merge(gandiObject, isRemoteOperation);
+        }
         const extensionPromises = [];
         extensions.extensionIDs.forEach(extensionID => {
             if (!this.extensionManager.isExtensionLoaded(extensionID)) {
@@ -1214,8 +1221,8 @@ class VirtualMachine extends EventEmitter {
         const sb2 = require('./serialization/sb2');
         return sb2
             .deserialize(sprite, this.runtime, true, zip)
-            .then(({targets, extensions}) =>
-                this.installTargets(targets, extensions, false, null, isRemoteOperation));
+            .then(({targets, extensions, gandi}) =>
+                this.installTargets(targets, extensions, gandi, false, null, isRemoteOperation));
     }
 
     /**
@@ -1230,8 +1237,8 @@ class VirtualMachine extends EventEmitter {
         const sb3 = require('./serialization/sb3');
         return sb3
             .deserialize(sprite, this.runtime, zip, true)
-            .then(({targets, extensions}) =>
-                this.installTargets(targets, extensions, false, null, isRemoteOperation)
+            .then(({targets, extensions, gandi}) =>
+                this.installTargets(targets, extensions, gandi, false, null, isRemoteOperation)
             );
     }
 

@@ -1,3 +1,5 @@
+const uid = require('../util/uid');
+const log = require('../util/log');
 class Gandi {
     /**
      * Constructor for the Gandi class.
@@ -22,6 +24,65 @@ class Gandi {
          */
         this._supportedAssetTypes = [];
         this.setup();
+    }
+
+    merge (data, isRemoteOperation) {
+        if (data.configs) {
+            this.configs = Object.assign(this.configs || {}, data.configs);
+        }
+        if (data.wildExtensions) {
+            this.wildExtensions = Object.assign(this.wildExtensions || {}, data.wildExtensions);
+        }
+        if (data.dynamicMenuItems) {
+            this.dynamicMenuItems = Object.assign(this.dynamicMenuItems || {}, data.dynamicMenuItems);
+        }
+        if (data.spine) {
+            this.spine = Object.assign(this.spine || {}, data.spine);
+        }
+
+        // Check if the asset is a duplicate
+        const isDuplicateAsset = b =>
+            this.assets.find(obj => obj.name === b.name && obj.dataFormat === b.dataFormat && obj.md5 === b.md5);
+
+        const isDuplicateFilename = fileName =>
+            this.assets.find(obj => `${obj.name}.${obj.dataFormat}` === fileName);
+
+        const isDuplicateId = id =>
+            this.assets.find(obj => obj.id === id);
+
+        const newAssets = data.assets.filter(obj => !isDuplicateAsset(obj));
+        newAssets.forEach(obj => {
+            let newName = `${obj.name}`;
+            let filename = `${newName}.${obj.dataFormat}`;
+            let i = 1;
+            while (isDuplicateFilename(filename)) {
+                i++;
+                newName = `${obj.name}_${i}`;
+                filename = `${newName}.${obj.dataFormat}`;
+            }
+            if (i > 1) {
+                log.warn(`Duplicate asset found: ${obj.name}.${obj.dataFormat}. Renaming to ${newName}.${obj.dataFormat}`);
+                obj.name = newName;
+            }
+            if (isDuplicateId(obj.id)) {
+                log.warn(`Duplicate asset id found: ${obj.id}. Regenerating id`);
+                obj.id = uid();
+            }
+        });
+        this.assets = this.assets.concat(newAssets);
+
+        if (!isRemoteOperation) {
+            // sync to server
+            if (data.wildExtensions && typeof data.wildExtensions === 'object') {
+                for (const [id, {url}] of Object.entries(data.wildExtensions)) {
+                    this.wildExtensions[id] = {id, url};
+                    this.runtime.emitGandiWildExtensionsChanged(['add', id, {id, url}]);
+                }
+            }
+            newAssets.forEach(obj => {
+                this.runtime.emitGandiAssetsUpdate({type: 'add', data: obj});
+            });
+        }
     }
 
     setup () {

@@ -1379,27 +1379,13 @@ const replaceUnsafeCharsInVariableIds = function (targets) {
  * @param {Object} gandiAssetsPromises - Promises for assets of this scratch object grouped
  *   into gandiAssets.
  * @param {Object} extensions - (in/out) parsed extension information will be stored here.
- * @returns {Promise<null>} A promise that resolves once the gandi assets have been loaded.
+ * @returns {Promise<Gandi?>} A promise that resolves once the gandi assets have been loaded and processed
+ *   with current runtime.gandi.
  */
 const parseGandiObject = (object, runtime, gandiAssetsPromises, extensions) => {
     // RESET GANDI OBJECT WHEN LOADING PROJECTS WITHOUT GANDI OBJECT
-    if (!runtime.gandi) {
-        runtime.gandi = new Gandi(runtime);
-    }
     if (!object) {
-        return null;
-    }
-    if (object.configs) {
-        runtime.gandi.configs = Object.assign(runtime.gandi.configs || {}, object.configs);
-    }
-    if (object.wildExtensions) {
-        runtime.gandi.wildExtensions = Object.assign(runtime.gandi.wildExtensions || {}, object.wildExtensions);
-    }
-    if (object.dynamicMenuItems) {
-        runtime.gandi.dynamicMenuItems = Object.assign(runtime.gandi.dynamicMenuItems || {}, object.dynamicMenuItems);
-    }
-    if (object.spine) {
-        runtime.gandi.spine = Object.assign(runtime.gandi.spine || {}, object.spine);
+        return Promise.resolve(null);
     }
     if (Array.isArray(object.assets)) {
         // find extension need to load
@@ -1415,19 +1401,10 @@ const parseGandiObject = (object, runtime, gandiAssetsPromises, extensions) => {
             extensions.extensionIDs.add(extension.id);
         });
     }
+
     return Promise.all(gandiAssetsPromises).then(gandiAssets => {
-        runtime.gandi.assets = runtime.gandi.assets.concat(gandiAssets);
-        // unique assets by id
-        const seenIds = {};
-        const uniqueObjects = [];
-        runtime.gandi.assets.forEach(obj => {
-            if (!seenIds[obj.md5]) {
-                seenIds[obj.md5] = true;
-                uniqueObjects.push(obj);
-            }
-        });
-        runtime.gandi.assets = uniqueObjects;
-        return null;
+        object.assets = gandiAssets;
+        return object;
     });
 };
 
@@ -1475,10 +1452,7 @@ const deserialize = async function (json, runtime, zip, isSingleSprite) {
         // Force this promise to wait for the next loop in the js tick. Let
         // storage have some time to send off asset requests.
         .then(assets => Promise.resolve(assets))
-        .then(assets => Promise.all(targetObjects
-            .map((target, index) => parseScratchObject(target, runtime, extensions, zip, assets[index]))
-            .concat(parseGandiObject(gandiObjects, runtime, gandiAssetsPromises, extensions))
-        ))
+        .then(assets => Promise.all(targetObjects.map((target, index) => parseScratchObject(target, runtime, extensions, zip, assets[index]))))
         .then(targets => targets
             // Remove GandiGandiObjectsPromise result
             // GandiGandiObjectsPromise result is always null
@@ -1504,9 +1478,11 @@ const deserialize = async function (json, runtime, zip, isSingleSprite) {
             monitorObjects.map(monitorDesc => deserializeMonitor(monitorDesc, runtime, targets, extensions));
             return targets;
         })
-        .then(targets => ({
+        .then(targets => parseGandiObject(gandiObjects, runtime, gandiAssetsPromises, extensions).then(gandi => ({targets, gandi})))
+        .then(({targets, gandi}) => ({
             targets,
-            extensions
+            extensions,
+            gandi
         }));
 };
 
