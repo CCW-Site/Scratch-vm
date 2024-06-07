@@ -26,7 +26,10 @@ class Gandi {
         this.setup();
     }
 
-    merge (data, isRemoteOperation) {
+    merge (data) {
+        if (!data) {
+            return null;
+        }
         if (data.configs) {
             this.configs = Object.assign(this.configs || {}, data.configs);
         }
@@ -71,18 +74,7 @@ class Gandi {
         });
         this.assets = this.assets.concat(newAssets);
 
-        if (!isRemoteOperation) {
-            // sync to server
-            if (data.wildExtensions && typeof data.wildExtensions === 'object') {
-                for (const [id, {url}] of Object.entries(data.wildExtensions)) {
-                    this.wildExtensions[id] = {id, url};
-                    this.runtime.emitGandiWildExtensionsChanged(['add', id, {id, url}]);
-                }
-            }
-            newAssets.forEach(obj => {
-                this.runtime.emitGandiAssetsUpdate({type: 'add', data: obj});
-            });
-        }
+        return {assets: newAssets, wildExtensions: data.wildExtensions};
     }
 
     setup () {

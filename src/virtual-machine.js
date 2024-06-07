@@ -31,7 +31,7 @@ const {
 const {loadGandiAsset} = require('./import/gandi-load-asset');
 const generateUid = require('./util/uid');
 const mutationAdapter = require('./engine/mutation-adapter.js');
-const Gandi = require('./util/gandi.js');
+
 require('canvas-toBlob');
 
 const RESERVED_NAMES = ['_mouse_', '_stage_', '_edge_', '_myself_', '_random_'];
@@ -1044,7 +1044,7 @@ class VirtualMachine extends EventEmitter {
      * @param {boolean} wholeProject - set to true if installing a whole project, as opposed to a single sprite.
      * @param {number} _projectProcessingUniqueId 加载project的Id
      * @param {boolean} isRemoteOperation - set to true if this is a remote operation
-     * @returns {Promise} resolved once targets have been installed
+     * @returns {Promise<{addedTargets:Target[], addedGandiObject:Gandi}>} resolved once targets and Gandi object have been installed
      */
     async installTargets (
         targets,
@@ -1055,12 +1055,7 @@ class VirtualMachine extends EventEmitter {
         isRemoteOperation,
     ) {
         await this.extensionManager.allAsyncExtensionsLoaded();
-        if (gandiObject) {
-            if (!this.runtime.gandi) {
-                this.runtime.gandi = new Gandi();
-            }
-            this.runtime.gandi.merge(gandiObject, isRemoteOperation);
-        }
+        const addedGandiObject = this.runtime.gandi.merge(gandiObject);
         const extensionPromises = [];
         extensions.extensionIDs.forEach(extensionID => {
             if (!this.extensionManager.isExtensionLoaded(extensionID)) {
@@ -1131,7 +1126,7 @@ class VirtualMachine extends EventEmitter {
                 this.runtime.getTargetForStage()
             );
             // Facilitating subsequent operations to update these targets.
-            return addedTargets;
+            return {addedTargets, addedGandiObject};
         });
     }
 
@@ -1189,7 +1184,7 @@ class VirtualMachine extends EventEmitter {
                     `${errorPrefix} Unable to verify sprite version.`
                 );
             })
-            .then(targets => {
+            .then(({addedTargets: targets, addedGandiObject}) => {
                 for (let index = 0; index < targets.length; index++) {
                     /** @type RenderedTarget */
                     const target = targets[index];
@@ -1203,10 +1198,25 @@ class VirtualMachine extends EventEmitter {
                     });
                 }
 
-                if (targets && !isRemoteOperation) {
-                    targets.forEach(target => {
-                        this.emit('ADD_SPRITE', target.id);
-                    });
+                if (!isRemoteOperation) {
+                    if (addedGandiObject) {
+                        if (typeof addedGandiObject.wildExtensions === 'object') {
+                            for (const [id, {url}] of Object.entries(addedGandiObject.wildExtensions)) {
+                                this.wildExtensions[id] = {id, url};
+                                this.runtime.emitGandiWildExtensionsChanged(['add', id, {id, url}]);
+                            }
+                        }
+                        if (Array.isArray(addedGandiObject.assets)) {
+                            addedGandiObject.assets.forEach(obj => {
+                                this.runtime.emitGandiAssetsUpdate({type: 'add', data: obj});
+                            });
+                        }
+                    }
+                    if (targets) {
+                        targets.forEach(target => {
+                            this.emit('ADD_SPRITE', target.id);
+                        });
+                    }
                 }
                 this.runtime.emitProjectChanged();
             })
