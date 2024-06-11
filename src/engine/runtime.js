@@ -341,13 +341,6 @@ class Runtime extends EventEmitter {
          */
         this.turboMode = false;
 
-
-        /**
-         * The id of the editor's current operator.
-         * @type {!string}
-         */
-        this.editorId = null;
-
         /**
          * A reference to the current runtime stepping interval, set
          * by a `setInterval`.
@@ -2859,14 +2852,6 @@ class Runtime extends EventEmitter {
     setCCWAPI (ccwAPI) {
         this.ccwAPI = ccwAPI;
         this.emit(Runtime.CCWAPI_CHANGED);
-    }
-
-    /**
-     * ccw: Update the id of the editor's current operator
-     * @param {*} compilerOptions New options
-     */
-    setEditorId (id) {
-        this.editorId = id;
     }
 
     /**

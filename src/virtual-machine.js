@@ -423,10 +423,6 @@ class VirtualMachine extends EventEmitter {
         this.runtime.setCCWAPI(ccwAPI);
     }
 
-    setEditorId (id) {
-        this.runtime.setEditorId(id);
-    }
-
     setCompilerOptions (compilerOptions) {
         this.runtime.setCompilerOptions(compilerOptions);
     }
@@ -1167,7 +1163,6 @@ class VirtualMachine extends EventEmitter {
         return validationPromise
             .then(validatedInput => {
                 const projectVersion = validatedInput[0].projectVersion;
-                validatedInput[0].editorId = this.runtime.editorId;
                 if (projectVersion === 2) {
                     return this._addSprite2(
                         validatedInput[0],

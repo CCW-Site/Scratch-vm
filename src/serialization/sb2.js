@@ -699,9 +699,6 @@ const parseScratchObject = function (object, runtime, extensions, topLevel, zip,
     if (object.hasOwnProperty('visible')) {
         target.visible = object.visible;
     }
-    if (object.hasOwnProperty('editorId')) {
-        target.editorId = object.editorId;
-    }
     if (object.hasOwnProperty('currentCostumeIndex')) {
         // Current costume index can sometimes be a floating
         // point number, use Math.floor to come up with an appropriate index
