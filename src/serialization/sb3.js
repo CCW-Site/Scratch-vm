@@ -610,23 +610,31 @@ const serialize = function (runtime, targetId, {allowOptimization = false, saveV
 
     const serializedTargets = flattenedOriginalTargets.map(t => serializeTarget(t, extensions, saveVarId));
 
-    const gandi = runtime.gandi.serialize(extensions);
-
     if (targetId) {
         const target = serializedTargets[0];
+        const gandi = runtime.gandi.serialize(extensions);
         if (target && gandi) {
             target.gandi = gandi;
         }
         return target;
     }
 
+    obj.targets = serializedTargets;
+
+    // serializeMonitors also records extensions
+    obj.monitors = serializeMonitors(runtime.getMonitorState(), runtime);
+    obj.monitors.forEach(monitor => {
+        // If the monitor block is from an extension, record it.
+        const extensionID = getExtensionIdForOpcode(monitor.opcode);
+        if (extensionID) {
+            extensions.add(extensionID);
+        }
+    });
+
+    const gandi = runtime.gandi.serialize(extensions);
     if (gandi) {
         obj.gandi = gandi;
     }
-
-    obj.targets = serializedTargets;
-
-    obj.monitors = serializeMonitors(runtime.getMonitorState(), runtime);
 
     // Assemble extension list
     obj.extensions = Array.from(extensions);
