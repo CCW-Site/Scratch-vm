@@ -1505,7 +1505,6 @@ class VirtualMachine extends EventEmitter {
             if (target !== this.editingTarget) {
                 const targetId = target.id;
                 const blocksIds = Object.keys(target.blocks._blocks);
-                const addedBlocks = [];
                 for (let index = 0; index < blocksIds.length; index++) {
                     const block = target.blocks._blocks[blocksIds[index]];
                     // A block may not exist, as there are operations to delete blocks below.
@@ -1536,30 +1535,35 @@ class VirtualMachine extends EventEmitter {
                             // add new input block except boolean
                             if (!oldArgIds.includes(argId) && newArgTypes[idx] !== ' %b') {
                                 const textBlockId = generateUid();
-                                target.blocks._blocks[textBlockId] = {
+                                // Add new input block
+                                const shadowBlock = {
                                     id: textBlockId,
                                     opcode: 'text',
                                     inputs: {},
                                     fields: {TEXT: {name: 'TEXT', value: ''}},
                                     next: null,
-                                    topLevel: false,
                                     parent: block.id,
                                     shadow: true,
+                                    topLevel: true,
                                     x: 0,
                                     y: 0
                                 };
-                                addedBlocks.push(target.blocks._blocks[textBlockId]);
-                                block.inputs[argId] = {
-                                    name: argId,
-                                    block: textBlockId,
-                                    shadow: textBlockId
-                                };
+                                target.blocks.createBlock(shadowBlock, 'default');
+                                this.runtime.emitTargetBlocksChanged(targetId, ['add', [shadowBlock]]);
+                                // Move the shadow block to parent
+                                setTimeout(() => {
+                                    target.blocks.moveBlock({
+                                        id: textBlockId,
+                                        oldCoordinate: {x: 0, y: 0},
+                                        newParent: block.id,
+                                        newInput: argId,
+                                        targetId: targetId,
+                                        source: 'default'
+                                    });
+                                }, 0);
                             }
                         });
                     }
-                }
-                if (addedBlocks.length > 0) {
-                    this.runtime.emitTargetBlocksChanged(targetId, ['add', addedBlocks]);
                 }
             }
         });
