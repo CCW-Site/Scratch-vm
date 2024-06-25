@@ -713,9 +713,9 @@ class VirtualMachine extends EventEmitter {
     }
 
     /**
-     * @returns {string} Project in a Scratch 3.0 JSON representation.
+     * @returns {JSZip} JSZip zip object representing the sb3.
      */
-    saveProjectSb3 () {
+    _saveProjectZip () {
         const soundDescs = serializeSounds(this.runtime);
         const costumeDescs = serializeCostumes(this.runtime);
         const projectJson = this.toJSON();
@@ -728,9 +728,31 @@ class VirtualMachine extends EventEmitter {
         zip.file('project.json', projectJson);
         this._addFileDescsToZip(soundDescs.concat(costumeDescs), zip);
 
-        return zip.generateAsync({
+        return zip
+    }
+
+    /**
+     * @returns {string} Project in a Scratch 3.0 JSON representation.
+     */
+    saveProjectSb3 () {
+        return this._saveProjectZip().generateAsync({
             type: 'blob',
             mimeType: 'application/x.scratch.sb3',
+            compression: 'DEFLATE',
+            compressionOptions: {
+                level: 6 // Tradeoff between best speed (1) and best compression (9)
+            }
+        });
+    }
+
+    /**
+     * @param {JSZip.OutputType} [type] JSZip output type. Defaults to 'arraybuffer'.
+     * @returns {StreamHelper} JSZip StreamHelper object generating the compressed sb3.
+     */
+    saveProjectSb3Stream (type) {
+        return this._saveProjectZip().generateInternalStream({
+            type: type || 'arraybuffer',
+             mimeType: 'application/x.scratch.sb3',
             compression: 'DEFLATE',
             compressionOptions: {
                 level: 6 // Tradeoff between best speed (1) and best compression (9)
