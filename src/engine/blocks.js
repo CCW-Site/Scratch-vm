@@ -1340,10 +1340,11 @@ class Blocks {
      * @param {string} oldName The old name of the asset that was renamed.
      * @param {string} newName The new name of the asset that was renamed.
      * @param {string} assetType String representation of the kind of asset
+     * @param {?string} targetId The ID of the target to emit block changes for (optional).
      * that was renamed. This can be one of 'sprite','costume', 'sound', or
      * 'backdrop'.
      */
-    updateAssetName (oldName, newName, assetType) {
+    updateAssetName (oldName, newName, assetType, targetId) {
         let getAssetField;
         if (assetType === 'costume') {
             getAssetField = this._getCostumeField.bind(this);
@@ -1361,6 +1362,16 @@ class Blocks {
             const assetField = getAssetField(blockId);
             if (assetField && assetField.value === oldName) {
                 assetField.value = newName;
+                if (targetId) {
+                    this.runtime.emitTargetBlocksChanged(targetId, [
+                        'update',
+                        {
+                            [blockId]: {
+                                [JSON.stringify(['fields', assetField.name, 'value'])]: newName
+                            }
+                        }
+                    ]);
+                }
             }
         }
         this.resetCache();

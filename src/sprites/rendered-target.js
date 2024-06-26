@@ -549,22 +549,6 @@ class RenderedTarget extends Target {
         }
     }
 
-    renameCostumeById (id, newName) {
-        const costume = this.getCostumeById(id);
-        const oldName = costume.name;
-        costume.name = newName;
-
-        if (this.isStage) {
-            const targets = this.runtime.targets;
-            for (let i = 0; i < targets.length; i++) {
-                const currTarget = targets[i];
-                currTarget.blocks.updateAssetName(oldName, newName, 'backdrop');
-            }
-        } else {
-            this.blocks.updateAssetName(oldName, newName, 'costume');
-        }
-    }
-
     /**
      * Rename a costume, taking care to avoid duplicate names.
      * @param {int} costumeIndex - the index of the costume to be renamed.
@@ -592,10 +576,10 @@ class RenderedTarget extends Target {
             const targets = this.runtime.targets;
             for (let i = 0; i < targets.length; i++) {
                 const currTarget = targets[i];
-                currTarget.blocks.updateAssetName(oldName, newUnusedName, 'backdrop');
+                currTarget.blocks.updateAssetName(oldName, newUnusedName, 'backdrop', this.originalTargetId);
             }
         } else {
-            this.blocks.updateAssetName(oldName, newUnusedName, 'costume');
+            this.blocks.updateAssetName(oldName, newUnusedName, 'costume', this.originalTargetId);
         }
     }
 
@@ -666,7 +650,7 @@ class RenderedTarget extends Target {
             return;
         }
         this.sprite.sounds[soundIndex].name = newUnusedName;
-        this.blocks.updateAssetName(oldName, newUnusedName, 'sound');
+        this.blocks.updateAssetName(oldName, newUnusedName, 'sound', this.originalTargetId);
         if (sendNameChangedEvent) {
             this.runtime.emitTargetSoundsChanged(
                 this.originalTargetId, ['update', this.sprite.sounds[soundIndex].id, {name: newUnusedName}]

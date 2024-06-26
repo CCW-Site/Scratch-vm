@@ -2025,7 +2025,8 @@ class VirtualMachine extends EventEmitter {
                     currTarget.blocks.updateAssetName(
                         oldName,
                         newName,
-                        'sprite'
+                        'sprite',
+                        currTarget.originalTargetId
                     );
                 }
                 if (newUnusedName !== oldName) {
