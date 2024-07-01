@@ -142,6 +142,10 @@ class Sprite {
         }
     }
 
+    cloneCount () {
+        return this.clones.length;
+    }
+
     duplicate () {
         const newSprite = new Sprite(null, this.runtime);
 
@@ -152,7 +156,7 @@ class Sprite {
         copiedBlocks.forEach(block => {
             newSprite.blocks.createBlock(block);
         });
-    
+
         const framesContainer = this.frames._frames;
         const originalFrames = Object.keys(framesContainer).map(key => framesContainer[key]);
         const copiedFrames = JSON.parse(JSON.stringify(originalFrames));
@@ -187,6 +191,10 @@ class Sprite {
         if (this.soundBank) {
             this.soundBank.dispose();
         }
+
+        this.costumes_.forEach(costume => {
+            this.runtime.renderer.destroySkin(costume.skinId);
+        });
     }
 }
 

@@ -1270,6 +1270,11 @@ class RenderedTarget extends Target {
         this.runtime.stopForTarget(this);
         this.runtime.removeExecutable(this);
         this.sprite.removeClone(this);
+        if (this.sprite.cloneCount() === 0) {
+            // last target who own sprite should release sprite;
+            this.sprite.dispose();
+        }
+
         if (this.renderer && this.drawableID !== null) {
             this.renderer.destroyDrawable(this.drawableID, this.isStage ?
                 StageLayering.BACKGROUND_LAYER :
