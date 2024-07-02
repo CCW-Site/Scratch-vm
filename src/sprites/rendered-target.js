@@ -576,7 +576,7 @@ class RenderedTarget extends Target {
             const targets = this.runtime.targets;
             for (let i = 0; i < targets.length; i++) {
                 const currTarget = targets[i];
-                currTarget.blocks.updateAssetName(oldName, newUnusedName, 'backdrop', this.originalTargetId);
+                currTarget.blocks.updateAssetName(oldName, newUnusedName, 'backdrop', currTarget.originalTargetId);
             }
         } else {
             this.blocks.updateAssetName(oldName, newUnusedName, 'costume', this.originalTargetId);
