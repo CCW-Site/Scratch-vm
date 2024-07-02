@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-expressions */
 let _TextEncoder;
 if (typeof TextEncoder === 'undefined') {
     _TextEncoder = require('text-encoding').TextEncoder;
@@ -728,7 +727,7 @@ class VirtualMachine extends EventEmitter {
         zip.file('project.json', projectJson);
         this._addFileDescsToZip(soundDescs.concat(costumeDescs), zip);
 
-        return zip
+        return zip;
     }
 
     /**
@@ -752,7 +751,7 @@ class VirtualMachine extends EventEmitter {
     saveProjectSb3Stream (type) {
         return this._saveProjectZip().generateInternalStream({
             type: type || 'arraybuffer',
-             mimeType: 'application/x.scratch.sb3',
+            mimeType: 'application/x.scratch.sb3',
             compression: 'DEFLATE',
             compressionOptions: {
                 level: 6 // Tradeoff between best speed (1) and best compression (9)
@@ -2069,14 +2068,13 @@ class VirtualMachine extends EventEmitter {
             // Remove monitors from the runtime state and remove the
             // target-specific monitored blocks (e.g. local variables)
             target.deleteMonitors();
-            const currentEditingTarget = this.editingTarget;
             const spriteClones = [...sprite.clones];
             for (let i = 0; i < spriteClones.length; i++) {
                 const clone = spriteClones[i];
                 this.runtime.stopForTarget(spriteClones[i]);
                 this.runtime.disposeTarget(spriteClones[i]);
                 // Ensure editing target is switched if we are deleting it.
-                if (clone === currentEditingTarget) {
+                if (clone === this.editingTarget) {
                     const nextTargetIndex = Math.min(
                         this.runtime.targets.length - 1,
                         targetIndexBeforeDelete
