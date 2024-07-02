@@ -24,8 +24,6 @@ const {loadSound} = require('../import/load-sound.js');
 const {deserializeCostume, deserializeSound} = require('./deserialize-assets.js');
 const {loadGandiAsset} = require('../import/gandi-load-asset');
 
-const Gandi = require('../util/gandi.js');
-
 const hasOwnProperty = Object.prototype.hasOwnProperty;
 
 /**
@@ -1254,6 +1252,17 @@ const deserializeMonitor = function (monitorData, runtime, targets, extensions) 
             monitorData.targetId = filteredTargets[0].id;
         } else {
             log.warn(`Tried to deserialize sprite specific monitor ${monitorData.opcode} but could not find sprite ${monitorData.spriteName}.`);
+        }
+    }
+    // If a variable or list monitor cannot be found in the corresponding sprite, it should not be created.
+    // Otherwise, it will result in the automatic creation of variables that shouldn't be created.
+    if (monitorData.opcode === 'data_variable' || monitorData.opcode === 'data_listcontents') {
+        const target = monitorData.targetId ?
+            targets.find(t => t.id === monitorData.targetId) :
+            targets.find(t => t.isStage);
+        if (!target.variables[monitorData.id]) {
+            log.warn(`Tried to deserialize sprite specific monitor ${monitorData.opcode} but could not find variable ${monitorData.id}.`);
+            return;
         }
     }
 
