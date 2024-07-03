@@ -217,12 +217,12 @@ class ExtensionManager {
 
             const diff = opsInUseSet.difference(incomingOpsSet);
             if (diff.size > 0) {
-                const detail = Array.from(diff).join(',    ');
+                const detail = Array.from(diff);
                 log.warn(
-                    `Rejecting attempt to replace extension ${extensionId} with new extension that has conflicting opcodes: ${detail}`
+                    `Rejecting attempt to replace extension ${extensionId} with new extension that has conflicting opcodes: ${detail.join(',    ')}`
                 );
                 throw new Error('opcode not found', {
-                    cause: {code: 'OPCODE_NOT_FOUND', values: diff}
+                    cause: {code: 'OPCODE_NOT_FOUND', values: detail}
                 });
             }
 
@@ -1039,7 +1039,7 @@ class ExtensionManager {
         );
         if (inUseBlockOps.size > 0) {
             throw new Error(`delete extension failed id=${extensionId}`, {
-                cause: {code: 'OPCODE_IN_USE', values: [inUseBlockOps]}
+                cause: {code: 'OPCODE_IN_USE', values: Array.from(inUseBlockOps)}
             });
         }
 
@@ -1052,6 +1052,14 @@ class ExtensionManager {
         delete customExtension[extensionId];
         // delete extension in runtime
         this.runtime.removeExtensionPrimitives(extensionId);
+
+        // delete monitor if extension has
+        this.runtime.getMonitorState()
+            .filter(monitorData => monitorData.opcode.startsWith(`${extensionId}_`))
+            .forEach(monitorData => {
+                this.runtime.monitorBlocks.deleteBlock(monitorData.id);
+                this.runtime.requestRemoveMonitor(monitorData.id);
+            });
     }
 
     getReplaceableExtensionInfo () {
@@ -1086,7 +1094,7 @@ class ExtensionManager {
             // opcode in use are not fully match,revert replacement
             this.deleteExtensionById(incomingExt.id);
             throw new Error(`opcodes are not fully covered in new extension ${incomingExt.id}`, {
-                cause: {code: 'OPCODE_NOT_FOUND', values: diff}
+                cause: {code: 'OPCODE_NOT_FOUND', values: Array.from(diff)}
             });
         } else {
             // TODO: allow type change, auto fix all block connection error cause by type change
