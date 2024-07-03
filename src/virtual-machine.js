@@ -2173,7 +2173,9 @@ class VirtualMachine extends EventEmitter {
      *     updated for a new locale (or empty if locale hasn't changed.)
      */
     setLocale (locale, messages) {
-        if (locale !== formatMessage.setup().locale) {
+        // The locale of formatMessage defaults to 'en'. If the locale of the GUI is also 'en', the translations will always be an empty object.
+        // Therefore, it should be changed to compare using messages instead.
+        if (messages !== formatMessage.setup().translations[locale]) {
             formatMessage.setup({
                 locale: locale,
                 translations: {[locale]: messages}
