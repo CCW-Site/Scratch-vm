@@ -1060,6 +1060,8 @@ class ExtensionManager {
                 this.runtime.monitorBlocks.deleteBlock(monitorData.id);
                 this.runtime.requestRemoveMonitor(monitorData.id);
             });
+        // delete a extension should change project to unsaved
+        this.runtime.emitProjectChanged();
     }
 
     getReplaceableExtensionInfo () {
