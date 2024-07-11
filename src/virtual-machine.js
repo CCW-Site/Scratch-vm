@@ -1224,6 +1224,7 @@ class VirtualMachine extends EventEmitter {
                         }
                         if (Array.isArray(addedGandiObject.assets)) {
                             addedGandiObject.assets.forEach(obj => {
+                                this.runtime.gandi.assets.push(obj);
                                 this.runtime.emitGandiAssetsUpdate({type: 'add', data: obj});
                             });
                         }
