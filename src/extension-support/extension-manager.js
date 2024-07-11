@@ -787,15 +787,12 @@ class ExtensionManager {
      * @param {string} url extension url
      */
     saveWildExtensionsURL (id, url) {
-        this.runtime.gandi.wildExtensions[id] = {id, url};
-
+        this.runtime.gandi.addWildExtension({id, url});
         // check if wild extension js is in sb3 assets
         if (this.runtime.gandi.isExtensionURLInGandiAssets(url)) {
             const extInfo = this._customExtensionInfo[id] || this._officialExtensionInfo[id];
             extInfo.replaceable = true;
         }
-
-        this.runtime.emitGandiWildExtensionsChanged(['add', id, {id, url}]);
     }
 
     loadExternalExtensionById (extensionId, shouldReplace = false) {
@@ -1050,6 +1047,8 @@ class ExtensionManager {
         // delete extension info
         delete this._customExtensionInfo[extensionId];
         delete customExtension[extensionId];
+        // delete as wild extension if it is
+        this.runtime.gandi.deleteWildExtension(extensionId);
         // delete extension in runtime
         this.runtime.removeExtensionPrimitives(extensionId);
 

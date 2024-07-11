@@ -334,6 +334,30 @@ class Gandi {
         this.runtime.emitProjectChanged();
     }
 
+    /**
+     * Adds a wild extension.
+     * @method
+     * @param {Object} data - The data for the wild extension.
+     */
+    addWildExtension ({id, url}) {
+        if (!this.wildExtensions[id]) {
+            this.wildExtensions[id] = {id, url};
+            this.runtime.emitGandiWildExtensionsChanged(['add', id, {id, url}]);
+        }
+    }
+
+    /**
+        * Deletes a wild extension.
+        * @method
+        * @param {string} id - The id of the wild extension to delete.
+        */
+    deleteWildExtension (id) {
+        if (this.wildExtensions[id]) {
+            delete this.wildExtensions[id];
+            this.runtime.emitGandiWildExtensionsChanged(['delete', id]);
+        }
+    }
+
     getExtensionAssets () {
         const AssetType = this.runtime.storage.AssetType;
         return this.assets.filter(item => item.asset.assetType.name === AssetType.Extension.name);

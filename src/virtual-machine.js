@@ -1218,8 +1218,7 @@ class VirtualMachine extends EventEmitter {
                     if (addedGandiObject) {
                         if (typeof addedGandiObject.wildExtensions === 'object') {
                             for (const [id, {url}] of Object.entries(addedGandiObject.wildExtensions)) {
-                                this.wildExtensions[id] = {id, url};
-                                this.runtime.emitGandiWildExtensionsChanged(['add', id, {id, url}]);
+                                this.runtime.gandi.addWildExtension({id, url});
                             }
                         }
                         if (Array.isArray(addedGandiObject.assets)) {
