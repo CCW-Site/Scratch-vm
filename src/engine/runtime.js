@@ -1342,8 +1342,7 @@ class Runtime extends EventEmitter {
                 }
                 const xml = '<button ' +
                     `text="${xmlEscape(maybeFormatMessage({
-                        // note: this translation is hardcoded in translation upload scripts
-                        id: 'tw.blocks.openDocs',
+                        id: 'gui.extensionLibrary.button.openDocs',
                         default: 'Open Documentation',
                         description: 'Button to open extensions docsURI'
                     }))}" ` +
