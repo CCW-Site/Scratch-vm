@@ -1329,7 +1329,7 @@ class VirtualMachine extends EventEmitter {
                 optVersion
             ).then(() => {
                 target.addCostume(costumeObject, null, isRemoteOperation);
-                target.setCostume(target.getCostumes().length - 1);
+                target.setCostume(target.getCostumeIndexById(costumeObject.id));
                 this.runtime.emitProjectChanged();
             });
         }
