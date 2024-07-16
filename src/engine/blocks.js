@@ -283,9 +283,13 @@ class Blocks {
             const block = this._blocks[id];
             if (block.opcode === 'procedures_definition') {
                 const internal = this._getCustomBlockInternal(block);
-                if (internal && internal.mutation.isglobal === 'true') {
-                    this._cache.procedureDefinitions[internal.mutation.proccode] = id; // The outer define block id
-                    globalProcedures.push(this.mutationToXML(internal.mutation));
+                if (internal && internal.mutation) {
+                    if (internal.mutation.isglobal === 'true') {
+                        this._cache.procedureDefinitions[internal.mutation.proccode] = id; // The outer define block id
+                        globalProcedures.push(this.mutationToXML(internal.mutation));
+                    }
+                } else {
+                    log.error(`The data format for this custom block(id:${id}) does not conform to the standard.`);
                 }
             }
         }
