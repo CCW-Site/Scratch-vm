@@ -340,10 +340,9 @@ class Gandi {
      * @param {Object} data - The data for the wild extension.
      */
     addWildExtension ({id, url}) {
-        if (!this.wildExtensions[id]) {
-            this.wildExtensions[id] = {id, url};
-            this.runtime.emitGandiWildExtensionsChanged(['add', id, {id, url}]);
-        }
+        const eventType = this.wildExtensions[id] ? 'update' : 'add';
+        this.wildExtensions[id] = {id, url};
+        this.runtime.emitGandiWildExtensionsChanged([eventType, id, {id, url}]);
     }
 
     /**
