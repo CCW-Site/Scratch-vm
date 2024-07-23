@@ -30,6 +30,7 @@ const {
 const {loadGandiAsset} = require('./import/gandi-load-asset');
 const generateUid = require('./util/uid');
 const mutationAdapter = require('./engine/mutation-adapter.js');
+const adapter = require('./engine/adapter.js');
 
 require('canvas-toBlob');
 
@@ -2732,6 +2733,20 @@ class VirtualMachine extends EventEmitter {
      */
     configureScratchLinkSocketFactory (factory) {
         this.runtime.configureScratchLinkSocketFactory(factory);
+    }
+
+    /**
+     * Adapts a given XML element for blocks or frames.
+     *
+     * @param {Element} xml - The XML element to be adapted.
+     * @returns {Array.<object> | null} A list of block or frame from the adapted XML.
+     */
+    xmlAdapter (xml) {
+        if (!xml || !(xml instanceof Element) || !xml.nodeName.toLowerCase() !== 'xml') {
+            log.error('A valid XML DOM element must be provided.');
+            return null;
+        }
+        return adapter({xml});
     }
 }
 
