@@ -2742,7 +2742,7 @@ class VirtualMachine extends EventEmitter {
      * @returns {Array.<object> | null} A list of block or frame from the adapted XML.
      */
     xmlAdapter (xml) {
-        if (!xml || !(xml instanceof Element) || !xml.nodeName.toLowerCase() !== 'xml') {
+        if (!xml || !(xml instanceof Element) || xml.nodeName.toLowerCase() !== 'xml') {
             log.error('A valid XML DOM element must be provided.');
             return null;
         }
