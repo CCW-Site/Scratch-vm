@@ -1479,12 +1479,24 @@ class VirtualMachine extends EventEmitter {
         return null;
     }
 
+    /**
+     * Sets a configuration property in the Gandi runtime.
+     *
+     * @param {string} key - The key of the configuration property to set.
+     * @param value - The value to set for the configuration property.
+     */
     setGandiConfigProperty (key, value) {
         this.runtime.gandi.setConfig(key, value);
     }
 
+    /**
+     * Gets a configuration property from the Gandi runtime.
+     *
+     * @param {string}  key - The key of the configuration property to retrieve.
+     * @returns The value of the configuration property.
+     */
     getGandiConfigProperty (key) {
-        return this.runtime.gandi.getConfig[key];
+        return this.runtime.gandi.getConfig(key);
     }
 
     getMonitoredKeys () {
