@@ -2330,7 +2330,8 @@ class Runtime extends EventEmitter {
 
 
         for (const opts in optMatchFields) {
-            if (!optMatchFields.hasOwnProperty(opts)) continue;
+            // The value of the field might be non-string data types
+            if (!optMatchFields.hasOwnProperty(opts) || typeof optMatchFields[opts] !== 'string') continue;
             optMatchFields[opts] = optMatchFields[opts].toUpperCase();
         }
 
