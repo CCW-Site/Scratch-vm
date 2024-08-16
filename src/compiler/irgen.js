@@ -1249,7 +1249,7 @@ class ScriptTreeGenerator {
      */
     descendVariable (block, fieldName, type) {
         const variable = block.fields[fieldName];
-        const id = variable.id;
+        let id = variable.id;
         if (!id) {
             // variable.id maybe null in some error sb3
             const currVar = this.target.lookupVariableByNameAndType(variable.value, type);
