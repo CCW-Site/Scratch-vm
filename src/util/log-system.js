@@ -1,7 +1,8 @@
 /* eslint-disable no-console */
 const log = require('./log');
+const EventEmitter = require('events');
 
-class LogSystem {
+class LogSystem extends EventEmitter {
     /**
      * Set font color
      */
@@ -50,6 +51,14 @@ class LogSystem {
      */
     clear () {
         console.clear();
+    }
+
+    /**
+     * Event name for new log.
+     * @const {string}
+     */
+    static get NEW_LOG_MESSAGE () {
+        return 'NEW_LOG_MESSAGE';
     }
 }
 
