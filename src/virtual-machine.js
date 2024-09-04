@@ -559,7 +559,7 @@ class VirtualMachine extends EventEmitter {
      * @param {?function} jsonFormatter A function to format the project json.
      * @return {!Promise} Promise that resolves after targets are installed.
      */
-    loadProject (input, jsonFormatter) {
+    loadProject (input, jsonFormatter, options) {
         // If assets are being loaded non-blockingly, they can all be aborted at once.
         if (this.runtime.asyncLoadingProjectAssets) {
             this.runtime.disposeFireWaitingLoadCallbackQueue();
@@ -677,7 +677,8 @@ class VirtualMachine extends EventEmitter {
                     return this.deserializeProject(
                         json,
                         zip,
-                        _projectProcessingUniqueId
+                        _projectProcessingUniqueId,
+                        options,
                     );
                 })
                 .then(() => this.runtime.emitProjectLoaded())
@@ -1007,7 +1008,7 @@ class VirtualMachine extends EventEmitter {
      * @param {number} _projectProcessingUniqueId 加载project的Id
      * @returns {Promise} Promise that resolves after the project has loaded
      */
-    deserializeProject (projectJSON, zip, _projectProcessingUniqueId) {
+    deserializeProject (projectJSON, zip, _projectProcessingUniqueId, options) {
         // Clear the current runtime
         this.clear();
 
@@ -1050,6 +1051,8 @@ class VirtualMachine extends EventEmitter {
                 gandi,
                 true,
                 _projectProcessingUniqueId,
+                false,
+                options,
             );
         });
     }
@@ -1071,6 +1074,7 @@ class VirtualMachine extends EventEmitter {
         wholeProject,
         _projectProcessingUniqueId,
         isRemoteOperation,
+        options,
     ) {
         await this.extensionManager.allAsyncExtensionsLoaded();
         const addedGandiObject = this.runtime.gandi.merge(gandiObject);
@@ -1104,6 +1108,11 @@ class VirtualMachine extends EventEmitter {
                     // because the target has not completed installation yet.
                     this.renameSprite(target.id, target.getName(), false);
                 }
+
+                if (options?.extractProperties?.shouldMarkLockDeleteAbility){
+                    target.extractProperties.lockDeleteAbility = true;
+                }
+
                 return target;
             });
             // Sort the executable targets by layerOrder.
@@ -1213,6 +1222,7 @@ class VirtualMachine extends EventEmitter {
                     target.sprite.sounds.forEach((sound, idx) => {
                         target.renameSound(idx, sound.name, false);
                     });
+                    // target.extractProperties.canDelete = false;
                 }
 
                 if (!isRemoteOperation) {
@@ -2424,7 +2434,7 @@ class VirtualMachine extends EventEmitter {
      * Disabled selectively by updates that don't affect project serialization.
      * Defaults to true.
      */
-    emitTargetsUpdate (triggerProjectChange = true) {
+    emitTargetsUpdate (triggerProjectChange = true, updatedTargets) {
         if (typeof triggerProjectChange === 'undefined') {
             triggerProjectChange = true;
         }
@@ -2448,7 +2458,8 @@ class VirtualMachine extends EventEmitter {
                 return getTargetListLazily();
             },
             // Currently editing target id.
-            editingTarget: this.editingTarget ? this.editingTarget.id : null
+            editingTarget: this.editingTarget ? this.editingTarget.id : null,
+            updatedTargets
         });
         if (triggerProjectChange) {
             this.runtime.emitProjectChanged();

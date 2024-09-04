@@ -520,6 +520,7 @@ const serializeTarget = function (target, extensions, saveVarId) {
     obj.sounds = target.sounds.filter(item => !item.isRuntimeAsyncLoad).map(serializeSound);
     if (target.hasOwnProperty('volume')) obj.volume = target.volume;
     if (target.hasOwnProperty('layerOrder')) obj.layerOrder = target.layerOrder;
+    if (target.extractProperties) obj.extractProperties = target.extractProperties;
     if (obj.isStage) { // Only the stage should have these properties
         if (target.hasOwnProperty('tempo')) obj.tempo = target.tempo;
         if (target.hasOwnProperty('videoTransparency')) obj.videoTransparency = target.videoTransparency;
@@ -1172,6 +1173,9 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
             target.variables[newBroadcast.id] = newBroadcast;
         }
     }
+    if (object.hasOwnProperty('extractProperties')) {
+        target.extractProperties = object.extractProperties;
+    }
     if (object.hasOwnProperty('comments')) {
         for (const commentId in object.comments) {
             const comment = object.comments[commentId];
@@ -1188,6 +1192,9 @@ const parseScratchObject = function (object, runtime, extensions, zip, assets) {
                 newComment.blockId = comment.blockId;
             }
             target.comments[newComment.id] = newComment;
+            if (comment.text && comment.text.includes('不要删除')) {
+                target.extractProperties.lockDeleteAbility = true;
+            }
         }
     }
     if (object.hasOwnProperty('x')) {

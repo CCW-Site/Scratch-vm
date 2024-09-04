@@ -168,6 +168,8 @@ class RenderedTarget extends Target {
 
         this.interpolationData = null;
 
+        this.extractProperties = {};
+
         // CCW: module sprite
         this.isModule = sprite.name.startsWith('#modules/');
     }
@@ -1254,6 +1256,7 @@ class RenderedTarget extends Target {
             costumes: costumes,
             sounds: this.getSounds(),
             textToSpeechLanguage: this.textToSpeechLanguage,
+            extractProperties: this.extractProperties,
             tempo: this.tempo,
             volume: this.volume,
             videoTransparency: this.videoTransparency,
