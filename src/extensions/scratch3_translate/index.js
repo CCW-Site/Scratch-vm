@@ -28,15 +28,6 @@ const blockIconURI =
 const serverURL = 'https://translate-service.scratch.mit.edu/';
 // const serverURL = 'https://trampoline.turbowarp.org/translate/';
 
-// powered by xigua start
-/**
- * 翻译API --- https://help.aliyun.com/document_detail/158269.html;
- */
-
-// powered by xigua start
-// eslint-disable-next-line no-undef
-const xiguaServerURL = typeof STUDY_WEB_HOST === 'undefined' ? process.env.STUDY_WEB_HOST : STUDY_WEB_HOST;
-// powered by xigua end
 
 const translateSupportLanguage = [
     'en',
@@ -116,12 +107,10 @@ class Scratch3TranslateBlocks {
             const config = runtime.ccwAPI.getOnlineExtensionsConfig();
             if (config && config.hosts && config.hosts.translate) {
                 this.host = config.hosts.translate;
+                this.isCCWService = true;
             }
         }
 
-        if (this.host || xiguaServerURL) {
-            this.isCCWService = true;
-        }
         // powered by xigua end
     }
 
@@ -328,14 +317,14 @@ class Scratch3TranslateBlocks {
         }
 
         const lang = this.getLanguageCodeFromArg(args.LANGUAGE);
-        if (this.host || xiguaServerURL) {
+        if (this.isCCWService) {
             return this.runWithCCWAPI(args, lang);
         }
         return this.runWithScratchAPI(args, lang);
     }
 
     runWithCCWAPI (args, lang) {
-        const url = `${this.host || xiguaServerURL}/ccw-main/external/mt/translate/`;
+        const url = this.host;;
 
         const tempThis = this;
         // powered by xigua start

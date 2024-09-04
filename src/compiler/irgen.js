@@ -1249,14 +1249,25 @@ class ScriptTreeGenerator {
      */
     descendVariable (block, fieldName, type) {
         const variable = block.fields[fieldName];
-        const id = variable.id;
+        let id = variable.id;
+        if (!id) {
+            // variable.id maybe null in some error sb3
+            const currVar = this.target.lookupVariableByNameAndType(variable.value, type);
+            if (currVar) {
+                id = currVar.id
+            } else {
+                throw new Error('descendVariable fail, id not found');
+            }
+        }
 
         if (this.variableCache.hasOwnProperty(id)) {
             return this.variableCache[id];
         }
 
         const data = this._descendVariable(id, variable.value, type);
-        this.variableCache[id] = data;
+        // variable.id maybe null in some error sb3
+        this.variableCache[data.id] = data;
+
         return data;
     }
 

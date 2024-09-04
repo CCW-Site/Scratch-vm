@@ -159,7 +159,26 @@ class ExtensionManager {
          * @type {Runtime}
          */
         this.runtime = vm.runtime;
+
+        /**
+         * Reference to the virtual machine, which provides the runtime and other VM functionalities.
+         * @type {VM}
+         */
         this.vm = vm;
+
+        /**
+         * List of external extension service URLs that can be loaded remotely.
+         * @type {Array.<string>}
+         * @private
+         */
+        this._gandiExternalExtensionServices = [];
+
+        /**
+         * Boolean flag to indicate if the external extension services have been loaded.
+         * @type {boolean}
+         * @private
+         */
+        this._gandiExternalExtensionServicesLoaded = false;
 
         this.loadingAsyncExtensions = 0;
         this.asyncExtensionsLoadedCallbacks = [];
@@ -252,6 +271,38 @@ class ExtensionManager {
     }
 
     /**
+     * Get the list of external extension service URLs.
+     * @returns {Array.<string>} - The list of external extension service URLs.
+     */
+    getGandiExternalExtensionServices () {
+        return this._gandiExternalExtensionServices;
+    }
+
+    /**
+     * Set a new list of external extension service URLs.
+     * This also resets the loaded flag to ensure the new services are loaded.
+     * @param {Array.<string>} services - The list of new external extension service URLs.
+     */
+    setGandiExternalExtensionServices (services) {
+        this._gandiExternalExtensionServices = services;
+        this._gandiExternalExtensionServicesLoaded = false;
+    }
+
+    /**
+     * Load all external extension services from their URLs.
+     * These services are added to the extension library but not loaded into the runtime.
+     * @returns {Promise} - A promise that resolves once all external services are loaded.
+     * @private
+     */
+    async loadGandiExternalExtensionServers () {
+        const allPromises = this._gandiExternalExtensionServices.map(url => this.loadExternalExtensionToLibrary(url));
+        // Only add Gandi remote extensions to the library; don't load them into the runtime. Let the project decide it.
+        return Promise.all(allPromises).then(() => {
+            this._gandiExternalExtensionServicesLoaded = true;
+        });
+    }
+
+    /**
      * Synchronously load an internal extension (core or non-core) by ID. This call will
      * fail if the provided id is not does not match an internal extension.
      * @param {string} extensionId - the ID of an internal extension
@@ -324,7 +375,6 @@ class ExtensionManager {
         throw new Error(`Extension not found: ${extensionURL}`);
     }
 
-
     /**
      * Loads an extension URL in a worker.
      *
@@ -350,7 +400,14 @@ class ExtensionManager {
      * Wait until all async extensions have loaded
      * @returns {Promise} resolved when all async extensions have loaded
      */
-    allAsyncExtensionsLoaded () {
+    async allAsyncExtensionsLoaded () {
+        if (!this._gandiExternalExtensionServicesLoaded) {
+            try {
+                await this.loadGandiExternalExtensionServers();
+            } catch (error) {
+                throw new Error('Failed to load additional Gandi extension services');
+            }
+        }
         if (this.loadingAsyncExtensions === 0) {
             return;
         }

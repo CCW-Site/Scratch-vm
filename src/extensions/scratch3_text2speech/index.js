@@ -164,10 +164,8 @@ class Scratch3Text2SpeechBlocks {
             const config = runtime.ccwAPI.getOnlineExtensionsConfig();
             if (config && config.hosts && config.hosts.tts) {
                 this.host = config.hosts.tts;
+                this.isCCWService = true;
             }
-        }
-        if (this.host || XIGUA_SERVER_HOST) {
-            this.isCCWService = true;
         }
         // powered by xigua end
     }
@@ -788,7 +786,7 @@ class Scratch3Text2SpeechBlocks {
             words = words.replace(/\S+/g, 'meow');
             locale = LANGUAGE_MAP[this.LANGUAGE_INFO[this.DEFAULT_LANGUAGE].speechSynthLocale];
         }
-        const path = this.host || `${XIGUA_SERVER_HOST}/ccw-main/external/speech/tts`;
+        const path = this.host;
 
         return fetchWithTimeout(path, {
             // powered by xigua start
