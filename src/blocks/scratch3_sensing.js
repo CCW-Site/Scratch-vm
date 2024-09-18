@@ -237,7 +237,7 @@ class Scratch3SensingBlocks {
         case 'year': return date.getFullYear();
         case 'month': return date.getMonth() + 1; // getMonth is zero-based
         case 'date': return date.getDate();
-        case 'dayofweek': return date.getDay() + 1; // getDay is zero-based, Sun=0
+        case 'dayofweek': return date.getDay() || 7; // getDay is zero-based, Sun=0, 国际标准ISO 8601，星期一是一周的开始
         case 'hour': return date.getHours();
         case 'minute': return date.getMinutes();
         case 'second': return date.getSeconds();
