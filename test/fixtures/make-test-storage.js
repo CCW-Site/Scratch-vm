@@ -39,9 +39,10 @@ const getAssetUrl = function (asset) {
  */
 const makeTestStorage = function () {
     const storage = new GandiStorage();
-    // const AssetType = storage.AssetType;
-    // storage.addWebSource([AssetType.Project], getProjectUrl);
-    // storage.addWebSource([AssetType.ImageVector, AssetType.ImageBitmap, AssetType.Sound], getAssetUrl);
+    const AssetType = storage.AssetType;
+    storage.addWebStore([AssetType.Project], getProjectUrl);
+    // storage.addWebStore([AssetType.ImageVector, AssetType.ImageBitmap, AssetType.Sound], getAssetUrl);
+
     return storage;
 };
 

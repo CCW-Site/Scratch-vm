@@ -201,7 +201,8 @@ test('get loudness with caching', t => {
     rt.audioEngine = {getLoudness: () => simulatedLoudness};
 
     // It should report -1 when current step time is null.
-    t.strictEqual(sensing.getLoudness(), -1);
+    // TW: The concept of a null current step time is inherently flawed and removed in TurboWarp.
+    // t.strictEqual(sensing.getLoudness(), -1);
 
     // Stub the current step time.
     rt.currentStepTime = 1000 / 30;

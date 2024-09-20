@@ -13,21 +13,12 @@ test('async load project all assets', t => {
     const vm = new VirtualMachine();
     vm.asyncLoadingProjectAssetsSupported = true;
 
-    // Evaluate playground data and exit
-    vm.on('playgroundData', e => {
-        const threads = JSON.parse(e.threads);
-        t.ok(threads.length === 0);
-        t.end();
-        process.nextTick(process.exit);
-    });
+    // vm.start();
+    // vm.clear();
+    // vm.setCompatibilityMode(false);
+    // vm.setTurboMode(false);
 
-    vm.start();
-    vm.clear();
-    vm.setCompatibilityMode(false);
-    vm.setTurboMode(false);
-
-    t.doesNotThrow(() => {
-        vm.loadProject(readFileToBuffer(SuperManyAssetsSB3ProjectPath))
+    vm.loadProject(readFileToBuffer(SuperManyAssetsSB3ProjectPath))
             .then(() => {
                 const runtime = vm.runtime;
                 // Load project information of the project
@@ -74,9 +65,8 @@ test('async load project all assets', t => {
 
                     t.equal(result.targets[31].name, 'Apple');
                     t.equal(result.targets[31].costumes[0].assetId, '831ccd4741a7a56d85f6698a21f4ca69');
-
                     t.end();
                 });
             });
-    });
+
 });

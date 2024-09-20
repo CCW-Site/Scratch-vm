@@ -1,20 +1,4 @@
 /**
- * Copyright (C) 2021 Thomas Weber
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
-
-/**
  * @fileoverview Common intermediates shared amongst parts of the compiler.
  */
 
@@ -43,7 +27,13 @@ class IntermediateScript {
         this.isProcedure = false;
 
         /**
-         * The name of this procedure, if any.
+         * This procedure's variant, if any.
+         * @type {string}
+         */
+        this.procedureVariant = '';
+
+        /**
+         * This procedure's code, if any.
          * @type {string}
          */
         this.procedureCode = '';
@@ -86,9 +76,16 @@ class IntermediateScript {
          */
         this.cachedCompileResult = null;
 
-        // CCW:  for global procedure compilation
-        // global procedure target
+        /**
+         * global procedure target
+         * @type {Target|null}
+         */
         this.target = null;
+        /**
+         * Whether the top block of this script is an executable hat.
+         * @type {boolean}
+         */
+        this.executableHat = false;
     }
 }
 

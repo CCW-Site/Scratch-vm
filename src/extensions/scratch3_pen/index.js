@@ -6,7 +6,6 @@ const Clone = require('../../util/clone');
 const Color = require('../../util/color');
 const formatMessage = require('format-message');
 const MathUtil = require('../../util/math-util');
-const RenderedTarget = require('../../sprites/rendered-target');
 const log = require('../../util/log');
 const StageLayering = require('../../engine/stage-layering');
 
@@ -106,6 +105,8 @@ class Scratch3PenBlocks {
      * @type {string}
      */
     static get STATE_KEY () {
+        // tw: We've hardcoded this value in various places for slight performance gains
+        // Make sure to update those if this changes.
         return 'Scratch.pen';
     }
 
@@ -150,7 +151,7 @@ class Scratch3PenBlocks {
      * @private
      */
     _getPenState (target) {
-        let penState = target.getCustomState(Scratch3PenBlocks.STATE_KEY);
+        let penState = target._customState['Scratch.pen'];
         if (!penState) {
             penState = Clone.simple(Scratch3PenBlocks.DEFAULT_PEN_STATE);
             target.setCustomState(Scratch3PenBlocks.STATE_KEY, penState);
@@ -171,7 +172,7 @@ class Scratch3PenBlocks {
             if (penState) {
                 newTarget.setCustomState(Scratch3PenBlocks.STATE_KEY, Clone.simple(penState));
                 if (penState.penDown) {
-                    newTarget.addListener(RenderedTarget.EVENT_TARGET_MOVED, this._onTargetMoved);
+                    newTarget.onTargetMoved = this._onTargetMoved;
                 }
             }
         }
@@ -297,6 +298,16 @@ class Scratch3PenBlocks {
             }),
             blockIconURI: blockIconURI,
             blocks: [
+                // tw: additional message when on the stage for clarity
+                {
+                    blockType: BlockType.LABEL,
+                    text: formatMessage({
+                        id: 'tw.pen.stageSelected',
+                        default: 'Stage selected: less pen blocks',
+                        description: 'Label that appears in the Pen category when the stage is selected'
+                    }),
+                    filter: [TargetType.STAGE]
+                },
                 {
                     opcode: 'clear',
                     blockType: BlockType.COMMAND,
@@ -540,7 +551,7 @@ class Scratch3PenBlocks {
 
         if (!penState.penDown) {
             penState.penDown = true;
-            target.addListener(RenderedTarget.EVENT_TARGET_MOVED, this._onTargetMoved);
+            target.onTargetMoved = this._onTargetMoved;
         }
 
         const penSkinId = this._getPenLayerID();
@@ -563,7 +574,7 @@ class Scratch3PenBlocks {
 
         if (penState.penDown) {
             penState.penDown = false;
-            target.removeListener(RenderedTarget.EVENT_TARGET_MOVED, this._onTargetMoved);
+            target.onTargetMoved = null;
         }
     }
 
@@ -584,7 +595,7 @@ class Scratch3PenBlocks {
         penState.color = (hsv.h / 360) * 100;
         penState.saturation = hsv.s * 100;
         penState.brightness = hsv.v * 100;
-        if (rgb.hasOwnProperty('a')) {
+        if (Object.prototype.hasOwnProperty.call(rgb, 'a')) {
             penState.transparency = 100 * (1 - (rgb.a / 255.0));
         } else {
             penState.transparency = 0;

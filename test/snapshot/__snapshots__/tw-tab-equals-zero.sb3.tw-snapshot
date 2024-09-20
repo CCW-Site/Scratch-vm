@@ -1,0 +1,40 @@
+// TW Snapshot
+// Input SHA-256: 86c1734c101ee85e6f737f891d6ca338d72b17026ab60d289ea7861351c65124
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = stage.variables["Kl,Own0m6{^v3$E{Wsc="];
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 6",}, b0, false, false, "i", null);
+b1.value = "\t";
+startHats("event_whenbroadcastreceived", { BROADCAST_OPTION: "message1" });
+retire(); return;
+}; })
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["Kl,Own0m6{^v3$E{Wsc="];
+const b1 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ () {
+if (compareEqual(b0.value, ("0" + ""))) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass \\t in a variable = string 0",}, b1, false, false, "q", null);
+}
+if (compareEqual("\t", ("0" + ""))) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass literal \\t = string 0",}, b1, false, false, "u", null);
+}
+if (compareEqual(("    " + ("" + b0.value)), ("0" + ""))) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass \\t and other spaces = string 0",}, b1, false, false, "w", null);
+}
+if (compareEqual(b0.value, (0 + 0))) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass \\t in a variable = number 0",}, b1, false, false, "z", null);
+}
+if (compareEqual("\t", (0 + 0))) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass literal \\t = number 0",}, b1, false, false, "B", null);
+}
+if (compareEqual(("    " + ("" + b0.value)), (0 + 0))) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass \\t and other spaces = number 0",}, b1, false, false, "E", null);
+}
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b1, false, false, "D", null);
+retire(); return;
+}; })

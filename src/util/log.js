@@ -1,4 +1,4 @@
-const minilog = require('minilog');
-minilog.enable();
+const nanolog = require('@turbowarp/nanolog');
+nanolog.enable();
 
-module.exports = minilog('vm');
+module.exports = nanolog('vm');

@@ -30,11 +30,13 @@ const serializeAssets = function (runtime, assetType, optTargetId) {
         for (let j = 0; j < currAssets.length; j++) {
             const currAsset = currAssets[j];
             if (currAsset.isRuntimeAsyncLoad) continue;
-            const asset = currAsset.asset;
+            const asset = currAsset.broken ? currAsset.broken.asset : currAsset.asset;
             if (asset) {
+                // Serialize asset if it exists, otherwise skip
                 assetDescs.push({
                     fileName: `${asset.assetId}.${asset.dataFormat}`,
-                    fileContent: asset.data});
+                    fileContent: asset.data
+                });
             }
         }
     }

@@ -62,13 +62,16 @@ test('hexToRgb', t => {
     t.deepEqual(color.hexToRgb('#ffffff'), {r: 255, g: 255, b: 255});
     t.deepEqual(color.hexToRgb('#0fa'), {r: 0, g: 255, b: 170});
     t.deepEqual(color.hexToRgb('#00ffaa'), {r: 0, g: 255, b: 170});
+    t.deepEqual(color.hexToRgb('#00FFaA'), {r: 0, g: 255, b: 170});
 
     t.deepEqual(color.hexToRgb('000'), {r: 0, g: 0, b: 0});
     t.deepEqual(color.hexToRgb('fff'), {r: 255, g: 255, b: 255});
+    t.deepEqual(color.hexToRgb('aBc'), {r: 0xaa, g: 0xbb, b: 0xcc});
     t.deepEqual(color.hexToRgb('00ffaa'), {r: 0, g: 255, b: 170});
 
     t.deepEqual(color.hexToRgb('0'), null);
     t.deepEqual(color.hexToRgb('hello world'), null);
+    t.deepEqual(color.hexToRgb('red'), null);
 
     t.end();
 });

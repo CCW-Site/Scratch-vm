@@ -1,0 +1,38 @@
+// TW Snapshot
+// Input SHA-256: a4ae71d2c1b70f29a667c2d582b24702068f1d128512b7aee53b2feddd274527
+
+// Sprite2 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = stage.variables["eFlmP1{XC+I1:h0Yln.K"];
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 7",}, b0, false, false, "h", null);
+b1.value = [];
+listInsert(b1, "any", "a");
+listInsert(b1, "any", "b");
+listInsert(b1, "any", "c");
+if ((b1.value.length === 3)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "s", null);
+}
+if (listContains(b1, "a")) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "v", null);
+}
+if (listContains(b1, "b")) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "x", null);
+}
+if (listContains(b1, "c")) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "z", null);
+}
+if (listContains(b1, listGet(b1.value, "any"))) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "A", null);
+}
+listDelete(b1, "any");
+if ((b1.value.length === 2)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "C", null);
+}
+if (compareEqual(listGet(b1.value, "*"), "")) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "F", null);
+}
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "E", null);
+retire(); return;
+}; })

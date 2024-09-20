@@ -52,20 +52,34 @@ class Color {
 
     /**
      * Convert a hex color (e.g., F00, #03F, #0033FF) to an RGB color object.
-     * CC-BY-SA Tim Down:
-     * https://stackoverflow.com/questions/5623838/rgb-to-hex-and-hex-to-rgb
      * @param {!string} hex Hex representation of the color.
      * @return {RGBObject} null on failure, or rgb: {r: red [0,255], g: green [0,255], b: blue [0,255]}.
      */
     static hexToRgb (hex) {
-        const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-        hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
-        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-        return result ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16)
-        } : null;
+        if (hex.startsWith('#')) {
+            hex = hex.substring(1);
+        }
+        const parsed = parseInt(hex, 16);
+        if (isNaN(parsed)) {
+            return null;
+        }
+        if (hex.length === 6) {
+            return {
+                r: (parsed >> 16) & 0xff,
+                g: (parsed >> 8) & 0xff,
+                b: parsed & 0xff
+            };
+        } else if (hex.length === 3) {
+            const r = ((parsed >> 8) & 0xf);
+            const g = ((parsed >> 4) & 0xf);
+            const b = parsed & 0xf;
+            return {
+                r: (r << 4) | r,
+                g: (g << 4) | g,
+                b: (b << 4) | b
+            };
+        }
+        return null;
     }
 
     /**

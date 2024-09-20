@@ -151,11 +151,6 @@ class BlockUtility {
      * @param {string} procedureCode Procedure code for procedure to start.
      */
     startProcedure (procedureCode, globalTarget) {
-        const addonBlock = this.runtime.getAddonBlock(procedureCode);
-        if (addonBlock) {
-            addonBlock.callback(this.thread.getAllparams(), this.thread);
-            return;
-        }
         this.sequencer.stepToProcedure(this.thread, procedureCode, globalTarget);
     }
 
@@ -260,6 +255,8 @@ class BlockUtility {
             this.sequencer.runtime.ioDevices[device] &&
             this.sequencer.runtime.ioDevices[device][func]) {
             const devObject = this.sequencer.runtime.ioDevices[device];
+            // TODO: verify correct `this` after switching from apply to spread
+            // eslint-disable-next-line prefer-spread
             return devObject[func].apply(devObject, args);
         }
     }

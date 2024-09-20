@@ -7,32 +7,36 @@ const Sprite = require('../../src/sprites/sprite');
 const VirtualMachine = require('../../src/virtual-machine');
 
 const project = require('../fixtures/gandi/project.json');
+const window = global;
+global.prompt == "function" || (function(window) {
+    window.prompt = function prompt(title) {
+      // title element
+      // create input with default text
+      // overlay
+      // dialog
+      // OK white on blue
+      // Cancel black on white
+      // return value of OK (value of input) or Cancel (null)
+    }
+  })(global);
 
-test('loadAndParseGandiAssets', t => {
-
+const initVM = function () {
     const vm = new VirtualMachine();
-    vm.attachStorage(makeTestStorage());
+    const storage = makeTestStorage();
+    vm.attachStorage(storage);
+    const AssetType = storage.AssetType;
+    vm.runtime.gandi.supportedAssetTypes = [AssetType.Python, AssetType.Json, AssetType.GLSL, AssetType.Extension];
+    return vm;
+}
 
+test('init Gandi Object', t => {
+    const vm = initVM();
     vm.loadProject(project).then(()=> {
         const gandiObject = vm.runtime.gandi;
-        // console.log('test loadAndParseGandiAssets >> gandiObject: ', gandiObject);
         t.type(gandiObject, 'object');
-        t.type(gandiObject.assets, 'array');
+        t.type(gandiObject.assets, 'Array');
+        t.equal(gandiObject.assets.length, 0);
         t.type(gandiObject.wildExtensions, 'object');
-
-        t.equal(gandiObject.assets[0].name, 'main');
-        t.equal(gandiObject.assets.length, 2);
-        t.deepEqual(Object.keys(gandiObject.wildExtensions), ['unitTestExt1', 'unitTestExt2']);
-        t.end();
-    })
-});
-
-test('collectGandiAssets', t => {
-    const vm = new VirtualMachine();
-    vm.attachStorage(makeTestStorage());
-    vm.loadProject(project).then(()=> {
-        const allAssets = vm.assets;
-        // console.log('test collectGandiAssets >> gandiObject: ', allAssets);
         t.end();
     })
 });

@@ -15,8 +15,8 @@ test('event', t => {
     vm.on('playgroundData', e => {
         const threads = JSON.parse(e.threads);
         t.ok(threads.length > 0);
+        vm.quit();
         t.end();
-        process.nextTick(process.exit);
     });
 
     // Start VM, load project, and run
@@ -24,6 +24,7 @@ test('event', t => {
         vm.start();
         vm.clear();
         vm.setCompatibilityMode(false);
+        vm.setCompilerOptions({enabled: false})
         vm.setTurboMode(false);
         vm.loadProject(project).then(() => {
             vm.greenFlag();

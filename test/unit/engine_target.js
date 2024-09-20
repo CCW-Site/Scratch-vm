@@ -402,10 +402,10 @@ test('duplicateVariables duplicates all variables', t => {
 
     // Should be able to find original var IDs in both this target's variables and
     // the duplicate variables since a blocks container was not specified.
-    t.equal(target.variables.hasOwnProperty('var ID 1'), true);
-    t.equal(target.variables.hasOwnProperty('var ID 2'), true);
-    t.equal(duplicateVariables.hasOwnProperty('var ID 1'), true);
-    t.equal(duplicateVariables.hasOwnProperty('var ID 1'), true);
+    t.equal(Object.prototype.hasOwnProperty.call(target.variables, 'var ID 1'), true);
+    t.equal(Object.prototype.hasOwnProperty.call(target.variables, 'var ID 2'), true);
+    t.equal(Object.prototype.hasOwnProperty.call(duplicateVariables, 'var ID 1'), true);
+    t.equal(Object.prototype.hasOwnProperty.call(duplicateVariables, 'var ID 1'), true);
 
     // Values of the duplicate varaiables should match the value of the original values at the time of duplication
     t.equal(target.variables['var ID 1'].value, duplicateVariables['var ID 1'].value);
@@ -457,7 +457,7 @@ test('duplicateVariables re-IDs variables when a block container is provided', t
     t.equal(copiedBlocks.getBlock('a block').fields.VARIABLE.id, 'mock var id');
     t.equal(copiedBlocks.getBlock('a block').fields.VARIABLE.value, 'a mock variable');
 
-    const duplicateVariables = target.duplicateVariables(copiedBlocks);
+    const duplicateVariables = target.duplicateVariables(target.id, copiedBlocks);
 
     // Duplicate variables should have new IDs
     t.equal(Object.keys(duplicateVariables).length, 2);

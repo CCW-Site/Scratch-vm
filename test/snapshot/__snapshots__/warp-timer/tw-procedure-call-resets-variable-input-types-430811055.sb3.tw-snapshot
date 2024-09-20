@@ -1,0 +1,25 @@
+// TW Snapshot
+// Input SHA-256: 2afbb43dad9e66e37997e13bf3ffb90bf39effd8974c2eb1a95bed61d437b6de
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = stage.variables["`jEk@4|i[#Fk?(8x)AV.-my variable"];
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 1",}, b0, false, false, "qf{MD}-f+l?U+)KA#Vnm", null);
+b1.value = "";
+thread.procedures["Zdo something"]();
+if (!compareEqual(b1.value, "")) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "Sgf_#7|GOpx!R]?Q3]$s", null);
+}
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, ",vD-ZG7f{]FoJ`,))JWh", null);
+retire(); return;
+}; })
+
+// Sprite1 Zdo something
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["`jEk@4|i[#Fk?(8x)AV.-my variable"];
+return function funXYZ_do_something () {
+b0.value = "help";
+return "";
+}; })

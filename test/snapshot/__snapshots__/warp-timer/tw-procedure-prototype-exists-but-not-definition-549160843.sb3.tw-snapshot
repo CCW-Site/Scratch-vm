@@ -1,0 +1,11 @@
+// TW Snapshot
+// Input SHA-256: 9805621c896afb4a8ed71236417a0311e5f4f38378214914625248b6157178b4
+
+// Apple script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 0",}, b0, false, false, "a", null);
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "f", null);
+retire(); return;
+}; })

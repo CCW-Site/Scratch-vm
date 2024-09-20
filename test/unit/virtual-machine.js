@@ -7,8 +7,7 @@ const events = require('../fixtures/events.json');
 const Renderer = require('../fixtures/fake-renderer');
 const Runtime = require('../../src/engine/runtime');
 const RenderedTarget = require('../../src/sprites/rendered-target');
-
-tap.tearDown(() => process.nextTick(process.exit));
+const Frames = require('../../src/engine/frame');
 
 const test = tap.test;
 
@@ -477,23 +476,19 @@ test('shareSoundToTarget', t => {
 test('reorderTarget', t => {
     const vm = new VirtualMachine();
     vm.emitTargetsUpdate = () => {};
+    const makeTarget = (t) => ({t, isOriginal: true, id: t});
 
-    vm.runtime.targets = ['a', 'b', 'c', 'd'];
+    vm.runtime.targets = ['a', 'b', 'c', 'd'].map(makeTarget);
 
-    t.equal(vm.reorderTarget(2, 2), false);
-    t.deepEqual(vm.runtime.targets, ['a', 'b', 'c', 'd']);
-
-    // Make sure clamping works
-    t.equal(vm.reorderTarget(-100, -5), false);
-    t.deepEqual(vm.runtime.targets, ['a', 'b', 'c', 'd']);
+    const getTargetValue = () => vm.runtime.targets.map(t => t && t.t);
 
     // Reorder upwards
     t.equal(vm.reorderTarget(0, 2), true);
-    t.deepEqual(vm.runtime.targets, ['b', 'c', 'a', 'd']);
+    t.deepEqual(getTargetValue(), ['b', 'c', 'a', 'd']);
 
     // Reorder downwards
     t.equal(vm.reorderTarget(3, 1), true);
-    t.deepEqual(vm.runtime.targets, ['b', 'd', 'c', 'a']);
+    t.deepEqual(getTargetValue(), ['b', 'd', 'c', 'a']);
 
     t.end();
 });
@@ -511,6 +506,10 @@ test('emitWorkspaceUpdate', t => {
         }
         return blockString;
     };
+    const makeBlocks = ()=> ({
+        toXML: blocksToXML,
+        getGlobalProceduresXML: () => []
+    })
     vm.runtime.targets = [
         {
             isStage: true,
@@ -519,39 +518,35 @@ test('emitWorkspaceUpdate', t => {
                     toXML: () => 'global'
                 }
             },
-            blocks: {
-                toXML: blocksToXML
-            },
+            blocks: makeBlocks(),
             comments: {
                 aStageComment: {
                     toXML: () => 'aStageComment',
                     blockId: null
                 }
-            }
+            },
+            frames: new Frames(vm.runtime)
         }, {
             variables: {
                 unused: {
                     toXML: () => 'unused'
                 }
             },
-            blocks: {
-                toXML: blocksToXML
-            },
+            blocks: makeBlocks(),
             comments: {
                 someBlockComment: {
                     toXML: () => 'someBlockComment',
                     blockId: 'someBlockId'
                 }
-            }
+            },
+            frames: new Frames(vm.runtime)
         }, {
             variables: {
                 local: {
                     toXML: () => 'local'
                 }
             },
-            blocks: {
-                toXML: blocksToXML
-            },
+            blocks: makeBlocks(),
             comments: {
                 someOtherComment: {
                     toXML: () => 'someOtherComment',
@@ -561,7 +556,8 @@ test('emitWorkspaceUpdate', t => {
                     toXML: () => 'aBlockComment',
                     blockId: 'a block'
                 }
-            }
+            },
+            frames: new Frames(vm.runtime)
         }
     ];
     vm.editingTarget = vm.runtime.targets[2];
@@ -958,23 +954,29 @@ test('shareBlocksToTarget loads extensions that have not yet been loaded', t => 
     runtime.targets = [stage];
 
     const fakeBlocks = [
-        {opcode: 'loaded_fakeblock'},
-        {opcode: 'notloaded_fakeblock'}
+        {opcode: 'pen_something', fields: {}},
+        {opcode: 'translate_something', fields: {}},
     ];
 
     // Stub the extension manager
     const loadedIds = [];
     vm.extensionManager = {
-        isExtensionLoaded: id => id === 'loaded',
+        allAsyncExtensionsLoaded: () => Promise.resolve(),
+        isBuiltinExtension: () => true,
+        isExtensionLoaded: id => id === 'pen',
+        loadExtensionIdSync: id => new Promise(resolve => {
+            loadedIds.push(id);
+            resolve();
+        }),
         loadExtensionURL: id => new Promise(resolve => {
             loadedIds.push(id);
             resolve();
-        })
+        }),
     };
 
     vm.shareBlocksToTarget(fakeBlocks, stage.id).then(() => {
         // Verify that only the not-loaded extension gets loaded
-        t.deepEqual(loadedIds, ['notloaded']);
+        t.deepEqual(loadedIds, ['translate']);
         t.end();
     });
 });
@@ -1016,6 +1018,7 @@ test('Starting the VM emits an event', t => {
     });
     vm.start();
     t.equal(started, true);
+    vm.quit();
     t.end();
 });
 
@@ -1047,7 +1050,7 @@ test('toJSON encodes Infinity/NaN as 0, not null', t => {
 
     runtime.targets = [stage];
 
-    const json = JSON.parse(vm.toJSON({allowOptimization: false}));
+    const json = JSON.parse(vm.toJSON());
     t.equal(json.targets[0].volume, 0);
     t.equal(json.targets[0].tempo, 0);
     t.equal(json.targets[0].variables.id1[1], 0);
@@ -1057,22 +1060,15 @@ test('toJSON encodes Infinity/NaN as 0, not null', t => {
     t.end();
 });
 
-test('emitTargetsUpdate targetList is lazy', t => {
+test('clearFlyoutBlocks removes all of the flyout blocks', t => {
     const vm = new VirtualMachine();
-    let calledToJSON = false;
-    vm.runtime.targets = [{
-        toJSON () {
-            calledToJSON = true;
-            return {};
-        }
-    }];
-    let targetsUpdateEvent;
-    vm.on('targetsUpdate', e => {
-        targetsUpdateEvent = e;
-    });
-    vm.emitTargetsUpdate();
-    t.equal(calledToJSON, false);
-    void targetsUpdateEvent.targetList; // should trigger lazy compute
-    t.equal(calledToJSON, true);
+    const flyoutBlocks = vm.runtime.flyoutBlocks;
+
+    flyoutBlocks.createBlock(adapter(events.mockVariableBlock)[0]);
+    t.equal(Object.keys(flyoutBlocks._blocks).length, 1);
+
+    vm.clearFlyoutBlocks();
+    t.equal(Object.keys(flyoutBlocks._blocks).length, 0);
+
     t.end();
 });

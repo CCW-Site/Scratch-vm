@@ -62,7 +62,7 @@ class JSONRPC {
         if (json.jsonrpc !== '2.0') {
             throw new Error(`Bad or missing JSON-RPC version in message: ${json}`);
         }
-        if (json.hasOwnProperty('method')) {
+        if (Object.prototype.hasOwnProperty.call(json, 'method')) {
             this._handleRequest(json);
         } else {
             this._handleResponse(json);
@@ -98,7 +98,7 @@ class JSONRPC {
     _handleRequest (json) {
         const {method, params, id} = json;
         const rawResult = this.didReceiveCall(method, params);
-        if (id) {
+        if (id !== null && typeof id !== 'undefined') {
             Promise.resolve(rawResult).then(
                 result => {
                     this._sendResponse(id, result);

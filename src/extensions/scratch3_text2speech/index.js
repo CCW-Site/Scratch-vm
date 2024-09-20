@@ -7,8 +7,8 @@ const Cast = require('../../util/cast');
 const MathUtil = require('../../util/math-util');
 const Clone = require('../../util/clone');
 const log = require('../../util/log');
-const fetchWithTimeout = require('../../util/fetch-with-timeout');
-
+const {fetchWithTimeout} = require('../../util/fetch-with-timeout');
+const getXGAccessCode = require('../../util/xg-access-code');
 
 /**
  * Icon svg to be displayed in the blocks category menu, encoded as a data URI.
@@ -158,9 +158,9 @@ class Scratch3Text2SpeechBlocks {
          */
         this._supportedLocales = this._getSupportedLocales();
         // powered by xigua start
-        this.thirdPartApiKey = localStorage.getItem('xg-access-code');
+        this.thirdPartApiKey = getXGAccessCode();
 
-        if (runtime.ccwAPI && runtime.ccwAPI.getOnlineExtensionsConfig) {
+        if (runtime && runtime.ccwAPI && runtime.ccwAPI.getOnlineExtensionsConfig) {
             const config = runtime.ccwAPI.getOnlineExtensionsConfig();
             if (config && config.hosts && config.hosts.tts) {
                 this.host = config.hosts.tts;
@@ -230,7 +230,7 @@ class Scratch3Text2SpeechBlocks {
      *
      * SCRATCH LOCALE
      *      Set by the editor, and used to store the language state in the project.
-     *      Listed in l10n: https://github.com/LLK/scratch-l10n/blob/master/src/supported-locales.js
+     *      Listed in l10n: https://github.com/scratchfoundation/scratch-l10n/blob/master/src/supported-locales.js
      * SUPPORTED LOCALE
      *      A Scratch locale that has a corresponding extension locale.
      * EXTENSION LOCALE
@@ -318,7 +318,7 @@ class Scratch3Text2SpeechBlocks {
                     id: 'text2speech.Japanese',
                     default: 'Japanese'
                 }),
-                locales: ['ja', 'ja-Hira'],
+                locales: ['ja', 'ja-hira'],
                 speechSynthLocale: 'ja-JP'
             },
             [KOREAN_ID]: {

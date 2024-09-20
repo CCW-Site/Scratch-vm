@@ -1,0 +1,36 @@
+// TW Snapshot
+// Input SHA-256: b1e62179f7a495c46c7e9c64a03d405924f6011b66aa71f6ec0f1781b936d38c
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = runtime.getSpriteTargetByName("Sprite1");
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 6",}, b0, false, false, "`f)8`e7_V%]cmRy7eZ?*", null);
+target.setXY(1e-9, target.y);
+if ((limitPrecision(target.x) === 1e-9)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass much above x does not round",}, b0, false, false, "wnAyae772?^VZ]bq?#*p", null);
+}
+if (((b1 ? b1.x : 0) === 1e-9)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass initial 'of' test",}, b0, false, false, "${qf}t3_Wf_/sqC#i0WN", null);
+}
+target.setXY(target.x + 0, target.y);
+runtime.ext_scratch3_motion._moveSteps(0, target);
+target.setXY(target.x + -9e-10, target.y);
+if (((b1 ? b1.x : 0) === 1.0000000000000007e-10)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass 'of' never rounds - positive x",}, b0, false, false, "zt/Fd,i768/rohNq-OU/", null);
+}
+if ((limitPrecision(target.x) === 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass x slightly above 0 rounds",}, b0, false, false, "p5a6(?e#B|B(d.fe;b6F", null);
+}
+target.setXY(target.x + -9e-10, target.y);
+target.setXY(target.x, target.y + 0);
+if (((b1 ? b1.x : 0) === -7.999999999999999e-10)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass 'of' never rounds and change x - negative x",}, b0, false, false, "![=|9E8]xp_9QR]fu}4M", null);
+}
+if ((limitPrecision(target.x) === 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass x slightly below 0 rounds",}, b0, false, false, "4o-vB]D}HJ1/*qW~k3Cd", null);
+}
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "8We]d__[]7X;@+e*x~^@", null);
+retire(); return;
+}; })

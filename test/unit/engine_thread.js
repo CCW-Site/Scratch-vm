@@ -215,15 +215,15 @@ test('stopThisScript', t => {
     th.target = rt;
 
     th.stopThisScript();
-    t.strictEquals(th.peekStack(), null);
+    t.equal(th.peekStack(), null);
     th.pushStack('arbitraryString');
-    t.strictEquals(th.peekStack(), 'arbitraryString');
+    t.equal(th.peekStack(), 'arbitraryString');
     th.stopThisScript();
-    t.strictEquals(th.peekStack(), null);
+    t.equal(th.peekStack(), null);
     th.pushStack('arbitraryString');
     th.pushStack('secondString');
     th.stopThisScript();
-    t.strictEquals(th.peekStack(), 'secondString');
+    t.equal(th.peekStack(), null);
 
     t.end();
 });
@@ -267,12 +267,17 @@ test('isRecursiveCall', t => {
     rt.blocks.createBlock(block2);
     th.target = rt;
 
+    const pushStack = id => {
+        th.pushStack(id);
+        th.peekStackFrame().op = {id};
+    };
+
     t.strictEquals(th.isRecursiveCall('fakeCode'), false);
-    th.pushStack('secondString');
+    pushStack('secondString');
     t.strictEquals(th.isRecursiveCall('fakeCode'), false);
-    th.pushStack('arbitraryString');
+    pushStack('arbitraryString');
     t.strictEquals(th.isRecursiveCall('fakeCode'), true);
-    th.pushStack('arbitraryString');
+    pushStack('arbitraryString');
     t.strictEquals(th.isRecursiveCall('fakeCode'), true);
     th.popStack();
     t.strictEquals(th.isRecursiveCall('fakeCode'), true);

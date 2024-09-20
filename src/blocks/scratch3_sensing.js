@@ -81,11 +81,23 @@ class Scratch3SensingBlocks {
             sensing_answer: {
                 getId: () => 'answer'
             },
+            sensing_mousedown: {
+                getId: () => 'mousedown'
+            },
+            sensing_mousex: {
+                getId: () => 'mousex'
+            },
+            sensing_mousey: {
+                getId: () => 'mousey'
+            },
             sensing_loudness: {
                 getId: () => 'loudness'
             },
             sensing_timer: {
                 getId: () => 'timer'
+            },
+            sensing_dayssince2000: {
+                getId: () => 'dayssince2000'
             },
             sensing_current: {
                 // This is different from the default toolbox xml id in order to support

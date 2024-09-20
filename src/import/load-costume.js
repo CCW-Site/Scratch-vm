@@ -1,11 +1,24 @@
 const StringUtil = require('../util/string-util');
 const uid = require('../util/uid');
 const log = require('../util/log');
-const {loadSvgString, serializeSvgToString} = require('scratch-svg-renderer');
+const AsyncLimiter = require('../util/async-limiter');
+const {loadSvgString, serializeSvgToString} = require('@turbowarp/scratch-svg-renderer');
+const {parseVectorMetadata} = require('../serialization/tw-costume-import-export');
 
 const loadVector_ = function (costume, runtime, rotationCenter, optVersion) {
     return new Promise(resolve => {
         let svgString = costume.asset.decodeText();
+
+        // TW: We allow SVGs to specify their rotation center using a special comment.
+        if (typeof rotationCenter === 'undefined') {
+            const parsedRotationCenter = parseVectorMetadata(svgString);
+            if (parsedRotationCenter) {
+                rotationCenter = parsedRotationCenter;
+                costume.rotationCenterX = rotationCenter[0];
+                costume.rotationCenterY = rotationCenter[1];
+            }
+        }
+
         // SVG Renderer load fixes "quirks" associated with Scratch 2 projects
         if (optVersion && optVersion === 2) {
             // scratch-svg-renderer fixes syntax that causes loading issues,
@@ -34,6 +47,11 @@ const loadVector_ = function (costume, runtime, rotationCenter, optVersion) {
             costume.bitmapResolution = 1;
         }
         runtime.emit('LOAD_ASSETS_PROGRESS', costume);
+
+        if (runtime.isPackaged) {
+            costume.asset = null;
+        }
+
         resolve(costume);
     });
 };
@@ -86,6 +104,64 @@ const canvasPool = (function () {
 }());
 
 /**
+ * @param {string} src URL of image
+ * @returns {Promise<HTMLImageElement>}
+ */
+const readAsImageElement = src => new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = function () {
+        resolve(image);
+        image.onload = null;
+        image.onerror = null;
+    };
+    image.onerror = function () {
+        reject(new Error('Costume load failed. Asset could not be read.'));
+        image.onload = null;
+        image.onerror = null;
+    };
+    image.src = src;
+});
+
+/**
+ * @param {Asset} asset scratch-storage asset
+ * @returns {Promise<HTMLImageElement|ImageBitmap>}
+ */
+const _persistentReadImage = async asset => {
+    // Sometimes, when a lot of images are loaded at once, especially in Chrome, reading an image
+    // can throw an error even on valid images. To mitigate this, we'll retry image reading a few
+    // time with delays.
+    let firstError;
+    for (let i = 0; i < 3; i++) {
+        try {
+            if (typeof createImageBitmap === 'function') {
+                const imageBitmap = await createImageBitmap(
+                    new Blob([asset.data.buffer], {type: asset.assetType.contentType})
+                );
+                // If we do too many createImageBitmap at the same time, some browsers (Chrome) will
+                // sometimes resolve with undefined. We limit concurrency so this shouldn't ever
+                // happen, but if it somehow does, throw an error so it can be retried or so that it
+                // falls back to scratch's broken costume handling.
+                if (!imageBitmap) {
+                    throw new Error(`createImageBitmap resolved with ${imageBitmap}`);
+                }
+                return imageBitmap;
+            }
+            return await readAsImageElement(asset.encodeDataURI());
+        } catch (e) {
+            if (!firstError) {
+                firstError = e;
+            }
+            log.warn(e);
+            await new Promise(resolve => setTimeout(resolve, Math.random() * 2000));
+        }
+    }
+    throw firstError;
+};
+
+// Browsers break when we do too many createImageBitmap at the same time.
+const readImage = new AsyncLimiter(_persistentReadImage, 25);
+
+/**
  * Return a promise to fetch a bitmap from storage and return it as a canvas
  * If the costume has bitmapResolution 1, it will be converted to bitmapResolution 2 here (the standard for Scratch 3)
  * If the costume has a text layer asset, which is a text part from Scratch 1.4, then this function
@@ -100,10 +176,14 @@ const canvasPool = (function () {
  *     assetMatchesBase is true if the asset matches the base layer; false if it required adjustment
  */
 const fetchBitmapCanvas_ = function (costume, runtime, rotationCenter) {
-    if (!costume || !costume.asset) {
+    if (!costume || !costume.asset) { // TODO: We can probably remove this check...
+        // TODO: reject with an Error (breaking API change!)
+        // eslint-disable-next-line prefer-promise-reject-errors
         return Promise.reject('Costume load failed. Assets were missing.');
     }
     if (!runtime.v2BitmapAdapter) {
+        // TODO: reject with an Error (breaking API change!)
+        // eslint-disable-next-line prefer-promise-reject-errors
         return Promise.reject('No V2 Bitmap adapter present.');
     }
 
@@ -142,27 +222,41 @@ const fetchBitmapCanvas_ = function (costume, runtime, rotationCenter) {
         });
     }))
         .then(([baseImageElement, textImageElement]) => {
-            const mergeCanvas = canvasPool.create();
+            if (!baseImageElement) {
+                throw new Error('Loading bitmap costume base failed.');
+            }
 
             const scale = costume.bitmapResolution === 1 ? 2 : 1;
-            mergeCanvas.width = baseImageElement.width;
-            mergeCanvas.height = baseImageElement.height;
 
-            const ctx = mergeCanvas.getContext('2d');
-            ctx.drawImage(baseImageElement, 0, 0);
+            let imageOrCanvas;
+            let canvas;
             if (textImageElement) {
+                canvas = canvasPool.create();
+                canvas.width = baseImageElement.width;
+                canvas.height = baseImageElement.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(baseImageElement, 0, 0);
                 ctx.drawImage(textImageElement, 0, 0);
+                imageOrCanvas = canvas;
+            } else {
+                imageOrCanvas = baseImageElement;
             }
-            // Track the canvas we merged the bitmaps onto separately from the
-            // canvas that we receive from resize if scale is not 1. We know
-            // resize treats mergeCanvas as read only data. We don't know when
-            // resize may use or modify the canvas. So we'll only release the
-            // mergeCanvas back into the canvas pool. Reusing the canvas from
-            // resize may cause errors.
-            let canvas = mergeCanvas;
             if (scale !== 1) {
-                canvas = runtime.v2BitmapAdapter.resize(mergeCanvas, canvas.width * scale, canvas.height * scale);
+                // resize() returns a new canvas.
+                imageOrCanvas = runtime.v2BitmapAdapter.resize(
+                    imageOrCanvas,
+                    imageOrCanvas.width * scale,
+                    imageOrCanvas.height * scale
+                );
+                // Old canvas is no longer used.
+                if (canvas) {
+                    canvasPool.release(canvas);
+                }
             }
+
+            // This informs TurboWarp/scratch-render that this canvas won't be reused by the canvas pool,
+            // which helps it optimize memory use.
+            imageOrCanvas.reusable = false;
 
             // By scaling, we've converted it to bitmap resolution 2
             if (rotationCenter) {
@@ -180,19 +274,31 @@ const fetchBitmapCanvas_ = function (costume, runtime, rotationCenter) {
             runtime.emit('LOAD_ASSETS_PROGRESS', costume);
 
             return {
-                canvas,
-                mergeCanvas,
+                image: imageOrCanvas,
                 rotationCenter,
                 // True if the asset matches the base layer; false if it required adjustment
                 assetMatchesBase: scale === 1 && !textImageElement
             };
         })
-        .catch(e => {
+        .finally(() => {
             // Clean up the text layer properties if it fails to load
             delete costume.textLayerMD5;
             delete costume.textLayerAsset;
-            throw e;
         });
+};
+
+const toDataURL = imageOrCanvas => {
+    if (imageOrCanvas instanceof HTMLCanvasElement) {
+        return imageOrCanvas.toDataURL();
+    }
+    const canvas = canvasPool.create();
+    canvas.width = imageOrCanvas.width;
+    canvas.height = imageOrCanvas.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(imageOrCanvas, 0, 0);
+    const url = canvas.toDataURL();
+    canvasPool.release(canvas);
+    return url;
 };
 
 const loadBitmap_ = function (costume, runtime, _rotationCenter) {
@@ -206,6 +312,8 @@ const loadBitmap_ = function (costume, runtime, _rotationCenter) {
                     // somewhere and act on that error (like logging).
                     //
                     // Return a rejection to stop executing updateCostumeAsset.
+                    // TODO: reject with an Error (breaking API change!)
+                    // eslint-disable-next-line prefer-promise-reject-errors
                     return Promise.reject('No V2 Bitmap adapter present.');
                 }
 
@@ -222,13 +330,13 @@ const loadBitmap_ = function (costume, runtime, _rotationCenter) {
                 costume.md5 = `${costume.assetId}.${costume.dataFormat}`;
             };
 
-            if (fetched && !fetched.assetMatchesBase) {
-                updateCostumeAsset(fetched.canvas.toDataURL());
+            if (!fetched.assetMatchesBase) {
+                updateCostumeAsset(toDataURL(fetched.image));
             }
 
             return fetched;
         })
-        .then(({canvas, mergeCanvas, rotationCenter}) => {
+        .then(({image, rotationCenter}) => {
             // createBitmapSkin does the right thing if costume.rotationCenter is undefined.
             // That will be the case if you upload a bitmap asset or create one by taking a photo.
             let center;
@@ -243,8 +351,7 @@ const loadBitmap_ = function (costume, runtime, _rotationCenter) {
 
             // TODO: costume.bitmapResolution will always be 2 at this point because of fetchBitmapCanvas_, so we don't
             // need to pass it in here.
-            costume.skinId = runtime.renderer.createBitmapSkin(canvas, costume.bitmapResolution, center);
-            canvasPool.release(mergeCanvas);
+            costume.skinId = runtime.renderer.createBitmapSkin(image, costume.bitmapResolution, center);
             const renderSize = runtime.renderer.getSkinSize(costume.skinId);
             costume.size = [renderSize[0] * 2, renderSize[1] * 2]; // Actual size, since all bitmaps are resolution 2
 
@@ -255,6 +362,11 @@ const loadBitmap_ = function (costume, runtime, _rotationCenter) {
                 costume.rotationCenterY = rotationCenter[1] * 2;
                 costume.bitmapResolution = 2;
             }
+
+            if (runtime.isPackaged) {
+                costume.asset = null;
+            }
+
             return costume;
         });
 };
@@ -331,7 +443,7 @@ const loadCostumeFromAsset = function (costume, runtime, optVersion) {
     costume.assetId = costume.asset.assetId;
     const renderer = runtime.renderer;
     if (!renderer) {
-        log.error('No rendering module present; cannot load costume: ', costume.name);
+        log.warn('No rendering module present; cannot load costume: ', costume.name);
         return Promise.resolve(costume);
     }
     const AssetType = runtime.storage.AssetType;
@@ -355,6 +467,7 @@ const loadCostumeFromAsset = function (costume, runtime, optVersion) {
             return handleCostumeLoadError(costume, runtime);
         });
 };
+
 
 /**
  * Load a costume's asset into memory asynchronously.
@@ -383,12 +496,12 @@ const loadCostume = function (md5ext, costume, runtime, optVersion) {
 
     // Need to load the costume from storage. The server should have a reference to this md5.
     if (!runtime.storage) {
-        log.error('No storage module present; cannot load costume asset: ', md5ext);
+        log.warn('No storage module present; cannot load costume asset: ', md5ext);
         return Promise.resolve(costume);
     }
 
     if (!runtime.storage.defaultAssetId) {
-        log.error(`No default assets found`);
+        log.warn(`No default assets found`);
         return Promise.resolve(costume);
     }
 

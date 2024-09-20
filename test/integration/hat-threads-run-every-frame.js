@@ -7,6 +7,19 @@ const Thread = require('../../src/engine/thread');
 const Runtime = require('../../src/engine/runtime');
 const execute = require('../../src/engine/execute.js');
 
+const compilerAndInterpreter = (name, callback) => {
+    test(`${name} - interpreted`, t => {
+        callback(t, {
+            enabled: false
+        });
+    });
+    test(`${name} - compiled`, t => {
+        callback(t, {
+            enabled: true
+        });
+    });
+};
+
 const projectUri = path.resolve(__dirname, '../fixtures/timer-greater-than-hat.sb2');
 const project = readFileToBuffer(projectUri);
 
@@ -30,8 +43,9 @@ const checkIsStackClickThread = (t, vm, stackClickThread) => {
  * The intention is to make sure that the hat block condition is evaluated
  * on each frame.
  */
-test('edge activated hat thread runs once every frame', t => {
+compilerAndInterpreter('edge activated hat thread runs once every frame', (t, co) => {
     const vm = new VirtualMachine();
+    vm.setCompilerOptions(co);
     vm.attachStorage(makeTestStorage());
 
     // Start VM, load project, and run
@@ -68,8 +82,10 @@ test('edge activated hat thread runs once every frame', t => {
  * When a hat is added it should run in the next frame. Any block related
  * caching should be reset.
  */
-test('edge activated hat thread runs after being added to previously executed target', t => {
+// eslint-disable-next-line max-len
+compilerAndInterpreter('edge activated hat thread runs after being added to previously executed target', (t, co) => {
     const vm = new VirtualMachine();
+    vm.setCompilerOptions(co);
     vm.attachStorage(makeTestStorage());
 
     // Start VM, load project, and run
@@ -114,8 +130,9 @@ test('edge activated hat thread runs after being added to previously executed ta
  * If the hat doesn't finish evaluating within one frame, it shouldn't be added again
  * on the next frame. (We skip execution by setting the step time to 0)
  */
-test('edge activated hat thread not added twice', t => {
+compilerAndInterpreter('edge activated hat thread not added twice', (t, co) => {
     const vm = new VirtualMachine();
+    vm.setCompilerOptions(co);
     vm.attachStorage(makeTestStorage());
 
     // Start VM, load project, and run
@@ -155,7 +172,7 @@ test('edge activated hat thread not added twice', t => {
  * Duplicating a sprite should also track duplicated edge activated hat in
  * runtime's _edgeActivatedHatValues map.
  */
-test('edge activated hat should trigger for both sprites when sprite is duplicated', t => {
+compilerAndInterpreter('edge activated hat should trigger for both sprites when sprite is duplicated', (t, co) => {
 
     // Project that is similar to timer-greater-than-hat.sb2, but has code on the sprite so that
     // the sprite can be duplicated
@@ -163,6 +180,7 @@ test('edge activated hat should trigger for both sprites when sprite is duplicat
     const projectWithSprite = readFileToBuffer(projectWithSpriteUri);
 
     const vm = new VirtualMachine();
+    vm.setCompilerOptions(co);
     vm.attachStorage(makeTestStorage());
 
     // Start VM, load project, and run
@@ -202,7 +220,7 @@ test('edge activated hat should trigger for both sprites when sprite is duplicat
  * Cloning a sprite should also track cloned edge activated hat separately
  * runtime's _edgeActivatedHatValues map.
  */
-test('edge activated hat should trigger for both sprites when sprite is cloned', t => {
+compilerAndInterpreter('edge activated hat should trigger for both sprites when sprite is cloned', (t, co) => {
 
     // Project that is similar to loudness-hat-block.sb2, but has code on the sprite so that
     // the sprite can be duplicated
@@ -210,6 +228,7 @@ test('edge activated hat should trigger for both sprites when sprite is cloned',
     const projectWithSprite = readFileToBuffer(projectWithSpriteUri);
 
     const vm = new VirtualMachine();
+    vm.setCompilerOptions(co);
     vm.attachStorage(makeTestStorage());
 
     // Start VM, load project, and run
@@ -253,8 +272,9 @@ test('edge activated hat should trigger for both sprites when sprite is cloned',
  * When adding a stack click thread first, make sure that the edge activated hat thread and
  * the stack click thread are both pushed and run (despite having the same top block)
  */
-test('edge activated hat thread does not interrupt stack click thread', t => {
+compilerAndInterpreter('edge activated hat thread does not interrupt stack click thread', (t, co) => {
     const vm = new VirtualMachine();
+    vm.setCompilerOptions(co);
     vm.attachStorage(makeTestStorage());
 
     // Start VM, load project, and run
@@ -305,8 +325,9 @@ test('edge activated hat thread does not interrupt stack click thread', t => {
  * When adding the hat thread first, make sure that the edge activated hat thread and
  * the stack click thread are both pushed and run (despite having the same top block)
  */
-test('edge activated hat thread does not interrupt stack click thread', t => {
+compilerAndInterpreter('edge activated hat thread does not interrupt stack click thread', (t, co) => {
     const vm = new VirtualMachine();
+    vm.setCompilerOptions(co);
     vm.attachStorage(makeTestStorage());
 
     // Start VM, load project, and run

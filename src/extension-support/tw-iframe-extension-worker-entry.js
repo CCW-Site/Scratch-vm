@@ -1,5 +1,9 @@
 const context = require('./tw-extension-worker-context');
 
+const jQuery = require('./tw-jquery-shim');
+global.$ = jQuery;
+global.jQuery = jQuery;
+
 const id = window.__WRAPPED_IFRAME_ID__;
 
 context.isWorker = false;

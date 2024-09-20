@@ -1,0 +1,54 @@
+// TW Snapshot
+// Input SHA-256: b9110339d39947f68168cbb129a20b23b7d4e607ffd5624bd67e096451f6a329
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["Go=PJS7BFXYo_qi2S:kQ"];
+return function* genXYZ () {
+b0.value = 0;
+while (true) {
+b0.value = ((+b0.value || 0) + 1);
+thread.timer = timer();
+var a0 = Math.max(0, 1000 * -1);
+runtime.requestRedraw();
+yield;
+while (thread.timer.timeElapsed() < a0) {
+yield;
+}
+thread.timer = null;
+yield;
+}
+retire(); return;
+}; })
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = stage.variables["Go=PJS7BFXYo_qi2S:kQ"];
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 2",}, b0, false, false, "o", null);
+b1.value = 0;
+if (compareEqual((thread.procedures["Zinvalid params - reporter"]()), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass invalid params reporter",}, b0, false, false, "L", null);
+}
+if (compareEqual((thread.procedures["Zinvalid params - boolean"]()), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass invalid params boolean",}, b0, false, false, "N", null);
+}
+runtime.stopForTarget(target, thread);
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "P", null);
+retire(); return;
+}; })
+
+// Sprite1 Zinvalid params - reporter
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function funXYZ_invalid_params___rep () {
+return 0;
+return "";
+}; })
+
+// Sprite1 Zinvalid params - boolean
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function funXYZ_invalid_params___boo () {
+return 0;
+return "";
+}; })

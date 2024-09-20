@@ -1,0 +1,146 @@
+// TW Snapshot
+// Input SHA-256: b1802636bbbd479dcf8634a525798c5b4dd9b0201cf6af6f5b4879455368c328
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = stage.variables["Go=PJS7BFXYo_qi2S:kQ"];
+const b2 = stage.variables["`jEk@4|i[#Fk?(8x)AV.-my variable"];
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 18",}, b0, false, false, "G", null);
+b1.value = 0;
+b2.value = (yield* thread.procedures["Znon warp recursion should yield %s"](8));
+if (((+b1.value || 0) === 4)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass non warp recursion yields",}, b0, false, false, "ao", null);
+}
+b1.value = 0;
+b2.value = (thread.procedures["Wwarp recursion should not yield %s"](8));
+if (((+b1.value || 0) === 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass warp recursion does not yield",}, b0, false, false, "ar", null);
+}
+b1.value = 0;
+b2.value = (yield* thread.procedures["Zfib %s"](7));
+if (((+b1.value || 0) === 20)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass non warp fib yielded",}, b0, false, false, "au", null);
+}
+yield* thread.procedures["Zrecursing yields between each %s"]("initial");
+yield* thread.procedures["Zrecursing arguments eval order %s %s %s %s"]("initial","","","");
+runtime.stopForTarget(target, thread);
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "av", null);
+retire(); return;
+}; })
+
+// Sprite1 Znon warp recursion should yield %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function* genXYZ_non_warp_recursion_s (p0) {
+if (compareGreaterThan(p0, 0)) {
+return (yield* yieldThenCallGenerator(thread.procedures["Znon warp recursion should yield %s"], ((+p0 || 0) - 1)));
+}
+return "";
+}; })
+
+// Sprite1 Wwarp recursion should not yield %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function funXYZ_warp_recursion_shoul (p0) {
+if (compareGreaterThan(p0, 0)) {
+return (thread.procedures["Wwarp recursion should not yield %s"](((+p0 || 0) - 1)));
+}
+return "";
+}; })
+
+// Sprite1 Zfib %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function* genXYZ_fib_ (p0) {
+if (compareLessThan(p0, 2)) {
+return p0;
+} else {
+return ((+(yield* yieldThenCallGenerator(thread.procedures["Zfib %s"], ((+p0 || 0) - 1))) || 0) + (+(yield* yieldThenCallGenerator(thread.procedures["Zfib %s"], ((+p0 || 0) - 2))) || 0));
+}
+return "";
+}; })
+
+// Sprite1 Zrecursing yields between each %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["Go=PJS7BFXYo_qi2S:kQ"];
+const b1 = stage.variables["`jEk@4|i[#Fk?(8x)AV.-my variable"];
+const b2 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ_recursing_yields_bet (p0) {
+if ((("" + p0).toLowerCase() === "initial".toLowerCase())) {
+b0.value = 0;
+b1.value = ((+(yield* yieldThenCallGenerator(thread.procedures["Zrecursing yields between each %s"], 1)) || 0) + (((+(yield* yieldThenCallGenerator(thread.procedures["Zrecursing yields between each %s"], 1)) || 0) + (((+(yield* yieldThenCallGenerator(thread.procedures["Zrecursing yields between each %s"], 2)) || 0) + (((+(yield* yieldThenCallGenerator(thread.procedures["Zrecursing yields between each %s"], 2)) || 0) + (((+(yield* yieldThenCallGenerator(thread.procedures["Zrecursing yields between each %s"], 3)) || 0) + (+(yield* yieldThenCallGenerator(thread.procedures["Zrecursing yields between each %s"], 3)) || 0)) || 0)) || 0)) || 0)) || 0));
+if (((+b0.value || 0) === 3)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass recursing between calls yields final",}, b2, false, false, "aK", null);
+} else {
+yield* executeInCompatibilityLayer({"MESSAGE":"fail recursing between calls yields final",}, b2, false, false, "aL", null);
+}
+} else {
+if (compareEqual(b0.value, p0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":("pass recursing between calls yields " + ("" + p0)),}, b2, false, false, "#", null);
+} else {
+yield* executeInCompatibilityLayer({"MESSAGE":("fail recursing between calls yields " + ("" + p0)),}, b2, false, false, "%", null);
+}
+}
+return "";
+}; })
+
+// Sprite1 Zrecursing arguments eval order %s %s %s %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["4HH82mPlVMOONdl(Ot*7"];
+const b1 = stage.variables["Go=PJS7BFXYo_qi2S:kQ"];
+const b2 = stage.variables["`jEk@4|i[#Fk?(8x)AV.-my variable"];
+const b3 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ_recursing_arguments_ (p0,p1,p2,p3) {
+if ((("" + p0).toLowerCase() === "initial".toLowerCase())) {
+b0.value = [];
+b1.value = 0;
+b2.value = (yield* yieldThenCallGenerator(thread.procedures["Zrecursing arguments eval order %s %s %s %s"], "child 1",(yield* yieldThenCallGenerator(thread.procedures["Zrecursing arguments eval order %s %s %s %s"], "child 2",(yield* yieldThenCallGenerator(thread.procedures["Zrecursing arguments eval order %s %s %s %s"], "child 3",(yield* yieldThenCallGenerator(thread.procedures["Zrecursing arguments eval order %s %s %s %s"], "child 4","","","")),(yield* yieldThenCallGenerator(thread.procedures["Zrecursing arguments eval order %s %s %s %s"], "child 5","","","")),(yield* yieldThenCallGenerator(thread.procedures["Zrecursing arguments eval order %s %s %s %s"], "child 6","","","")))),"","")),"",(yield* yieldThenCallGenerator(thread.procedures["Zrecursing arguments eval order %s %s %s %s"], "child 7","","",""))));
+if ((("" + (b0.value[(1 | 0) - 1] ?? "")).toLowerCase() === "1/child 4".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass recurse arg order - 1",}, b3, false, false, "aZ", null);
+}
+if ((("" + (b0.value[(2 | 0) - 1] ?? "")).toLowerCase() === "1/child 5".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass recurse arg order - 2",}, b3, false, false, "a#", null);
+}
+if ((("" + (b0.value[(3 | 0) - 1] ?? "")).toLowerCase() === "2/child 6".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass recurse arg order - 3",}, b3, false, false, "a(", null);
+}
+if ((("" + (b0.value[(4 | 0) - 1] ?? "")).toLowerCase() === "2/child 3".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass recurse arg order - 4",}, b3, false, false, "a*", null);
+}
+if ((("" + (b0.value[(5 | 0) - 1] ?? "")).toLowerCase() === "3/child 2".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass recurse arg order - 5",}, b3, false, false, "a,", null);
+}
+if ((("" + (b0.value[(6 | 0) - 1] ?? "")).toLowerCase() === "3/child 7".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass recurse arg order - 6",}, b3, false, false, "a.", null);
+}
+if ((("" + (b0.value[(7 | 0) - 1] ?? "")).toLowerCase() === "4/child 1".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass recurse arg order - 7",}, b3, false, false, "a:", null);
+}
+if ((b0.value.length === 7)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass recurse arg order - length is correct",}, b3, false, false, "a=", null);
+}
+} else {
+b0.value.push((("" + b1.value) + ("/" + ("" + p0))));
+b0._monitorUpToDate = false;
+}
+return "";
+}; })
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["Go=PJS7BFXYo_qi2S:kQ"];
+return function* genXYZ () {
+b0.value = 0;
+while (true) {
+b0.value = ((+b0.value || 0) + 1);
+thread.timer = timer();
+var a0 = Math.max(0, 1000 * -1);
+runtime.requestRedraw();
+yield;
+while (thread.timer.timeElapsed() < a0) {
+yield;
+}
+thread.timer = null;
+yield;
+}
+retire(); return;
+}; })

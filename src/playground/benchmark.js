@@ -49,7 +49,7 @@ const Runtime = require('../engine/runtime');
 
 const ScratchRender = require('scratch-render');
 const AudioEngine = require('scratch-audio');
-const ScratchSVGRenderer = require('scratch-svg-renderer');
+const ScratchSVGRenderer = require('@turbowarp/scratch-svg-renderer');
 
 const Scratch = window.Scratch = window.Scratch || {};
 
@@ -58,12 +58,20 @@ const PROJECT_SERVER = 'https://cdn.projects.scratch.mit.edu/';
 
 const SLOW = .1;
 
-const projectInput = document.querySelector('input');
+const projectInput = document.querySelector('#project-id');
+if (location.hash) {
+    projectInput.value = location.hash.substring(1);
+}
+
+const enableCompiler = new URLSearchParams(location.search).get('compiler') === 'true';
+const compilerInput = document.querySelector('#enable-compiler');
+compilerInput.checked = enableCompiler;
 
 document.querySelector('.run')
     .addEventListener('click', () => {
-        window.location.hash = projectInput.value;
-        location.reload();
+        const params = new URLSearchParams(location.search);
+        params.set('compiler', compilerInput.checked);
+        location.href = `${location.pathname}?${params}#${projectInput.value}`;
     }, false);
 
 const setShareLink = function (json) {
@@ -73,12 +81,35 @@ const setShareLink = function (json) {
         .href = `suite.html`;
 };
 
+const getProjectMetadata = async projectId => {
+    const response = await fetch(`https://trampoline.turbowarp.org/api/projects/${projectId}`);
+    if (response.status === 404) {
+        throw new Error('The project is unshared or does not exist');
+    }
+    if (!response.ok) {
+        throw new Error(`HTTP error ${response.status} fetching project metadata`);
+    }
+    const json = await response.json();
+    return json;
+};
+
+const getProjectData = async projectId => {
+    const metadata = await getProjectMetadata(projectId);
+    const token = metadata.project_token;
+    const response = await fetch(`https://projects.scratch.mit.edu/${projectId}?token=${token}`);
+    if (!response.ok) {
+        throw new Error(`HTTP error ${response.status} fetching project data`);
+    }
+    const data = await response.arrayBuffer();
+    return data;
+};
+
 const loadProject = function () {
     let id = location.hash.substring(1).split(',')[0];
     if (id.length < 1 || !isFinite(id)) {
         id = projectInput.value;
     }
-    Scratch.vm.downloadProjectId(id);
+    getProjectData(id).then(data => Scratch.vm.loadProject(data));
     return id;
 };
 
@@ -588,6 +619,9 @@ const runBenchmark = function () {
     const vm = new VirtualMachine();
     Scratch.vm = vm;
 
+    vm.setCompilerOptions({
+        enabled: enableCompiler
+    });
     vm.setTurboMode(true);
 
     const storage = new ScratchStorage();

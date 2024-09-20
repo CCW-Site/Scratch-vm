@@ -90,6 +90,17 @@ class Scratch3SoundBlocks {
         };
     }
 
+    /** The minimum and maximum values for sound effects when miscellaneous limits are removed. */
+    static get LARGER_EFFECT_RANGE () {
+        return {
+            // scratch-audio throws if pitch is too big because some math results in Infinity
+            pitch: {min: -1000, max: 1000},
+
+            // No reason for these to go beyond 100
+            pan: {min: -100, max: 100}
+        };
+    }
+
     /**
      * @param {Target} target - collect sound state for this target.
      * @returns {SoundState} the mutable sound state associated with that target. This will be created if necessary.
@@ -267,7 +278,7 @@ class Scratch3SoundBlocks {
         const value = Cast.toNumber(args.VALUE);
 
         const soundState = this._getSoundState(util.target);
-        if (!soundState.effects.hasOwnProperty(effect)) return;
+        if (!Object.prototype.hasOwnProperty.call(soundState.effects, effect)) return;
 
         if (change) {
             soundState.effects[effect] += value;
@@ -276,16 +287,19 @@ class Scratch3SoundBlocks {
         }
 
         const miscLimits = this.runtime.runtimeOptions.miscLimits;
-        if (miscLimits) {
-            const {min, max} = Scratch3SoundBlocks.EFFECT_RANGE[effect];
-            soundState.effects[effect] = MathUtil.clamp(soundState.effects[effect], min, max);
-        }
+        const {min, max} = miscLimits ?
+            Scratch3SoundBlocks.EFFECT_RANGE[effect] :
+            Scratch3SoundBlocks.LARGER_EFFECT_RANGE[effect];
+        soundState.effects[effect] = MathUtil.clamp(soundState.effects[effect], min, max);
 
         this._syncEffectsForTarget(util.target);
         if (miscLimits) {
             // Yield until the next tick.
             return Promise.resolve();
         }
+
+        // Requesting a redraw makes sure that "forever: change pitch by 1" still work but without
+        // yielding unnecessarily in other cases
         this.runtime.requestRedraw();
     }
 
@@ -303,7 +317,7 @@ class Scratch3SoundBlocks {
     _clearEffectsForTarget (target) {
         const soundState = this._getSoundState(target);
         for (const effect in soundState.effects) {
-            if (!soundState.effects.hasOwnProperty(effect)) continue;
+            if (!Object.prototype.hasOwnProperty.call(soundState.effects, effect)) continue;
             soundState.effects[effect] = 0;
         }
         this._syncEffectsForTarget(target);

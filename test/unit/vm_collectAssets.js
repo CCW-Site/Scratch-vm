@@ -36,8 +36,7 @@ test('collectAssetsWithGandiAssets', t => {
     ] = [{assetId: 1}, {assetId: 2}, {assetId: 3}, {assetId: 4}];
     sprite.sounds = [{id: 1, asset: soundAsset1}, {id: 2, asset: soundAsset2}];
     sprite.costumes = [{id: 1, asset: costumeAsset1}];
-
-    vm.runtime.gandi = {assets: [gandiAsset1], wildExtensions: {}};
+    vm.runtime.gandi.assets.push({id: 1, asset: gandiAsset1});
 
     const assets = vm.assets;
     t.type(assets.length, 'number');

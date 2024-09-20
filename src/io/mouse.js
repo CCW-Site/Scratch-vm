@@ -1,5 +1,7 @@
 const MathUtil = require('../util/math-util');
 
+const roundToThreeDecimals = number => Math.round(number * 1000) / 1000;
+
 class Mouse {
     constructor (runtime) {
         this._clientX = 0;
@@ -50,7 +52,7 @@ class Mouse {
             const drawableID = this.runtime.renderer.pick(x, y);
             for (let i = 0; i < this.runtime.targets.length; i++) {
                 const target = this.runtime.targets[i];
-                if (target.hasOwnProperty('drawableID') &&
+                if (Object.prototype.hasOwnProperty.call(target, 'drawableID') &&
                     target.drawableID === drawableID) {
                     return target;
                 }
@@ -65,21 +67,21 @@ class Mouse {
      * @param  {object} data Data from DOM event.
      */
     postData (data) {
-        if (data.x) {
+        if (typeof data.x === 'number') {
             this._clientX = data.x;
-            this._scratchX = Math.round(MathUtil.clamp(
+            this._scratchX = MathUtil.clamp(
                 this.runtime.stageWidth * ((data.x / data.canvasWidth) - 0.5),
                 -(this.runtime.stageWidth / 2),
                 (this.runtime.stageWidth / 2)
-            ));
+            );
         }
-        if (data.y) {
+        if (typeof data.y === 'number') {
             this._clientY = data.y;
-            this._scratchY = Math.round(MathUtil.clamp(
+            this._scratchY = MathUtil.clamp(
                 -this.runtime.stageHeight * ((data.y / data.canvasHeight) - 0.5),
                 -(this.runtime.stageHeight / 2),
                 (this.runtime.stageHeight / 2)
-            ));
+            );
         }
         if (typeof data.isDown !== 'undefined') {
             // If no button specified, default to left button for compatibility
@@ -138,7 +140,10 @@ class Mouse {
      * @return {number} Clamped and integer rounded X position of the mouse cursor.
      */
     getScratchX () {
-        return this._scratchX;
+        if (this.runtime.runtimeOptions.miscLimits) {
+            return Math.round(this._scratchX);
+        }
+        return roundToThreeDecimals(this._scratchX);
     }
 
     /**
@@ -146,7 +151,10 @@ class Mouse {
      * @return {number} Clamped and integer rounded Y position of the mouse cursor.
      */
     getScratchY () {
-        return this._scratchY;
+        if (this.runtime.runtimeOptions.miscLimits) {
+            return Math.round(this._scratchY);
+        }
+        return roundToThreeDecimals(this._scratchY);
     }
 
     /**

@@ -16,15 +16,14 @@ class Scratch3ProcedureBlocks {
             procedures_definition: this.definition,
             procedures_call: this.call,
             procedures_call_with_return: this.callWithReturn,
+            procedures_return: this.return,
             argument_reporter_string_number: this.argumentReporterStringNumber,
             argument_reporter_boolean: this.argumentReporterBoolean,
-            // CCW customize
-            procedures_return: this.proceduresReturn,
             ccw_hat_parameter: this.ccwHatParameter
         };
     }
 
-    proceduresReturn (args, util) {
+    return (args, util) {
         util.stopThisScript();
         // If used outside of a custom block, there may be no stack frame.
         if (util.thread.peekStackFrame()) {
@@ -36,7 +35,7 @@ class Scratch3ProcedureBlocks {
         // No-op: execute the blocks.
     }
 
-    _callProcedure (args, util) {
+    _callProcedure (args, util, isReporter = false) {
         const procedureCode = args.mutation.proccode;
         const isGlobal = args.mutation.isglobal === 'true';
         let paramNamesIdsAndDefaults;
@@ -54,7 +53,9 @@ class Scratch3ProcedureBlocks {
         // block is dragged between sprites without the definition.
         // Match Scratch 2.0 behavior and noop.
         if (paramNamesIdsAndDefaults === null) {
-            util.stackFrame.executed = true;
+            if (isReporter) {
+                return '';
+            }
             return;
         }
 
@@ -65,13 +66,27 @@ class Scratch3ProcedureBlocks {
         // at earlier stack frames for the values of a given parameter (#1729)
         util.initParams();
         for (let i = 0; i < paramIds.length; i++) {
-            if (args.hasOwnProperty(paramIds[i])) {
+            if (Object.prototype.hasOwnProperty.call(args, paramIds[i])) {
                 util.pushParam(paramNames[i], args[paramIds[i]]);
             } else {
                 util.pushParam(paramNames[i], paramDefaults[i]);
             }
         }
+        const addonBlock = util.runtime.getAddonBlock(procedureCode);
+        if (addonBlock) {
+            const result = addonBlock.callback(util.thread.getAllparams(), util);
+            if (util.thread.status === 1 /* STATUS_PROMISE_WAIT */) {
+                // If the addon block is using STATUS_PROMISE_WAIT to force us to sleep,
+                // make sure to not re-run this block when we resume.
+                util.stackFrame.executed = true;
+            }
+            return result;
+        }
         util.stackFrame.executed = true;
+        if (isReporter) {
+            util.thread.peekStackFrame().waitingReporter = true;
+            util.stackFrame.returnValue = ''; // default return value
+        }
         // CCW: pass global target to procedure if isGlobal === true
         util.startProcedure(procedureCode, globalTarget);
     }
@@ -95,14 +110,12 @@ class Scratch3ProcedureBlocks {
             delete stackFrame.executed;
             return returnValue;
         }
-        util.thread.peekStackFrame().waitingReporter = true;
-        util.stackFrame.returnValue = ''; // default return value
-        this._callProcedure(args, util);
+        return this._callProcedure(args, util, true);
     }
 
     call (args, util) {
         if (!util.stackFrame.executed) {
-            this._callProcedure(args, util);
+            return this._callProcedure(args, util, false);
         }
     }
 

@@ -27,10 +27,10 @@ const KEY_NAME = {
 };
 
 /**
- * An array of the names of scratch keys.
- * @type {Array<string>}
+ * A set of the names of Scratch keys.
+ * @type {Set<string>}
  */
-const KEY_NAME_LIST = Object.keys(KEY_NAME).map(name => KEY_NAME[name]);
+const KEY_NAME_SET = new Set(Object.values(KEY_NAME));
 
 class Keyboard {
     constructor (runtime) {
@@ -121,7 +121,9 @@ class Keyboard {
         keyArg = Cast.toString(keyArg);
 
         // If the arg matches a special key name, return it.
-        if (KEY_NAME_LIST.includes(keyArg)) {
+        // No special keys have a name that is only 1 character long, so we can avoid the lookup
+        // entirely in the most common case.
+        if (keyArg.length > 1 && KEY_NAME_SET.has(keyArg)) {
             return keyArg;
         }
 
@@ -171,7 +173,7 @@ class Keyboard {
             this._keysPressed.splice(index, 1);
         }
         // Fix for https://github.com/LLK/scratch-vm/issues/2271
-        if (data.hasOwnProperty('keyCode')) {
+        if (Object.prototype.hasOwnProperty.call(data, 'keyCode')) {
             const keyCode = data.keyCode;
             if (this._numeralKeyCodesToStringKey.has(keyCode)) {
                 const lastKeyOfSameCode = this._numeralKeyCodesToStringKey.get(keyCode);

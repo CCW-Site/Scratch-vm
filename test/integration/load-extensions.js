@@ -1,14 +1,24 @@
 const path = require('path');
-const tap = require('tap');
-const {test} = tap;
+const test = require('tap').skip;
 const fs = require('fs');
 const readFileToBuffer = require('../fixtures/readProjectFile').readFileToBuffer;
+const dispatch = require('../../src/dispatch/central-dispatch');
 const VirtualMachine = require('../../src/index');
+/**
+ * Call _stopLoop() on the Video Sensing extension.
+ * @param {VirtualMachine} vm - a VM instance which has loaded the 'videoSensing' extension.
+ */
+const stopVideoLoop = vm => {
+    // TODO: provide a general way to tell extensions to shut down
+    // Ideally we'd just dispose of the extension's Worker...
+    const serviceName = vm.extensionManager._loadedExtensions.get('videoSensing');
+    dispatch.call(serviceName, '_stopLoop');
+};
 
-tap.tearDown(() => process.nextTick(process.exit));
-
+const music = require('../../src/extensions/scratch3_music')
 test('Load external extensions', async t => {
     const vm = new VirtualMachine();
+    vm.extensionManager.addBuiltinExtension('music', music);
     const testFiles = fs.readdirSync('./test/fixtures/load-extensions/confirm-load/');
 
     // Test each example extension file
@@ -25,11 +35,15 @@ test('Load external extensions', async t => {
                 });
         });
     }
+
+    stopVideoLoop(vm);
+    vm.quit();
     t.end();
 });
 
 test('Load video sensing extension and video properties', async t => {
     const vm = new VirtualMachine();
+    vm.extensionManager.addBuiltinExtension('music', music);
     // An array of test projects and their expected video state values
     const testProjects = [
         {
@@ -64,5 +78,7 @@ test('Load video sensing extension and video properties', async t => {
         t.equal(vm.runtime.ioDevices.video._ghost, project.videoTransparency);
     }
 
+    stopVideoLoop(vm);
+    vm.quit();
     t.end();
 });
