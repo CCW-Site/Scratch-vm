@@ -2,9 +2,10 @@ const ArgumentType = require('../../extension-support/argument-type');
 const BlockType = require('../../extension-support/block-type');
 const Cast = require('../../util/cast');
 const log = require('../../util/log');
-const fetchWithTimeout = require('../../util/fetch-with-timeout');
+const {fetchWithTimeout} = require('../../util/fetch-with-timeout');
 const languageNames = require('scratch-translate-extension-languages');
 const formatMessage = require('format-message');
+const getXGAccessCode = require('../../util/xg-access-code');
 /**
  * Icon svg to be displayed in the blocks category menu, encoded as a data URI.
  * @type {string}
@@ -101,9 +102,9 @@ class Scratch3TranslateBlocks {
          */
         this._lastTextTranslated = '';
         // powered by xigua start
-        this.thirdPartApiKey = localStorage.getItem('xg-access-code');
+        this.thirdPartApiKey = getXGAccessCode();
 
-        if (runtime.ccwAPI && runtime.ccwAPI.getOnlineExtensionsConfig) {
+        if (runtime && runtime.ccwAPI && runtime.ccwAPI.getOnlineExtensionsConfig) {
             const config = runtime.ccwAPI.getOnlineExtensionsConfig();
             if (config && config.hosts && config.hosts.translate) {
                 this.host = config.hosts.translate;
@@ -279,11 +280,11 @@ class Scratch3TranslateBlocks {
     getLanguageCodeFromArg (arg) {
         const languageArg = Cast.toString(arg).toLowerCase();
         // Check if the arg matches a language code in the menu.
-        if (languageNames.menuMap.hasOwnProperty(languageArg)) {
+        if (Object.prototype.hasOwnProperty.call(languageNames.menuMap, languageArg)) {
             return languageArg;
         }
         // Check for a dropped-in language name, and convert to a language code.
-        if (languageNames.nameMap.hasOwnProperty(languageArg)) {
+        if (Object.prototype.hasOwnProperty.call(languageNames.nameMap, languageArg)) {
             return languageNames.nameMap[languageArg];
         }
 
@@ -388,7 +389,7 @@ class Scratch3TranslateBlocks {
             })
             .catch(err => {
                 log.warn(`error fetching translate result! ${err}`);
-                return '';
+                return args.WORDS;
             });
         return translatePromise;
     }

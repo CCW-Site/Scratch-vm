@@ -55,31 +55,39 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
     const currentBlockId = blockCached.id;
     const opcode = blockCached.opcode;
     const isHat = blockCached._isHat;
+    const isConditional = blockCached._isConditional;
+    const isLoop = blockCached._isLoop;
 
     thread.pushReportedValue(resolvedValue);
     if (isHat) {
         // Hat predicate was evaluated.
-        if (sequencer.runtime.getIsEdgeActivatedHat(opcode)) {
+        if (thread.stackClick) {
+            thread.status = Thread.STATUS_RUNNING;
+        } else if (sequencer.runtime.getIsEdgeActivatedHat(opcode)) {
             // If this is an edge-activated hat, only proceed if the value is
             // true and used to be false, or the stack was activated explicitly
             // via stack click
-            if (!thread.stackClick) {
-                const hasOldEdgeValue = thread.target.hasEdgeActivatedValue(currentBlockId);
-                const oldEdgeValue = thread.target.updateEdgeActivatedValue(
-                    currentBlockId,
-                    resolvedValue
-                );
+            const hasOldEdgeValue = thread.target.hasEdgeActivatedValue(currentBlockId);
+            const oldEdgeValue = thread.target.updateEdgeActivatedValue(
+                currentBlockId,
+                resolvedValue
+            );
 
-                const edgeWasActivated = hasOldEdgeValue ? (!oldEdgeValue && resolvedValue) : resolvedValue;
-                if (!edgeWasActivated) {
-                    sequencer.retireThread(thread);
-                }
+            const edgeWasActivated = hasOldEdgeValue ? (!oldEdgeValue && resolvedValue) : resolvedValue;
+            if (edgeWasActivated) {
+                thread.status = Thread.STATUS_RUNNING;
+            } else {
+                sequencer.retireThread(thread);
             }
-        } else if (!resolvedValue) {
-            // Not an edge-activated hat: retire the thread
-            // if predicate was false.
+        } else if (resolvedValue) {
+            // Predicate returned true: allow the script to run.
+            thread.status = Thread.STATUS_RUNNING;
+        } else {
+            // Predicate returned false: do not allow script to run
             sequencer.retireThread(thread);
         }
+    } else if ((isConditional || isLoop) && typeof resolvedValue !== 'undefined') {
+        sequencer.stepToBranch(thread, cast.toNumber(resolvedValue), isLoop);
     } else {
         // In a non-hat, report the value visually if necessary if
         // at the top of the thread stack.
@@ -105,6 +113,40 @@ const handleReport = function (resolvedValue, sequencer, thread, blockCached, la
     }
 };
 
+const handlePromiseResolution = (resolvedValue, sequencer, thread, blockCached, lastOperation) => {
+    handleReport(resolvedValue, sequencer, thread, blockCached, lastOperation);
+    // If it's a command block or a top level reporter in a stackClick.
+    // TW: Don't mangle the stack when we just finished executing a hat block.
+    // Hat block is always the top and first block of the script. There are no loops to find.
+    if (lastOperation && (!blockCached._isHat || thread.stackClick)) {
+        let stackFrame;
+        let nextBlockId;
+        let globalTarget;
+        do {
+            // In the case that the promise is the last block in the current thread stack
+            // We need to pop out repeatedly until we find the next block.
+            const popped = thread.popStack();
+            if (popped === null) {
+                return;
+            }
+            nextBlockId = thread.target.blocks.getNextBlock(popped);
+            globalTarget = thread.getCurrentGlobalTarget();
+            if (!nextBlockId && globalTarget) {
+                nextBlockId = globalTarget.blocks.getNextBlock(popped);
+            }
+            if (nextBlockId !== null) {
+                // A next block exists so break out this loop
+                break;
+            }
+            // Investigate the next block and if not in a loop,
+            // then repeat and pop the next item off the stack frame
+            stackFrame = thread.peekStackFrame();
+        } while (stackFrame !== null && !stackFrame.isLoop);
+
+        thread.pushStack(nextBlockId, globalTarget);
+    }
+};
+
 const handlePromise = (primitiveReportedValue, sequencer, thread, blockCached, lastOperation) => {
     if (thread.status === Thread.STATUS_RUNNING) {
         // Primitive returned a promise; automatically yield thread.
@@ -112,44 +154,11 @@ const handlePromise = (primitiveReportedValue, sequencer, thread, blockCached, l
     }
     // Promise handlers
     primitiveReportedValue.then(resolvedValue => {
-        handleReport(resolvedValue, sequencer, thread, blockCached, lastOperation);
-        // If it's a command block or a top level reporter in a stackClick.
-        if (lastOperation) {
-            let stackFrame;
-            let nextBlockId;
-            let globalTarget;
-            do {
-                globalTarget = thread.getCurrentGlobalTarget();
-
-                // In the case that the promise is the last block in the current thread stack
-                // We need to pop out repeatedly until we find the next block.
-                const popped = thread.popStack();
-                if (popped === null) {
-                    return;
-                }
-                nextBlockId = thread.target.blocks.getNextBlock(popped);
-
-                if (!nextBlockId && globalTarget) {
-                    nextBlockId = globalTarget.blocks.getNextBlock(popped);
-                }
-
-                if (nextBlockId !== null) {
-                    // A next block exists so break out this loop
-                    break;
-                }
-                // Investigate the next block and if not in a loop,
-                // then repeat and pop the next item off the stack frame
-                stackFrame = thread.peekStackFrame();
-            } while (stackFrame !== null && !stackFrame.isLoop);
-
-            thread.pushStack(nextBlockId, globalTarget);
-        }
+        handlePromiseResolution(resolvedValue, sequencer, thread, blockCached, lastOperation);
     }, rejectionReason => {
         // Promise rejected: the primitive had some error.
-        // Log it and proceed.
         log.warn('Primitive rejected promise: ', rejectionReason);
-        thread.status = Thread.STATUS_RUNNING;
-        thread.popStack();
+        handlePromiseResolution(`${rejectionReason}`, sequencer, thread, blockCached, lastOperation);
     });
 };
 
@@ -294,6 +303,10 @@ class BlockCached {
         this._isHat = runtime.getIsHat(opcode);
         this._blockFunction = runtime.getOpcodeFunction(opcode);
         this._definedBlockFunction = typeof this._blockFunction !== 'undefined';
+
+        const flowing = runtime._flowing[opcode];
+        this._isConditional = !!(flowing && flowing.conditional);
+        this._isLoop = !!(flowing && flowing.loop);
 
         // Store the current shadow value if there is a shadow value.
         const fieldKeys = Object.keys(fields);
@@ -533,7 +546,7 @@ const execute = function (sequencer, thread) {
 
         const isPromiseReportedValue = isPromise(primitiveReportedValue);
         // If it's a promise, wait until promise resolves.
-        // CCW: procedures_call_with_return make stack frame waiting report like promise
+        // procedures_call_with_return make stack frame waiting report like promise
         if (isPromiseReportedValue || currentStackFrame.waitingReporter) {
             if (isPromiseReportedValue) {
                 handlePromise(primitiveReportedValue, sequencer, thread, opCached, lastOperation);
@@ -561,7 +574,7 @@ const execute = function (sequencer, thread) {
                 };
             });
 
-            // We are waiting for a promise. Stop running this set of operations
+            // We are waiting to be resumed later. Stop running this set of operations
             // and continue them later after thawing the reported values.
             break;
         } else if (thread.status === Thread.STATUS_RUNNING) {
@@ -582,6 +595,9 @@ const execute = function (sequencer, thread) {
                     parentValues[inputName] = primitiveReportedValue;
                 }
             }
+        } else if (thread.status === Thread.STATUS_DONE) {
+            // Nothing else to execute.
+            break;
         }
     }
 

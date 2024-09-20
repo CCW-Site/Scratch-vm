@@ -20,12 +20,16 @@ class Base64Util {
 
     /**
      * Convert a Uint8Array to a base64 encoded string.
-     * @param {Uint8Array} array - the array to convert.
+     * @param {Uint8Array|Array<number>} array - the array to convert.
      * @return {string} - the base64 encoded string.
      */
     static uint8ArrayToBase64 (array) {
-        const base64 = btoa(String.fromCharCode.apply(null, array));
-        return base64;
+        let binary = '';
+        const len = array.length;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(array[i]);
+        }
+        return btoa(binary);
     }
 
     /**
@@ -34,13 +38,7 @@ class Base64Util {
     * @return {string} - the base64 encoded string.
     */
     static arrayBufferToBase64 (buffer) {
-        let binary = '';
-        const bytes = new Uint8Array(buffer);
-        const len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(bytes[ i ]);
-        }
-        return btoa(binary);
+        return Base64Util.uint8ArrayToBase64(new Uint8Array(buffer));
     }
 
 }

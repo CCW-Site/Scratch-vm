@@ -60,7 +60,7 @@ class MathUtil {
         case 270:
             return -Infinity;
         default:
-            return parseFloat(Math.tan((Math.PI * angle) / 180).toFixed(10));
+            return Math.round(Math.tan((Math.PI * angle) / 180) * 1e10) / 1e10;
         }
     }
 
@@ -121,7 +121,7 @@ class MathUtil {
 
         return randInt;
     }
- 
+
     /**
      * Scales a number from one range to another.
      * @param {number} i number to be scaled

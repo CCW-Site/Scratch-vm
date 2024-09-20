@@ -1,10 +1,10 @@
 const formatMessage = require('format-message');
 
 /**
- * @param {Runtime|null} runtime
+ * @param {VM|null} vm
  * @returns {object}
  */
-const createTranslate = runtime => {
+const createTranslate = vm => {
     const namespace = formatMessage.namespace();
 
     const translate = (message, args) => {
@@ -22,7 +22,11 @@ const createTranslate = runtime => {
 
     const generateId = defaultMessage => `_${defaultMessage}`;
 
-    const getLocale = () => formatMessage.setup().locale;
+    const getLocale = () => {
+        if (vm) return vm.getLocale();
+        if (typeof navigator !== 'undefined') return navigator.language;
+        return 'en';
+    };
 
     let storedTranslations = {};
     translate.setup = newTranslations => {
@@ -37,10 +41,16 @@ const createTranslate = runtime => {
         });
     };
 
+    Object.defineProperty(translate, 'language', {
+        configurable: true,
+        enumerable: true,
+        get: () => getLocale()
+    });
+
     translate.setup({});
 
-    if (runtime) {
-        runtime.on('LOCALE_CHANGED', () => {
+    if (vm) {
+        vm.on('LOCALE_CHANGED', () => {
             translate.setup(null);
         });
     }

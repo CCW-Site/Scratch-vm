@@ -1,19 +1,3 @@
-/**
- * Copyright (C) 2021 Thomas Weber
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
-
 const Cast = require('../util/cast');
 const StringUtil = require('../util/string-util');
 const BlockType = require('../extension-support/block-type');
@@ -46,7 +30,6 @@ const createVariableData = (scope, varObj) => ({
     name: varObj.name,
     isCloud: varObj.isCloud
 });
-
 
 /**
  * @param {string} code
@@ -97,10 +80,14 @@ class ScriptTreeGenerator {
          * @private
          */
         this.variableCache = {};
+
+        this.usesTimer = false;
     }
 
     setProcedureVariant (procedureVariant, globalTarget) {
         const procedureCode = parseProcedureCode(procedureVariant);
+
+        this.script.procedureVariant = procedureVariant;
         this.script.procedureCode = procedureCode;
         this.script.isProcedure = true;
         this.script.yields = false;
@@ -188,20 +175,11 @@ class ScriptTreeGenerator {
      */
     descendInput (block) {
         switch (block.opcode) {
-        case 'colour_picker': {
-            const color = block.fields.COLOUR.value;
-            const hex = color.substr(1);
-            if (/^[0-9a-f]{6,8}$/.test(hex)) {
-                return {
-                    kind: 'constant',
-                    value: Number.parseInt(hex, 16)
-                };
-            }
+        case 'colour_picker':
             return {
                 kind: 'constant',
-                value: color
+                value: block.fields.COLOUR.value
             };
-        }
         case 'math_angle':
         case 'math_integer':
         case 'math_number':
@@ -270,6 +248,11 @@ class ScriptTreeGenerator {
             };
         }
 
+        case 'control_get_counter':
+            return {
+                kind: 'counter.get'
+            };
+
         case 'data_variable':
             return {
                 kind: 'var.get',
@@ -303,6 +286,17 @@ class ScriptTreeGenerator {
                 kind: 'list.contents',
                 list: this.descendVariable(block, 'LIST', LIST_TYPE)
             };
+
+        case 'event_broadcast_menu': {
+            const broadcastOption = block.fields.BROADCAST_OPTION;
+            const broadcastVariable = this.target.lookupBroadcastMsg(broadcastOption.id, broadcastOption.value);
+            // TODO: empty string probably isn't the correct fallback
+            const broadcastName = broadcastVariable ? broadcastVariable.name : '';
+            return {
+                kind: 'constant',
+                value: broadcastName
+            };
+        }
 
         case 'looks_backdropnumbername':
             if (block.fields.NUMBER_NAME.value === 'number') {
@@ -567,6 +561,9 @@ class ScriptTreeGenerator {
                 right: this.descendInputOfBlock(block, 'NUM2')
             };
 
+        case 'procedures_call':
+            return this.descendProcedure(block);
+
         case 'sensing_answer':
             return {
                 kind: 'sensing.answer'
@@ -645,6 +642,7 @@ class ScriptTreeGenerator {
                 object: this.descendInputOfBlock(block, 'OBJECT')
             };
         case 'sensing_timer':
+            this.usesTimer = true;
             return {
                 kind: 'timer.get'
             };
@@ -703,6 +701,8 @@ class ScriptTreeGenerator {
                     value: block.fields[fields[0]].value
                 };
             }
+
+            log.warn(`IR: Unknown input: ${block.opcode}`, block);
             throw new Error(`IR: Unknown input: ${block.opcode}`);
         }
         }
@@ -726,6 +726,10 @@ class ScriptTreeGenerator {
                 },
                 whenTrue: this.descendSubstack(block, 'SUBSTACK'),
                 whenFalse: []
+            };
+        case 'control_clear_counter':
+            return {
+                kind: 'counter.clear'
             };
         case 'control_create_clone_of':
             return {
@@ -769,6 +773,10 @@ class ScriptTreeGenerator {
                 whenTrue: this.descendSubstack(block, 'SUBSTACK'),
                 whenFalse: this.descendSubstack(block, 'SUBSTACK2')
             };
+        case 'control_incr_counter':
+            return {
+                kind: 'counter.increment'
+            };
         case 'control_repeat':
             this.analyzeLoop();
             return {
@@ -776,16 +784,26 @@ class ScriptTreeGenerator {
                 times: this.descendInputOfBlock(block, 'TIMES'),
                 do: this.descendSubstack(block, 'SUBSTACK')
             };
-        case 'control_repeat_until':
+        case 'control_repeat_until': {
             this.analyzeLoop();
+            // Dirty hack: automatically enable warp timer for this block if it uses timer
+            // This fixes project that do things like "repeat until timer > 0.5"
+            this.usesTimer = false;
+            const condition = this.descendInputOfBlock(block, 'CONDITION');
+            const needsWarpTimer = this.usesTimer;
+            if (needsWarpTimer) {
+                this.script.yields = true;
+            }
             return {
                 kind: 'control.while',
                 condition: {
                     kind: 'op.not',
-                    operand: this.descendInputOfBlock(block, 'CONDITION')
+                    operand: condition
                 },
-                do: this.descendSubstack(block, 'SUBSTACK')
+                do: this.descendSubstack(block, 'SUBSTACK'),
+                warpTimer: needsWarpTimer
             };
+        }
         case 'control_stop': {
             const level = block.fields.STOP_OPTION.value;
             if (level === 'all') {
@@ -823,7 +841,9 @@ class ScriptTreeGenerator {
             return {
                 kind: 'control.while',
                 condition: this.descendInputOfBlock(block, 'CONDITION'),
-                do: this.descendSubstack(block, 'SUBSTACK')
+                do: this.descendSubstack(block, 'SUBSTACK'),
+                // We should consider analyzing this like we do for control_repeat_until
+                warpTimer: false
             };
 
         case 'data_addtolist':
@@ -994,31 +1014,13 @@ class ScriptTreeGenerator {
 
         case 'motion_changexby':
             return {
-                kind: 'motion.setXY',
-                x: {
-                    kind: 'op.add',
-                    left: {
-                        kind: 'motion.x'
-                    },
-                    right: this.descendInputOfBlock(block, 'DX')
-                },
-                y: {
-                    kind: 'motion.y'
-                }
+                kind: 'motion.changeX',
+                dx: this.descendInputOfBlock(block, 'DX')
             };
         case 'motion_changeyby':
             return {
-                kind: 'motion.setXY',
-                x: {
-                    kind: 'motion.x'
-                },
-                y: {
-                    kind: 'op.add',
-                    left: {
-                        kind: 'motion.y'
-                    },
-                    right: this.descendInputOfBlock(block, 'DY')
-                }
+                kind: 'motion.changeY',
+                dy: this.descendInputOfBlock(block, 'DY')
             };
         case 'motion_gotoxy':
             return {
@@ -1052,18 +1054,12 @@ class ScriptTreeGenerator {
             };
         case 'motion_setx':
             return {
-                kind: 'motion.setXY',
-                x: this.descendInputOfBlock(block, 'X'),
-                y: {
-                    kind: 'motion.y'
-                }
+                kind: 'motion.setX',
+                x: this.descendInputOfBlock(block, 'X')
             };
         case 'motion_sety':
             return {
-                kind: 'motion.setXY',
-                x: {
-                    kind: 'motion.x'
-                },
+                kind: 'motion.setY',
                 y: this.descendInputOfBlock(block, 'Y')
             };
         case 'motion_turnleft':
@@ -1154,13 +1150,15 @@ class ScriptTreeGenerator {
             };
         case 'procedures_call':
             return this.descendProcedure(block);
+        case 'procedures_return':
+            return {
+                kind: 'procedures.return',
+                value: this.descendInputOfBlock(block, 'RETURN')
+            };
         case 'sensing_resettimer':
             return {
                 kind: 'timer.reset'
             };
-        case 'procedures_return':
-            return {kind: 'procedures.return', value: this.descendInputOfBlock(block, 'RETURN')};
-
         default: {
             const opcodeFunction = this.runtime.getOpcodeFunction(block.opcode);
             if (opcodeFunction) {
@@ -1172,24 +1170,15 @@ class ScriptTreeGenerator {
                 const blockInfo = this.getBlockInfo(block.opcode);
                 if (blockInfo) {
                     const type = blockInfo.info.blockType;
-                    if (type === BlockType.COMMAND) {
+                    if (type === BlockType.COMMAND || type === BlockType.CONDITIONAL || type === BlockType.LOOP) {
                         return this.descendCompatLayer(block);
                     }
                 }
             }
 
-            // When this thread was triggered by a stack click, attempt to compile as an input.
-            // TODO: perhaps this should be moved to generate()?
-            if (this.thread.stackClick) {
-                try {
-                    const inputNode = this.descendInput(block);
-                    return {
-                        kind: 'visualReport',
-                        input: inputNode
-                    };
-                } catch (e) {
-                    // Ignore
-                }
+            const asVisualReport = this.descendVisualReport(block);
+            if (asVisualReport) {
+                return asVisualReport;
             }
 
             log.warn(`IR: Unknown stacked block: ${block.opcode}`, block);
@@ -1260,7 +1249,7 @@ class ScriptTreeGenerator {
             }
         }
 
-        if (this.variableCache.hasOwnProperty(id)) {
+        if (Object.prototype.hasOwnProperty.call(this.variableCache, id)) {
             return this.variableCache[id];
         }
 
@@ -1271,8 +1260,70 @@ class ScriptTreeGenerator {
         return data;
     }
 
+    /**
+     * @param {string} id The ID of the variable.
+     * @param {string} name The name of the variable.
+     * @param {''|'list'} type The variable type.
+     * @private
+     * @returns {*} A parsed variable object.
+     */
+    _descendVariable (id, name, type) {
+        const target = this.target;
+        const stage = this.stage;
+
+        // Look for by ID in target...
+        if (Object.prototype.hasOwnProperty.call(target.variables, id)) {
+            return createVariableData('target', target.variables[id]);
+        }
+
+        // Look for by ID in stage...
+        if (!target.isStage) {
+            if (stage && Object.prototype.hasOwnProperty.call(stage.variables, id)) {
+                return createVariableData('stage', stage.variables[id]);
+            }
+        }
+
+        // Look for by name and type in target...
+        for (const varId in target.variables) {
+            if (Object.prototype.hasOwnProperty.call(target.variables, varId)) {
+                const currVar = target.variables[varId];
+                if (currVar.name === name && currVar.type === type) {
+                    return createVariableData('target', currVar);
+                }
+            }
+        }
+
+        // Look for by name and type in stage...
+        if (!target.isStage && stage) {
+            for (const varId in stage.variables) {
+                if (Object.prototype.hasOwnProperty.call(stage.variables, varId)) {
+                    const currVar = stage.variables[varId];
+                    if (currVar.name === name && currVar.type === type) {
+                        return createVariableData('stage', currVar);
+                    }
+                }
+            }
+        }
+
+        // Create it locally...
+        const newVariable = new Variable(id, name, type, false, target.id);
+        target.variables[id] = newVariable;
+
+        if (target.sprite) {
+            // Create the variable in all instances of this sprite.
+            // This is necessary because the script cache is shared between clones.
+            // sprite.clones has all instances of this sprite including the original and all clones
+            for (const clone of target.sprite.clones) {
+                if (!Object.prototype.hasOwnProperty.call(clone.variables, id)) {
+                    clone.variables[id] = new Variable(id, name, type, false, target.id);
+                }
+            }
+        }
+
+        return createVariableData('target', newVariable);
+    }
+
     descendProcedure (block) {
-        // setting of yields will be handled later in the analysis phase
         const procedureCode = block.mutation.proccode;
         const isGlobal = block.mutation.isglobal === 'true';
         if (procedureCode === 'tw:debugger;') {
@@ -1288,6 +1339,32 @@ class ScriptTreeGenerator {
             };
         }
 
+        const [paramNames, paramIds, paramDefaults] = paramNamesIdsAndDefaults;
+
+        const addonBlock = this.runtime.getAddonBlock(procedureCode);
+        if (addonBlock) {
+            this.script.yields = true;
+            const args = {};
+            for (let i = 0; i < paramIds.length; i++) {
+                let value;
+                if (block.inputs[paramIds[i]] && block.inputs[paramIds[i]].block) {
+                    value = this.descendInputOfBlock(block, paramIds[i]);
+                } else {
+                    value = {
+                        kind: 'constant',
+                        value: paramDefaults[i]
+                    };
+                }
+                args[paramNames[i]] = value;
+            }
+            return {
+                kind: 'addons.call',
+                code: procedureCode,
+                arguments: args,
+                blockId: block.id
+            };
+        }
+
         // These are guaranteed to exist by previous checks
         let definitionId = blockContainer.getProcedureDefinition(procedureCode);
         let definitionBlock;
@@ -1295,12 +1372,23 @@ class ScriptTreeGenerator {
 
         if (definitionId) {
             definitionBlock = blockContainer.getBlock(definitionId);
-            innerDefinition = blockContainer.getBlock(definitionBlock.inputs.custom_block.block);
+            if (definitionBlock) {
+                innerDefinition = blockContainer.getBlock(definitionBlock.inputs.custom_block.block);
+            }
         } else {
+            // TODO: maybe we don't need check if procedureCode is global procedures
+            // this.script.target indicates whether it is a global procedures
             let globalTarget;
             [definitionId, globalTarget] = blockContainer.getGlobalProcedureAndTarget(procedureCode);
-            definitionBlock = globalTarget.blocks.getBlock(definitionId);
-            innerDefinition = globalTarget.blocks.getBlock(definitionBlock.inputs.custom_block.block);
+            if (definitionId && globalTarget) {
+                definitionBlock = globalTarget.blocks.getBlock(definitionId);
+                innerDefinition = globalTarget.blocks.getBlock(definitionBlock.inputs.custom_block.block);
+            }
+        }
+        if (!definitionBlock) {
+            return {
+                kind: 'noop'
+            };
         }
 
         let isWarp = this.script.isWarp;
@@ -1320,8 +1408,6 @@ class ScriptTreeGenerator {
         if (!this.script.dependedProcedures.includes(variant)) {
             this.script.dependedProcedures.push(variant);
         }
-
-        const [paramNames, paramIds, paramDefaults] = paramNamesIdsAndDefaults;
 
         // Non-warp direct recursion yields.
         if (!this.script.isWarp) {
@@ -1353,69 +1439,6 @@ class ScriptTreeGenerator {
     }
 
     /**
-     * @param {string} id The ID of the variable.
-     * @param {string} name The name of the variable.
-     * @param {''|'list'} type The variable type.
-     * @private
-     * @returns {*} A parsed variable object.
-     */
-    _descendVariable (id, name, type) {
-        const target = this.target;
-        const stage = this.stage;
-
-        // Look for by ID in target...
-        if (target.variables.hasOwnProperty(id)) {
-            return createVariableData('target', target.variables[id]);
-        }
-
-        // Look for by ID in stage...
-        if (!target.isStage) {
-            if (stage && stage.variables.hasOwnProperty(id)) {
-                return createVariableData('stage', stage.variables[id]);
-            }
-        }
-
-        // Look for by name and type in target...
-        for (const varId in target.variables) {
-            if (target.variables.hasOwnProperty(varId)) {
-                const currVar = target.variables[varId];
-                if (currVar.name === name && currVar.type === type) {
-                    return createVariableData('target', currVar);
-                }
-            }
-        }
-
-        // Look for by name and type in stage...
-        if (!target.isStage && stage) {
-            for (const varId in stage.variables) {
-                if (stage.variables.hasOwnProperty(varId)) {
-                    const currVar = stage.variables[varId];
-                    if (currVar.name === name && currVar.type === type) {
-                        return createVariableData('stage', currVar);
-                    }
-                }
-            }
-        }
-
-        // Create it locally...
-        const newVariable = new Variable(id, name, type, false, target.id);
-        target.variables[id] = newVariable;
-
-        if (target.sprite) {
-            // Create the variable in all instances of this sprite.
-            // This is necessary because the script cache is shared between clones.
-            // sprite.clones has all instances of this sprite including the original and all clones
-            for (const clone of target.sprite.clones) {
-                if (!clone.variables.hasOwnProperty(id)) {
-                    clone.variables[id] = new Variable(id, name, type, false, target.id);
-                }
-            }
-        }
-
-        return createVariableData('target', newVariable);
-    }
-
-    /**
      * Descend into a block that uses the compatibility layer.
      * @param {*} block The block to use the compatibility layer for.
      * @private
@@ -1423,22 +1446,43 @@ class ScriptTreeGenerator {
      */
     descendCompatLayer (block) {
         this.script.yields = true;
+
         const inputs = {};
-        const fields = {};
         for (const name of Object.keys(block.inputs)) {
-            inputs[name] = this.descendInputOfBlock(block, name);
+            if (!name.startsWith('SUBSTACK')) {
+                inputs[name] = this.descendInputOfBlock(block, name);
+            }
         }
+
+        const fields = {};
         for (const name of Object.keys(block.fields)) {
             fields[name] = block.fields[name].value;
         }
         if (block.mutation?.blockInfo?.isDynamic) {
             inputs.mutation = {kind: 'gandi.blockMutation', value: block.mutation};
         }
+
+        const blockInfo = this.getBlockInfo(block.opcode);
+        const blockType = (blockInfo && blockInfo.info && blockInfo.info.blockType) || BlockType.COMMAND;
+        const substacks = {};
+        if (blockType === BlockType.CONDITIONAL || blockType === BlockType.LOOP) {
+            for (const inputName in block.inputs) {
+                if (!inputName.startsWith('SUBSTACK')) continue;
+                const branchNum = inputName === 'SUBSTACK' ? 1 : +inputName.substring('SUBSTACK'.length);
+                if (!isNaN(branchNum)) {
+                    substacks[branchNum] = this.descendSubstack(block, inputName);
+                }
+            }
+        }
+
         return {
             kind: 'compat',
+            id: block.id,
             opcode: block.opcode,
+            blockType,
             inputs,
-            fields
+            fields,
+            substacks
         };
     }
 
@@ -1479,6 +1523,72 @@ class ScriptTreeGenerator {
         }
     }
 
+    descendVisualReport (block) {
+        if (!this.thread.stackClick || block.next) {
+            return null;
+        }
+        try {
+            return {
+                kind: 'visualReport',
+                input: this.descendInput(block)
+            };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /**
+     * @param {Block} hatBlock
+     */
+    walkHat (hatBlock) {
+        const nextBlock = hatBlock.next;
+        const opcode = hatBlock.opcode;
+        const hatInfo = this.runtime._hats[opcode];
+
+        if (this.thread.stackClick) {
+            // We still need to treat the hat as a normal block (so executableHat should be false) for
+            // interpreter parity, but the reuslt is ignored.
+            const opcodeFunction = this.runtime.getOpcodeFunction(opcode);
+            if (opcodeFunction) {
+                return [
+                    this.descendCompatLayer(hatBlock),
+                    ...this.walkStack(nextBlock)
+                ];
+            }
+            return this.walkStack(nextBlock);
+        }
+
+        if (hatInfo.edgeActivated) {
+            // Edge-activated HAT
+            this.script.yields = true;
+            this.script.executableHat = true;
+            return [
+                {
+                    kind: 'hat.edge',
+                    id: hatBlock.id,
+                    condition: this.descendCompatLayer(hatBlock)
+                },
+                ...this.walkStack(nextBlock)
+            ];
+        }
+
+        const opcodeFunction = this.runtime.getOpcodeFunction(opcode);
+        if (opcodeFunction) {
+            // Predicate-based HAT
+            this.script.yields = true;
+            this.script.executableHat = true;
+            return [
+                {
+                    kind: 'hat.predicate',
+                    condition: this.descendCompatLayer(hatBlock)
+                },
+                ...this.walkStack(nextBlock)
+            ];
+        }
+
+        return this.walkStack(nextBlock);
+    }
+
     /**
      * @param {string} topBlockId The ID of the top block of the script.
      * @returns {IntermediateScript}
@@ -1508,23 +1618,25 @@ class ScriptTreeGenerator {
             this.readTopBlockComment(topBlock.comment);
         }
 
-        // If the top block is a hat, advance to its child.
-        let entryBlock;
-        if (this.runtime.getIsHat(topBlock.opcode) || topBlock.opcode === 'procedures_definition') {
-            if (this.runtime.getIsEdgeActivatedHat(topBlock.opcode)) {
-                throw new Error(`Not compiling an edge-activated hat: ${topBlock.opcode}`);
-            }
-            entryBlock = topBlock.next;
+        // We do need to evaluate empty hats
+        const hatInfo = this.runtime._hats[topBlock.opcode];
+        const isHat = !!hatInfo;
+        if (isHat) {
+            this.script.stack = this.walkHat(topBlock);
         } else {
-            entryBlock = topBlockId;
-        }
+            // We don't evaluate the procedures_definition top block as it never does anything
+            // We also don't want it to be treated like a hat block
+            let entryBlock;
+            if (topBlock.opcode === 'procedures_definition') {
+                entryBlock = topBlock.next;
+            } else {
+                entryBlock = topBlockId;
+            }
 
-        if (!entryBlock) {
-            // This is an empty script.
-            return this.script;
+            if (entryBlock) {
+                this.script.stack = this.walkStack(entryBlock);
+            }
         }
-
-        this.script.stack = this.walkStack(entryBlock);
 
         return this.script;
     }
@@ -1554,7 +1666,7 @@ class IRGenerator {
 
     addProcedureDependencies (dependencies) {
         for (const procedureVariant of dependencies) {
-            if (this.procedures.hasOwnProperty(procedureVariant)) {
+            if (Object.prototype.hasOwnProperty.call(this.procedures, procedureVariant)) {
                 continue;
             }
             if (this.compilingProcedures.has(procedureVariant)) {
@@ -1649,4 +1761,7 @@ class IRGenerator {
     }
 }
 
-module.exports = IRGenerator;
+module.exports = {
+    ScriptTreeGenerator,
+    IRGenerator
+};

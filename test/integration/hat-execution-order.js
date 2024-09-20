@@ -7,8 +7,22 @@ const VirtualMachine = require('../../src/index');
 const projectUri = path.resolve(__dirname, '../fixtures/hat-execution-order.sb2');
 const project = readFileToBuffer(projectUri);
 
-test('complex', t => {
+const compilerAndInterpreter = (name, callback) => {
+    test(`${name} - interpreted`, t => {
+        callback(t, {
+            enabled: false
+        });
+    });
+    test(`${name} - compiled`, t => {
+        callback(t, {
+            enabled: true
+        });
+    });
+};
+
+compilerAndInterpreter('complex', (t, co) => {
     const vm = new VirtualMachine();
+    vm.setCompilerOptions(co);
     vm.attachStorage(makeTestStorage());
 
     // Evaluate playground data and exit
@@ -20,8 +34,8 @@ test('complex', t => {
         const results = vm.runtime.targets[0].variables[resultKey].value;
         t.deepEqual(results, ['3', '2', '1', 'stage']);
 
+        vm.quit();
         t.end();
-        process.nextTick(process.exit);
     });
 
     // Start VM, load project, and run

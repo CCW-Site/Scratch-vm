@@ -925,6 +925,13 @@ class Scratch3MusicBlocks {
         };
     }
 
+    _isConcurrencyLimited () {
+        return (
+            this.runtime.runtimeOptions.miscLimits &&
+            this._concurrencyCounter > Scratch3MusicBlocks.CONCURRENCY_LIMIT
+        );
+    }
+
     /**
      * Play a drum sound for some number of beats.
      * @param {object} args - the block arguments.
@@ -987,7 +994,7 @@ class Scratch3MusicBlocks {
         if (util.runtime.audioEngine === null) return;
         if (util.target.sprite.soundBank === null) return;
         // If we're playing too many sounds, do not play the drum sound.
-        if (this._concurrencyCounter > Scratch3MusicBlocks.CONCURRENCY_LIMIT) {
+        if (this._isConcurrencyLimited()) {
             return;
         }
 
@@ -1088,7 +1095,7 @@ class Scratch3MusicBlocks {
         if (util.target.sprite.soundBank === null) return;
 
         // If we're playing too many sounds, do not play the note.
-        if (this._concurrencyCounter > Scratch3MusicBlocks.CONCURRENCY_LIMIT) {
+        if (this._isConcurrencyLimited()) {
             return;
         }
 

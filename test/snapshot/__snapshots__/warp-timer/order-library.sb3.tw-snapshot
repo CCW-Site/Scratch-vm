@@ -1,0 +1,84 @@
+// TW Snapshot
+// Input SHA-256: 7f0df1e9c4a6b87f8bbea53b22d5a1201ebe774e535661cef5da3bd75af45c11
+
+// Sprite3 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = stage.variables["):/PVGTvoVRvq(ikGwRE-wait"];
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 2",}, b0, false, false, "s+@:|^WPr8]N1Y9Hk2f5", null);
+thread.timer = timer();
+var a0 = Math.max(0, 1000 * (+b1.value || 0));
+runtime.requestRedraw();
+yield;
+while (thread.timer.timeElapsed() < a0) {
+yield;
+}
+thread.timer = null;
+thread.timer = timer();
+var a1 = Math.max(0, 1000 * (+b1.value || 0));
+runtime.requestRedraw();
+yield;
+while (thread.timer.timeElapsed() < a1) {
+yield;
+}
+thread.timer = null;
+thread.timer = timer();
+var a2 = Math.max(0, 1000 * (+b1.value || 0));
+runtime.requestRedraw();
+yield;
+while (thread.timer.timeElapsed() < a2) {
+yield;
+}
+thread.timer = null;
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "7e7aA!PF-sxf1uka+sh2", null);
+retire(); return;
+}; })
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["):/PVGTvoVRvq(ikGwRE-order"];
+const b1 = stage.variables["):/PVGTvoVRvq(ikGwRE-wait"];
+const b2 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ () {
+b0.value = 0;
+thread.timer = timer();
+var a0 = Math.max(0, 1000 * (+b1.value || 0));
+runtime.requestRedraw();
+yield;
+while (thread.timer.timeElapsed() < a0) {
+yield;
+}
+thread.timer = null;
+b0.value = ((+b0.value || 0) + 1);
+if (((b0.value || 0) === 1)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass order is correct (1)",}, b2, false, false, "RSQ{nVCc)6E)(`KlnFCF", null);
+} else {
+yield* executeInCompatibilityLayer({"MESSAGE":("fail order is incorrect 1 != " + ("" + b0.value)),}, b2, false, false, "8k^j~`c^|YO@hkFd?~2d", null);
+}
+retire(); return;
+}; })
+
+// Sprite2 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["):/PVGTvoVRvq(ikGwRE-order"];
+const b1 = stage.variables["):/PVGTvoVRvq(ikGwRE-wait"];
+const b2 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ () {
+b0.value = 0;
+thread.timer = timer();
+var a0 = Math.max(0, 1000 * (+b1.value || 0));
+runtime.requestRedraw();
+yield;
+while (thread.timer.timeElapsed() < a0) {
+yield;
+}
+thread.timer = null;
+b0.value = ((+b0.value || 0) + 1);
+if (((b0.value || 0) === 2)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass order is correct (2)",}, b2, false, false, "KP?op(=Vg2#;@]!,C#.~", null);
+} else {
+yield* executeInCompatibilityLayer({"MESSAGE":("fail order is incorrect 2 != " + ("" + b0.value)),}, b2, false, false, "=]|}L~4uQXTNtwJKw_;R", null);
+}
+retire(); return;
+}; })

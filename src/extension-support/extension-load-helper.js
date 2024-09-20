@@ -14,8 +14,8 @@ const pending = new Set();
 
 const clearScratchAPI = id => {
     pending.delete(id);
-    if (window.IIFEExtensionInfoList && id) {
-        window.IIFEExtensionInfoList = window.IIFEExtensionInfoList.filter(({extensionObject}) => extensionObject.info.extensionId !== id);
+    if (global.IIFEExtensionInfoList && id) {
+        global.IIFEExtensionInfoList = global.IIFEExtensionInfoList.filter(({extensionObject}) => extensionObject.info.extensionId !== id);
     }
     if (global.Scratch && pending.size === 0) {
         global.Scratch.extensions = {
@@ -46,8 +46,8 @@ const setupScratchAPI = (vm, id) => {
             },
             Extension: () => extensionInstance.constructor
         };
-        window.IIFEExtensionInfoList = window.IIFEExtensionInfoList || [];
-        window.IIFEExtensionInfoList.push({extensionObject, extensionInstance});
+        global.IIFEExtensionInfoList = global.IIFEExtensionInfoList || [];
+        global.IIFEExtensionInfoList.push({extensionObject, extensionInstance});
         return;
     };
 
@@ -55,14 +55,15 @@ const setupScratchAPI = (vm, id) => {
         const {runtime} = vm;
         if (runtime.ccwAPI && runtime.ccwAPI.getOpenVM) {
             openVM = runtime.ccwAPI.getOpenVM();
-        } else {
-            openVM = {
-                runtime: vm.runtime
-            };
         }
+        openVM = {
+            runtime: vm.runtime,
+            exports: vm.exports,
+            ...openVM
+        };
     }
     if (!translate) {
-        translate = createTranslate(vm.runtime);
+        translate = createTranslate(vm);
     }
 
     const scratch = {
@@ -94,11 +95,8 @@ const createdScriptLoader = ({url, onSuccess, onError}) => {
         exist.failedCallBack.push(onError);
         return exist;
     }
-    if (!url) {
-        log.warn('remote extension url is null');
-    }
-    const script = document.createElement('script');
 
+    const script = document.createElement('script');
     script.src = `${url + (url.includes('?') ? '&' : '?')}t=${Date.now()}`;
     script.id = url;
     script.defer = true;
@@ -111,10 +109,10 @@ const createdScriptLoader = ({url, onSuccess, onError}) => {
     const logError = e => {
         scriptError = e;
     };
-    window.addEventListener('error', logError);
+    global.addEventListener('error', logError);
 
     const removeScript = () => {
-        window.removeEventListener('error', logError);
+        global.removeEventListener('error', logError);
         document.body.removeChild(script);
     };
 

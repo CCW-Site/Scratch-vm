@@ -1,0 +1,20 @@
+// TW Snapshot
+// Input SHA-256: f2d984762d77ff375ba3e39b5d57190b71a131f0d8620d2becb2735b7da116c3
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "?@x?KlY[GHB#^le;O^;Z", null);
+retire(); return;
+}; })
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 1",}, b0, false, false, "*S!`s:/sOEm#Bd%7=h7E", null);
+yield* waitThreads(startHats("event_whenbroadcastreceived", { BROADCAST_OPTION: "message1" }));
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "g#w*ISI)$Wi.45AszY|1", null);
+retire(); return;
+}; })

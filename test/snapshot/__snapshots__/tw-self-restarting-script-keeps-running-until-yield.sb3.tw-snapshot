@@ -1,0 +1,38 @@
+// TW Snapshot
+// Input SHA-256: dc029abbf128cea0830f4578e89619949837ec26dfa76f110ca599a9ee12e66e
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = stage.variables["G{NQ*NXG*qzywe1Q3?FM"];
+const b2 = stage.variables["`jEk@4|i[#Fk?(8x)AV.-my variable"];
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 1",}, b0, false, false, "c", null);
+b1.value = 0;
+b2.value = 0;
+startHats("event_whenbroadcastreceived", { BROADCAST_OPTION: "message1" });
+retire(); return;
+}; })
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["`jEk@4|i[#Fk?(8x)AV.-my variable"];
+const b1 = stage.variables["G{NQ*NXG*qzywe1Q3?FM"];
+const b2 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ () {
+if (compareEqual(b0.value, 0)) {
+b0.value = 1;
+startHats("event_whenbroadcastreceived", { BROADCAST_OPTION: "message1" });
+b1.value = 1;
+for (var a0 = 1; a0 >= 0.5; a0--) {
+yield;
+}
+b1.value = 2;
+} else {
+if (((+b1.value || 0) === 1)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b2, false, false, "p", null);
+}
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b2, false, false, "n", null);
+}
+retire(); return;
+}; })

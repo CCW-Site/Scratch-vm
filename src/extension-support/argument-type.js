@@ -44,21 +44,29 @@ const ArgumentType = {
     IMAGE: 'image',
 
     /**
-     * powered by xigua
-     * XIGUA_MATRIX 小白板的12*12 Led矩阵
-     * XIGUA_WHITE_BOARD_NOTE 小白版的 MIDI note number with note picker (piano) field 超长版本
+     * for 12*12 Led board
      */
     XIGUA_MATRIX: 'xigua_matrix',
 
+    /**
+     *  MIDI note number with note picker (piano)
+     */
     XIGUA_WHITE_BOARD_NOTE: 'xigua_white_board_note',
 
     /**
      * CCW_HAT_PARAMETER, use in hat block
      */
-    CCW_HAT_PARAMETER: 'ccw_hat_parameter'
+    CCW_HAT_PARAMETER: 'ccw_hat_parameter',
+
     /**
-     * powered by xigua
+     * Name of costume in the current target
      */
+    COSTUME: 'costume',
+
+    /**
+     * Name of sound in the current target
+     */
+    SOUND: 'sound'
 };
 
 module.exports = ArgumentType;

@@ -2,18 +2,15 @@ const uid = require('../util/uid');
 const frameSource = require('./tw-load-script-as-plain-text!./tw-iframe-extension-worker-entry');
 
 const none = "'none'";
-const allow = '*';
 const featurePolicy = {
     'accelerometer': none,
     'ambient-light-sensor': none,
-    'autoplay': none,
     'battery': none,
     'camera': none,
     'display-capture': none,
     'document-domain': none,
     'encrypted-media': none,
     'fullscreen': none,
-    'gamepad': allow,
     'geolocation': none,
     'gyroscope': none,
     'magnetometer': none,
@@ -53,9 +50,10 @@ class IframeExtensionWorker {
 
         window.addEventListener('message', this._onWindowMessage.bind(this));
         const blob = new Blob([
-            `<body><script>window.__WRAPPED_IFRAME_ID__=${JSON.stringify(this.id)};${frameSource}</script></body>`
+            // eslint-disable-next-line max-len
+            `<!DOCTYPE html><body><script>window.__WRAPPED_IFRAME_ID__=${JSON.stringify(this.id)};${frameSource}</script></body>`
         ], {
-            type: 'text/html'
+            type: 'text/html; charset=utf-8'
         });
         this.iframe.src = URL.createObjectURL(blob);
     }

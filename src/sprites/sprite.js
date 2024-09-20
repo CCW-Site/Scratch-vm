@@ -193,7 +193,7 @@ class Sprite {
         }
 
         this.costumes_.forEach(costume => {
-            this.runtime.renderer.destroySkin(costume.skinId);
+            this.runtime.renderer && this.runtime.renderer.destroySkin(costume.skinId);
         });
     }
 }

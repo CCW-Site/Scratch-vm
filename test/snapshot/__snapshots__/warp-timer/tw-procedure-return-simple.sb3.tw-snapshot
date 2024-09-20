@@ -1,0 +1,111 @@
+// TW Snapshot
+// Input SHA-256: cd516553f3cbf4a41ae9a8bc1f5d06a3392d365226bccdfa294578314f18facb
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = stage.variables["`jEk@4|i[#Fk?(8x)AV.-my variable"];
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 8",}, b0, false, false, "x", null);
+if ((("" + (thread.procedures["Zsimplest"]())).toLowerCase() === "It works!".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass simplest",}, b0, false, false, ":", null);
+}
+if ((("" + (thread.procedures["Znesting 1"]())).toLowerCase() === "42-54".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass nesting1",}, b0, false, false, "=", null);
+}
+if (((+(thread.procedures["Wwarp fib %s"](12)) || 0) === 144)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass fib 12",}, b0, false, false, "@", null);
+}
+if (((+(thread.procedures["Wfactorial %s"](12)) || 0) === 479001600)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass factorial 12",}, b0, false, false, "]", null);
+}
+b1.value = (yield* thread.procedures["Zno shadowing 1 %s %s"]("f","g"));
+if (compareEqual(b1.value, "")) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass default return value",}, b0, false, false, "|", null);
+}
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "`", null);
+retire(); return;
+}; })
+
+// Sprite1 Zsimplest
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function funXYZ_simplest () {
+return "It works!";
+return "";
+}; })
+
+// Sprite1 Znesting 1
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function funXYZ_nesting_1 () {
+thread.procedures["Znesting 2"]();
+return (("" + (thread.procedures["Znesting 3 %s %s"](6,7))) + ("" + (thread.procedures["Znesting 3 %s %s"](-1,54))));
+return "";
+}; })
+
+// Sprite1 Wwarp fib %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function funXYZ_warp_fib_ (p0) {
+return (thread.procedures["Wfib %s"](p0));
+return "";
+}; })
+
+// Sprite1 Wfactorial %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function funXYZ_factorial_ (p0) {
+if (compareGreaterThan(p0, 1)) {
+return ((+p0 || 0) * (+(thread.procedures["Wfactorial %s"](((+p0 || 0) - 1))) || 0));
+}
+return 1;
+return "";
+}; })
+
+// Sprite1 Zno shadowing 1 %s %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = stage.variables["`jEk@4|i[#Fk?(8x)AV.-my variable"];
+return function* genXYZ_no_shadowing_1__ (p0,p1) {
+if (((("" + p0).toLowerCase() === "f".toLowerCase()) && (("" + p1).toLowerCase() === "g".toLowerCase()))) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass shadow check 1",}, b0, false, false, "aq", null);
+}
+b1.value = (thread.procedures["Zno shadowing 2 %s %s"](1,2));
+if (((("" + p0).toLowerCase() === "f".toLowerCase()) && (("" + p1).toLowerCase() === "g".toLowerCase()))) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass shadow check 2",}, b0, false, false, "au", null);
+}
+b1.value = (thread.procedures["Zno shadowing 2 %s %s"](3,4));
+if (((("" + p0).toLowerCase() === "f".toLowerCase()) && (("" + p1).toLowerCase() === "g".toLowerCase()))) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass shadow check 3",}, b0, false, false, "ax", null);
+}
+return "";
+}; })
+
+// Sprite1 Znesting 2
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function funXYZ_nesting_2 () {
+return "discard nesting 2";
+return "";
+}; })
+
+// Sprite1 Znesting 3 %s %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function funXYZ_nesting_3__ (p0,p1) {
+return ((+p0 || 0) * (+p1 || 0));
+return "";
+}; })
+
+// Sprite1 Wfib %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function funXYZ_fib_ (p0) {
+if (compareLessThan(p0, 2)) {
+return p0;
+} else {
+return ((+(thread.procedures["Wfib %s"](((+p0 || 0) - 1))) || 0) + (+(thread.procedures["Wfib %s"](((+p0 || 0) - 2))) || 0));
+}
+return "";
+}; })
+
+// Sprite1 Zno shadowing 2 %s %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function funXYZ_no_shadowing_2__ (p0,p1) {
+return "discard shadow 2";
+return "";
+}; })

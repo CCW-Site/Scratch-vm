@@ -94,16 +94,16 @@ test('#new & duplicate asset with new uid', async t => {
     let count = 0;
     vm.runtime.targets.forEach(target => {
         target.sprite.costumes.forEach(obj => {
-            vmAssets[obj.uid] = obj.name;
+            vmAssets[obj.id] = obj.name;
             count++;
         });
         target.sprite.sounds.forEach(obj => {
-            vmAssets[obj.uid] = obj.name;
+            vmAssets[obj.id] = obj.name;
             count++;
         });
     });
     t.equal(count, Object.keys(vmAssets).length, 'all asset has different uid');
-    t.ok(newCostume.hasOwnProperty('uid'), 'addCostume has uid property');
-    t.ok(newSound.hasOwnProperty('uid'), 'addSound has uid property');
+    t.ok(newCostume.hasOwnProperty('id'), 'addCostume has uid property');
+    t.ok(newSound.hasOwnProperty('id'), 'addSound has uid property');
     t.end();
 });

@@ -61,31 +61,5 @@
   ],
   "monitors": [],
   "extensions": [],
-  "gandi": {
-    "assets": [
-      {
-        "assetId": "fuzzy_operations",
-        "name": "main",
-        "md5ext": "fuzzy_operations.py",
-        "dataFormat": "py"
-      },
-      {
-        "assetId": "project",
-        "name": "levelData",
-        "md5ext": "project.json",
-        "dataFormat": "json"
-      }
-    ],
-    "wildExtensions": {
-      "unitTestExt1": {
-        "id": "unitTestExt1",
-        "url": "https://unitTestExt1.js"
-      },
-      "unitTestExt2": {
-        "id": "unitTestExt2",
-        "url": "https://unitTestExt2.js"
-      }
-    }
-  },
   "meta": { "semver": "3.0.0", "vm": "1.4.11", "agent": "" }
 }

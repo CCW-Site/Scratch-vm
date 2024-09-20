@@ -1,0 +1,33 @@
+// TW Snapshot
+// Input SHA-256: 58dd6f369897907ea46fffbb8210d8bc15db59f26ce117ff4211035afff17f23
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = stage.variables["`jEk@4|i[#Fk?(8x)AV.-my variable"];
+const b2 = runtime.getOpcodeFunction("sensing_userid");
+const b3 = runtime.getOpcodeFunction("motion_xscroll");
+const b4 = runtime.getOpcodeFunction("motion_yscroll");
+const b5 = runtime.getOpcodeFunction("motion_scroll_right");
+const b6 = runtime.getOpcodeFunction("motion_scroll_up");
+const b7 = runtime.getOpcodeFunction("motion_align_scene");
+const b8 = runtime.getOpcodeFunction("looks_setstretchto");
+const b9 = runtime.getOpcodeFunction("looks_changestretchby");
+const b10 = runtime.getOpcodeFunction("looks_hideallsprites");
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 1",}, b0, false, false, "pW2KnJW$%KXFoppMJBAi", null);
+b1.value = (yield* executeInCompatibilityLayer({}, b2, false, false, "X[|X;C.(v[|^i|@0Eqy4", null));
+b1.value = (yield* executeInCompatibilityLayer({}, b3, false, false, "z;H$hVK7X;MZSyO9U/#1", null));
+b1.value = (yield* executeInCompatibilityLayer({}, b4, false, false, ";Q94_J}Jv36TqTll;ji*", null));
+yield* executeInCompatibilityLayer({"DISTANCE":10,}, b5, false, false, "_TLJeW5hG9gAtYO2c*D9", null);
+yield* executeInCompatibilityLayer({"DISTANCE":10,}, b6, false, false, "o=l#1WJR!L37RN`q:`8E", null);
+yield* executeInCompatibilityLayer({"ALIGNMENT":"bottom-left",}, b7, false, false, "idkZ9I+=Q:@xXm;N-2Oy", null);
+yield* executeInCompatibilityLayer({"STRETCH":100,}, b8, false, false, "AMs-%pRGK*v6a[.XifN1", null);
+yield* executeInCompatibilityLayer({"STRETCH":100,}, b8, false, false, "g+bBVCHp+A[-X2E7-7#|", null);
+yield* executeInCompatibilityLayer({"CHANGE":10,}, b9, false, false, "ZN24~,cX56Dc2k4vt}HB", null);
+yield* executeInCompatibilityLayer({"CHANGE":10,}, b9, false, false, "Zjds+5Is*:nb7wnX{rYN", null);
+yield* executeInCompatibilityLayer({}, b10, false, false, "8X_d`@6,B7%wzr7.xE}t", null);
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "C/%^M/1/S`iX8*M~Q;!3", null);
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "(C;YJ2L~?zR[Y)Wti?3m", null);
+retire(); return;
+}; })

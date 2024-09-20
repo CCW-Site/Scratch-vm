@@ -18,7 +18,7 @@ const loadSoundFromAsset = function (sound, soundAsset, runtime, soundBank) {
     sound.id = sound.id || uid();
     sound.assetId = soundAsset.assetId;
     if (!runtime.audioEngine) {
-        log.error('No audio engine present; cannot load sound asset: ', sound.md5);
+        log.warn('No audio engine present; cannot load sound asset: ', sound.md5);
         return Promise.resolve(sound);
     }
     return runtime.audioEngine.decodeSoundPlayer(Object.assign(
@@ -38,6 +38,11 @@ const loadSoundFromAsset = function (sound, soundAsset, runtime, soundBank) {
             soundBank.addSoundPlayer(soundPlayer);
         }
         runtime.emit('LOAD_ASSETS_PROGRESS', sound);
+
+        if (runtime.isPackaged) {
+            sound.asset = null;
+        }
+
         return sound;
     });
 };
@@ -99,7 +104,7 @@ const handleSoundLoadError = function (sound, runtime, soundBank) {
  */
 const loadSound = function (sound, runtime, soundBank) {
     if (!runtime.storage) {
-        log.error('No storage module present; cannot load sound asset: ', sound.md5);
+        log.warn('No storage module present; cannot load sound asset: ', sound.md5);
         return Promise.resolve(sound);
     }
     if (!runtime.storage.defaultAssetId) {

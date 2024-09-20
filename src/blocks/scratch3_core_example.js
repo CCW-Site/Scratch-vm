@@ -10,182 +10,44 @@ const blockIconURI = 'data:image/svg+xml,%3Csvg id="rotate-counter-clockwise" xm
  * and used as part of tests.
  */
 class Scratch3CoreExample {
-
-    constructor(runtime) {
+    constructor (runtime) {
         /**
          * The runtime instantiating this block package.
          * @type {Runtime}
          */
         this.runtime = runtime;
-        this.NS = 'coreExample';
     }
-    handleCCWHat (args, util) {
-        console.log('handleCCWHat', args);
-        return true;
-    }
-    triggerCCWHat (args, util) {
-        console.log('triggerCCWHat', args);
-        util.startHatsWithParams('coreExample_handleCCWHat', {parameters: {Msg: args.Msg}, fields: {Data: args.Data}});
-
-    }
-
 
     /**
      * @returns {object} metadata for this extension and its blocks.
      */
     getInfo () {
-        const handleCCWHat = {
-            opcode: 'handleCCWHat',
-            text: 'ccw hat with [Data] [Msg]',
-            blockType: BlockType.HAT,
-            isEdgeActivated: false,
-            arguments: {
-                Data: {
-                    type: ArgumentType.STRING,
-                    menu: 'hatMenu'
-                },
-                Msg: {
-                    type: 'ccw_hat_parameter'
-                }
-            }
-        };
-
-        const triggerCCWHat = {
-            opcode: 'triggerCCWHat',
-            text: 'triggerCCWHat [Data] [Msg]',
-            blockType: BlockType.COMMAND,
-            arguments: {
-                Data: {
-                    type: ArgumentType.STRING,
-                    menu: 'hatMenu'
-                },
-                Msg: {
-                    type: ArgumentType.STRING,
-                    defaultValue: 'key'
-                }
-            }
-        };
-
-        const makeVarBtn = {
-            func: 'MAKE_A_VARIABLE',
-            blockType: BlockType.BUTTON,
-            text: 'make a variable (CoreEx)'
-        };
-
-        const exampleOpcode = {
-            opcode: 'exampleOpcode',
-            blockType: BlockType.REPORTER,
-            text: 'example block'
-        };
-
-        const exampleWithInlineImage = {
-            opcode: 'exampleWithInlineImage',
-            blockType: BlockType.COMMAND,
-            text: 'block with image [CLOCKWISE] inline',
-            arguments: {
-                CLOCKWISE: {
-                    type: ArgumentType.IMAGE,
-                    dataURI: blockIconURI
-                }
-            }
-        };
-
-        const dynamicBlock = {
-            opcode: 'dynamicBlock',
-            blockType: BlockType.REPORTER,
-            text: 'dynamic Block [B]',
-            isDynamic: true,
-            arguments: {
-                // A: {
-                //     type: ArgumentType.STRING,
-                //     defaultValue: '1',
-                //     dynamicArguments: {
-                //         hideAddButton: false,
-                //         hideDeleteButton: false,
-                //         seperator: ',',
-                //         defaultValues: '1'
-                //     }
-                //     type: ArgumentType.STRING,
-                //     defaultValue: '1'
-                // },
-                B: {
-                    type: ArgumentType.STRING,
-                    menu: 'dynamicMenu'
-                }
-            }
-        };
-
-        const staticBlock = {
-            opcode: 'staticBlockOp',
-            blockType: BlockType.REPORTER,
-            text: 'staticBlock'
-        };
-
-        const arrayBuilderBlock = {
-            opcode: 'arrayBuilderBlock',
-            blockType: BlockType.REPORTER,
-            text: 'arrayBuilderBlock [A] [B]',
-            arguments: {
-                A: {
-                    type: ArgumentType.ARRAY,
-                    mutation: {
-                        items: 2,
-                        movable: false,
-                        hideAddButton: true
-                    }
-                },
-                B: {
-                    type: ArgumentType.ARRAY,
-                    mutation: {
-                        items: 2,
-                        movable: false,
-                        hideAddButton: true
-                    }
-                }
-            }
-        };
-
-        const menuBlock = {
-            opcode: 'menuBlock',
-            blockType: BlockType.COMMAND,
-            text: 'menuBlock [DATA]',
-            arguments: {
-                DATA: {
-                    type: ArgumentType.STRING,
-                    menu: 'dynamicMenu'
-                }
-            }
-        };
-
-        const button = {
-            blockType: 'button',
-            text: 'updateExtension',
-            onClick: this.updateExtension.bind(this)
-        };
-
         return {
-            id: this.NS,
+            id: 'coreExample',
             name: 'CoreEx', // This string does not need to be translated as this extension is only used as an example.
             blocks: [
-                // button,
-                // arrayBuilderBlock,
-                // triggerCCWHat,
-                // handleCCWHat,
-                // makeVarBtn,
-                // exampleOpcode,
-                // exampleWithInlineImage,
-                dynamicBlock,
-                // staticBlock,
-                // menuBlock
-            ],
-            menus: {
-                // hatMenu: [
-                //     {text: '*', value: '*'},
-                //     {text: 'a', value: 'a'},
-                //     {text: 'b', value: 'b'}
-                // ]
-                dynamicMenu: {items: 'buildDynamicMenu'}
-            }
+                {
+                    func: 'MAKE_A_VARIABLE',
+                    blockType: BlockType.BUTTON,
+                    text: 'make a variable (CoreEx)'
+                },
+                {
+                    opcode: 'exampleOpcode',
+                    blockType: BlockType.REPORTER,
+                    text: 'example block'
+                },
+                {
+                    opcode: 'exampleWithInlineImage',
+                    blockType: BlockType.COMMAND,
+                    text: 'block with image [CLOCKWISE] inline',
+                    arguments: {
+                        CLOCKWISE: {
+                            type: ArgumentType.IMAGE,
+                            dataURI: blockIconURI
+                        }
+                    }
+                }
+            ]
         };
     }
 
@@ -198,59 +60,10 @@ class Scratch3CoreExample {
         return stage ? stage.getName() : 'no stage yet';
     }
 
-    exampleWithInlineImage (args) {
+    exampleWithInlineImage () {
         return;
     }
-    staticBlockOp (args) {
 
-    }
-
-    menuBlock (args) {
-        console.log('menuBlock', ...args);
-    }
-
-    dynamicBlock (args) {
-        console.log('dynamic block', args);
-        return 'dynamic block';
-    }
-
-    buildDynamicMenu () {
-        return [{text: '1', value: '1'}];
-    }
-
-    arrayBuilderBlock (args) {
-        console.log('A :', args.A);
-        console.log('B :', args.B);
-    }
-
-    updateExtension () {
-        const dynamicBlock = {
-            opcode: 'dynamicBlock',
-            blockType: BlockType.REPORTER,
-            text: 'dynamic Block [A][B][C]',
-            isDynamic: true,
-            disableMonitor: true,
-            arguments: {
-                A: {
-                    type: ArgumentType.STRING,
-                    defaultValue: '1'
-                },
-                B: {
-                    type: ArgumentType.STRING,
-                    defaultValue: '2'
-                },
-                C: {
-                    type: ArgumentType.STRING,
-                    defaultValue: '3'
-                }
-            }
-        };
-
-        const newInfo = this.getInfo();
-        newInfo.blocks = newInfo.blocks.concat(dynamicBlock);
-        const categoryInfo = this.runtime._blockInfo.find(info => info.id === this.NS);
-        (categoryInfo ? this.runtime._refreshExtensionPrimitives : this.runtime._registerExtensionPrimitives).bind(this.runtime)(newInfo);
-    }
 }
 
 module.exports = Scratch3CoreExample;

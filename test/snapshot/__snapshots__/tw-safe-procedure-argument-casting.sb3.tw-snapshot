@@ -1,0 +1,26 @@
+// TW Snapshot
+// Input SHA-256: 89920bf89edf85596d13e7781c1ea5de2fea61c0adf78ecdd41e4a7ab824aebe
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 2",}, b0, false, false, "J#qm1yA(@Z6mj%Mgh;0X", null);
+thread.procedures["Zswitch %s"]("1");
+if ((((target.currentCostume + 1) === 2) && ((+target.getCostumes()[target.currentCostume].name || 0) === 1))) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, ";DM$.QW6o-O+T/oBdqt!", null);
+}
+thread.procedures["Zswitch %s"]("2");
+if ((((target.currentCostume + 1) === 1) && ((+target.getCostumes()[target.currentCostume].name || 0) === 2))) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "71a9Slk0w=^~x;5T@nw,", null);
+}
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "$R-1lb(Mu?gdTIH^;kC_", null);
+retire(); return;
+}; })
+
+// Sprite1 Zswitch %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+return function funXYZ_switch_ (p0) {
+runtime.ext_scratch3_looks._setCostume(target, p0);
+return "";
+}; })

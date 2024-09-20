@@ -196,7 +196,7 @@ const domToBlocksOrFrames = function (elementsDOM) {
     // Flatten elements object into a list.
     const elementsList = [];
     for (const b in elements) {
-        if (!elements.hasOwnProperty(b)) continue;
+        if (!Object.prototype.hasOwnProperty.call(elements, b)) continue;
         elementsList.push(elements[b]);
     }
     return elementsList;

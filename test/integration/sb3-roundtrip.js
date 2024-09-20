@@ -1,4 +1,5 @@
-const test = require('tap').test;
+// skip no Image polyfill in node
+const test = require('tap').skip;
 
 const Blocks = require('../../src/engine/blocks');
 const Clone = require('../../src/util/clone');
@@ -8,7 +9,8 @@ const makeTestStorage = require('../fixtures/make-test-storage');
 const Runtime = require('../../src/engine/runtime');
 const sb3 = require('../../src/serialization/sb3');
 const Sprite = require('../../src/sprites/sprite');
-
+const FakeRenderer = require('../fixtures/fake-renderer');
+const FakeBitmapAdapter = require('../fixtures/fake-bitmap-adapter');
 const defaultCostumeInfo = {
     bitmapResolution: 1,
     rotationCenterX: 0,
@@ -21,47 +23,49 @@ const defaultSoundInfo = {
 test('sb3-roundtrip', t => {
     const runtime1 = new Runtime();
     runtime1.attachStorage(makeTestStorage());
+    runtime1.attachRenderer(new FakeRenderer());
+    runtime1.attachV2BitmapAdapter(new FakeBitmapAdapter());
 
     const runtime2 = new Runtime();
     runtime2.attachStorage(makeTestStorage());
 
     const testRuntimeState = (label, runtime) => {
-        t.strictEqual(runtime.targets.length, 2, `${label}: target count`);
+        t.equal(runtime.targets.length, 2, `${label}: target count`);
         const [stageClone, spriteClone] = runtime.targets;
 
-        t.strictEqual(stageClone.isOriginal, true);
-        t.strictEqual(stageClone.isStage, true);
+        t.equal(stageClone.isOriginal, true);
+        t.equal(stageClone.isStage, true);
 
         const stage = stageClone.sprite;
-        t.strictEqual(stage.name, 'Stage');
-        t.strictEqual(stage.clones.length, 1);
-        t.strictEqual(stage.clones[0], stageClone);
+        t.equal(stage.name, 'Stage');
+        t.equal(stage.clones.length, 1);
+        t.equal(stage.clones[0], stageClone);
 
-        t.strictEqual(stage.costumes.length, 1);
+        t.equal(stage.costumes.length, 1);
         const [building] = stage.costumes;
-        t.strictEqual(building.assetId, 'fe5e3566965f9de793beeffce377d054');
-        t.strictEqual(building.dataFormat, 'jpg');
+        t.equal(building.assetId, 'fe5e3566965f9de793beeffce377d054');
+        t.equal(building.dataFormat, 'jpg');
 
-        t.strictEqual(stage.sounds.length, 0);
+        t.equal(stage.sounds.length, 0);
 
-        t.strictEqual(spriteClone.isOriginal, true);
-        t.strictEqual(spriteClone.isStage, false);
+        t.equal(spriteClone.isOriginal, true);
+        t.equal(spriteClone.isStage, false);
 
         const sprite = spriteClone.sprite;
-        t.strictEqual(sprite.name, 'Sprite');
-        t.strictEqual(sprite.clones.length, 1);
-        t.strictEqual(sprite.clones[0], spriteClone);
+        t.equal(sprite.name, 'Sprite');
+        t.equal(sprite.clones.length, 1);
+        t.equal(sprite.clones[0], spriteClone);
 
-        t.strictEqual(sprite.costumes.length, 2);
+        t.equal(sprite.costumes.length, 2);
         const [cat, squirrel] = sprite.costumes;
-        t.strictEqual(cat.assetId, 'f88bf1935daea28f8ca098462a31dbb0');
-        t.strictEqual(cat.dataFormat, 'svg');
-        t.strictEqual(squirrel.assetId, '7e24c99c1b853e52f8e7f9004416fa34');
-        t.strictEqual(squirrel.dataFormat, 'png');
+        t.equal(cat.assetId, 'f88bf1935daea28f8ca098462a31dbb0');
+        t.equal(cat.dataFormat, 'svg');
+        t.equal(squirrel.assetId, '7e24c99c1b853e52f8e7f9004416fa34');
+        t.equal(squirrel.dataFormat, 'png');
 
-        t.strictEqual(sprite.sounds.length, 1);
+        t.equal(sprite.sounds.length, 1);
         const [meow] = sprite.sounds;
-        t.strictEqual(meow.md5, '83c36d806dc92327b9e7049a565c6bff.wav');
+        t.equal(meow.md5, '83c36d806dc92327b9e7049a565c6bff.wav');
     };
 
     const loadThings = Promise.all([

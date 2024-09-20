@@ -11,7 +11,7 @@ const project = readFileToBuffer(projectUri);
 test('importing sb3 project with monitors', t => {
     const vm = new VirtualMachine();
     vm.attachStorage(makeTestStorage());
-
+    vm.extensionManager.addBuiltinExtension('music', require('../../src/extensions/scratch3_music'));
     // Evaluate playground data and exit
     vm.on('playgroundData', e => {
         const threads = JSON.parse(e.threads);
@@ -247,8 +247,8 @@ test('importing sb3 project with monitors', t => {
         t.equal(monitorRecord.targetId, null);
         t.equal(vm.extensionManager.isExtensionLoaded('ev3'), true);
 
+        vm.quit();
         t.end();
-        process.nextTick(process.exit);
     });
 
     // Start VM, load project, and run

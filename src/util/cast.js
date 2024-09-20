@@ -11,6 +11,27 @@ const Color = require('../util/color');
  * Use when coercing a value before computation.
  */
 
+/**
+ * Used internally by compare()
+ * @param {*} val A value that evaluates to 0 in JS string-to-number conversation such as empty string, 0, or tab.
+ * @returns {boolean} True if the value should not be treated as the number zero.
+ */
+const isNotActuallyZero = val => {
+    if (typeof val !== 'string') return false;
+    for (let i = 0; i < val.length; i++) {
+        const code = val.charCodeAt(i);
+        // '0'.charCodeAt(0) === 48
+        // '\t'.charCodeAt(0) === 9
+        // We include tab for compatibility with scratch-www's broken trim() polyfill.
+        // https://github.com/TurboWarp/scratch-vm/issues/115
+        // https://scratch.mit.edu/projects/788261699/
+        if (code === 48 || code === 9) {
+            return false;
+        }
+    }
+    return true;
+};
+
 class Cast {
     /**
      * Scratch cast to number.
@@ -121,9 +142,9 @@ class Cast {
     static compare (v1, v2) {
         let n1 = Number(v1);
         let n2 = Number(v2);
-        if (n1 === 0 && Cast.isWhiteSpace(v1)) {
+        if (n1 === 0 && isNotActuallyZero(v1)) {
             n1 = NaN;
-        } else if (n2 === 0 && Cast.isWhiteSpace(v2)) {
+        } else if (n2 === 0 && isNotActuallyZero(v2)) {
             n2 = NaN;
         }
         if (isNaN(n1) || isNaN(n2)) {

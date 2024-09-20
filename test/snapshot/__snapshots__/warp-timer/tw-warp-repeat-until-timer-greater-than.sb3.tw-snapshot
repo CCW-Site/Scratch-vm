@@ -1,0 +1,28 @@
+// TW Snapshot
+// Input SHA-256: 2ae215411916e72c845c0f613d5b93f017b16af3010c6f4b0bbb3d1087eec301
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 1",}, b0, false, false, "e", null);
+yield* thread.procedures["Wrun without screen refresh"]();
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "s", null);
+retire(); return;
+}; })
+
+// Sprite1 Wrun without screen refresh
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["F?*}X,`9XBpN_[piGRrz"];
+const b1 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ_run_without_screen_r () {
+b0.value = (((daysSince2000() * 86400) || 0) + 3);
+runtime.ioDevices.clock.resetProjectTimer();
+while (!((runtime.ioDevices.clock.projectTimer() > 0.1) || compareGreaterThan((daysSince2000() * 86400), b0.value))) {
+if (isStuck()) yield;
+}
+if (compareLessThan((daysSince2000() * 86400), b0.value)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b1, true, false, "u", null);
+}
+return "";
+}; })

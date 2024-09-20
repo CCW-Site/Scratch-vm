@@ -269,8 +269,6 @@ class WeDo2Motor {
      * Turn this motor on indefinitely.
      */
     turnOn () {
-        if (this._power === 0) return;
-
         const cmd = this._parent.generateOutputCommand(
             this._index + 1,
             WeDo2Command.MOTOR_POWER,

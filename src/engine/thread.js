@@ -63,6 +63,13 @@ class _StackFrame {
          * @type {Object}
          */
         this.executionContext = null;
+
+        /**
+         * Internal block object being executed. This is *not* the same as the object found
+         * in target.blocks.
+         * @type {object}
+         */
+        this.op = null;
     }
 
     /**
@@ -79,6 +86,8 @@ class _StackFrame {
         this.waitingReporter = null;
         this.params = null;
         this.executionContext = null;
+        this.op = null;
+
         return this;
     }
 
@@ -197,11 +206,6 @@ class Thread {
         // these values only make sense if isCompiled == true
         this.timer = null;
         /**
-         * Warp level
-         * @type {number}
-         */
-        this.warp = 0;
-        /**
          * The thread's generator.
          * @type {Generator}
          */
@@ -218,6 +222,8 @@ class Thread {
          * @type {Object}
          */
         this.hatParam = null;
+        this.executableHat = false;
+        this.compatibilityStackFrame = null;
     }
 
     /**
@@ -346,13 +352,21 @@ class Thread {
             if (!block && globalTarget) {
                 block = globalTarget.blocks.getBlock(blockID);
             }
-
-            if (typeof block !== 'undefined' &&
-                    (block.opcode === 'procedures_call' ||
-                    block.opcode === 'procedures_call_with_return' ||
-                    stackFrame.waitingReporter)) {
+            if (stackFrame.waitingReporter) {
                 break;
             }
+            const isProcedureCall = block &&
+                (block.opcode === 'procedures_call' || block.opcode === 'procedures_call_with_return');
+            // Command form of procedures_call
+            if (isProcedureCall) {
+                // By definition, if we get here, the procedure is done, so skip ahead so
+                // the arguments won't be re-evaluated and then discarded as frozen state
+                // about which arguments have been evaluated is lost.
+                // This fixes https://github.com/TurboWarp/scratch-vm/issues/201
+                this.goToNextBlock();
+                break;
+            }
+
             this.popStack();
             blockID = this.peekStack();
         }
@@ -444,7 +458,7 @@ class Thread {
             if (frame.params === null) {
                 continue;
             }
-            if (frame.params.hasOwnProperty(paramName)) {
+            if (Object.prototype.hasOwnProperty.call(frame.params, paramName)) {
                 return frame.params[paramName];
             }
             return null;
@@ -492,7 +506,15 @@ class Thread {
         let callCount = 5; // Max number of enclosing procedure calls to examine.
         const sp = this.stackFrames.length - 1;
         for (let i = sp - 1; i >= 0; i--) {
-            const block = this.stackFrames[i].op;
+            // Cached block objects in op, not just id
+            // it cached when execute(),make sure we can get the block in any thread context
+            // because global procedure may not in the this.target.blocks
+            let block = this.stackFrames[i].op
+            if (block && block.id && !block.opcode) {
+                // compatible with not cached op, such as unit test
+                // only found block id, get block object
+                block = this.target.blocks.getBlock(block.id);
+            }
             if ((block.opcode === 'procedures_call' || block.opcode === 'procedures_call_with_return') &&
                 block.mutation.proccode === procedureCode) {
                 return true;
@@ -515,10 +537,15 @@ class Thread {
 
         this.triedToCompile = true;
 
+        // stackClick === true disables hat block generation
+        // It would be great to cache these separately, but for now it's easiest to just disable them to avoid
+        // cached versions of scripts breaking projects.
+        const canCache = !this.stackClick;
+
         const topBlock = this.topBlock;
         // Flyout blocks are stored in a special block container.
         const blocks = this.blockContainer.getBlock(topBlock) ? this.blockContainer : this.target.runtime.flyoutBlocks;
-        const cachedResult = blocks.getCachedCompileResult(topBlock);
+        const cachedResult = canCache && blocks.getCachedCompileResult(topBlock);
         // If there is a cached error, do not attempt to recompile.
         if (cachedResult && !cachedResult.success) {
             return;
@@ -530,13 +557,17 @@ class Thread {
         } else {
             try {
                 result = compile(this);
-                blocks.cacheCompileResult(topBlock, result);
+                if (canCache) {
+                    blocks.cacheCompileResult(topBlock, result);
+                }
             } catch (error) {
                 // @ts-ignore
                 if (typeof DEPLOY_ENV !== 'undefined' && DEPLOY_ENV !== 'prod') {
                     log.error('cannot compile script', this.target.getName(), error);
                 }
-                blocks.cacheCompileError(topBlock, error);
+                if (canCache) {
+                    blocks.cacheCompileError(topBlock, error);
+                }
                 this.target.runtime.emitCompileError(this.target, error);
                 return;
             }
@@ -549,6 +580,8 @@ class Thread {
 
         this.generator = result.startingFunction(this)();
 
+        this.executableHat = result.executableHat;
+
         if (!this.blockContainer.forceNoGlow) {
             this.blockGlowInFrame = this.topBlock;
             this.requestScriptGlowInFrame = true;
@@ -557,5 +590,8 @@ class Thread {
         this.isCompiled = true;
     }
 }
+
+// for extensions
+Thread._StackFrame = _StackFrame;
 
 module.exports = Thread;

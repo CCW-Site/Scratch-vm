@@ -1,0 +1,16 @@
+// TW Snapshot
+// Input SHA-256: 28a59bb79ba328f31ac0b79f49143a2513080e30a7383fda80579d08021c3c82
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = stage.variables["`jEk@4|i[#Fk?(8x)AV.-my variable"];
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 1",}, b0, false, false, "c", null);
+b1.value = "#22388a";
+if ((("" + b1.value).toLowerCase() === "#22388a".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "f", null);
+}
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "e", null);
+retire(); return;
+}; })

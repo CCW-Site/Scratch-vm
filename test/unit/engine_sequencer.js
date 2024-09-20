@@ -74,9 +74,14 @@ const generateThread = function (runtime) {
     let next = randomString();
     let inp = randomString();
     let name = th.topBlock;
+
+    const pushStack = id => {
+        th.pushStack(id);
+        th.peekStackFrame().op = {id};
+    };
     
     rt.blocks.createBlock(generateBlockInput(name, next, inp));
-    th.pushStack(name);
+    pushStack(name);
     rt.blocks.createBlock(generateBlock(inp));
     
     for (let i = 0; i < 10; i++) {
@@ -85,11 +90,11 @@ const generateThread = function (runtime) {
         inp = randomString();
         
         rt.blocks.createBlock(generateBlockInput(name, next, inp));
-        th.pushStack(name);
+        pushStack(name);
         rt.blocks.createBlock(generateBlock(inp));
     }
     rt.blocks.createBlock(generateBlock(next));
-    th.pushStack(next);
+    pushStack(next);
     th.target = rt;
     th.blockContainer = rt.blocks;
 

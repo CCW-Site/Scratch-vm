@@ -1,0 +1,120 @@
+// TW Snapshot
+// Input SHA-256: e652f448fbf09a37afacb03afa9f3448cce43aef06439b58b44aeec73edb0438
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["Go=PJS7BFXYo_qi2S:kQ"];
+return function* genXYZ () {
+b0.value = 0;
+while (true) {
+b0.value = ((+b0.value || 0) + 1);
+thread.timer = timer();
+var a0 = Math.max(0, 1000 * -1);
+runtime.requestRedraw();
+yield;
+while (thread.timer.timeElapsed() < a0) {
+yield;
+}
+thread.timer = null;
+yield;
+}
+retire(); return;
+}; })
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 3",}, b0, false, false, "k", null);
+yield* thread.procedures["Znon warp"]();
+runtime.stopForTarget(target, thread);
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "N", null);
+retire(); return;
+}; })
+
+// Sprite1 Znon warp
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["Go=PJS7BFXYo_qi2S:kQ"];
+const b1 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ_non_warp () {
+b0.value = 0;
+for (var a0 = 5; a0 >= 0.5; a0--) {
+thread.timer = timer();
+var a1 = Math.max(0, 1000 * 0);
+runtime.requestRedraw();
+yield;
+while (thread.timer.timeElapsed() < a1) {
+yield;
+}
+thread.timer = null;
+yield;
+}
+if (((+b0.value || 0) === 5)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass non warp 1",}, b1, false, false, "R", null);
+}
+if ((("" + (yield* thread.procedures["Wverify runs warp %s"]((yield* thread.procedures["Zverify runs non warp %s"]((yield* thread.procedures["Wverify runs warp %s"]("abc"))))))).toLowerCase() === "warp: non warp: warp: abc".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass non warp and warp mix",}, b1, false, false, "S", null);
+}
+b0.value = 0;
+for (var a2 = 5; a2 >= 0.5; a2--) {
+thread.timer = timer();
+var a3 = Math.max(0, 1000 * 0);
+runtime.requestRedraw();
+yield;
+while (thread.timer.timeElapsed() < a3) {
+yield;
+}
+thread.timer = null;
+yield;
+}
+if (((+b0.value || 0) === 5)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass non warp 2",}, b1, false, false, "W", null);
+}
+return "";
+}; })
+
+// Sprite1 Wverify runs warp %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["Go=PJS7BFXYo_qi2S:kQ"];
+const b1 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ_verify_runs_warp_ (p0) {
+b0.value = 0;
+for (var a0 = 5; a0 >= 0.5; a0--) {
+thread.timer = timer();
+var a1 = Math.max(0, 1000 * 0);
+runtime.requestRedraw();
+while (thread.timer.timeElapsed() < a1) {
+if (isStuck()) yield;
+}
+thread.timer = null;
+}
+if (!compareEqual(b0.value, 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"fail did not run warp",}, b1, true, false, "Z", null);
+}
+return ("warp: " + ("" + p0));
+return "";
+}; })
+
+// Sprite1 Zverify runs non warp %s
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = stage.variables["Go=PJS7BFXYo_qi2S:kQ"];
+const b1 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ_verify_runs_non_warp (p0) {
+b0.value = 0;
+for (var a0 = 5; a0 >= 0.5; a0--) {
+thread.timer = timer();
+var a1 = Math.max(0, 1000 * 0);
+runtime.requestRedraw();
+yield;
+while (thread.timer.timeElapsed() < a1) {
+yield;
+}
+thread.timer = null;
+yield;
+}
+if (compareEqual(b0.value, 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"fail ran warp",}, b1, false, false, "L", null);
+}
+return ("non warp: " + ("" + p0));
+return "";
+}; })

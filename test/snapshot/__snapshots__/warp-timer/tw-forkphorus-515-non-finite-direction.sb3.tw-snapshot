@@ -1,0 +1,28 @@
+// TW Snapshot
+// Input SHA-256: 1fa5a314682ce218a097be41607e4eb456a2b046a47ca46d01a1033323afa544
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = runtime.getOpcodeFunction("motion_pointtowards");
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 4",}, b0, false, false, "h", null);
+target.setDirection(95);
+if ((target.direction === 95)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass 1",}, b0, false, false, "o", null);
+}
+target.setDirection(((1 / 0) || 0));
+if ((target.direction === 95)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass 2",}, b0, false, false, "r", null);
+}
+target.setDirection(((0 / 0) || 0));
+if ((target.direction === 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass 3",}, b0, false, false, "u", null);
+}
+yield* executeInCompatibilityLayer({"TOWARDS":"Sprite2",}, b1, false, false, "g", null);
+if ((target.direction === 90)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass 4",}, b0, false, false, "y", null);
+}
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "w", null);
+retire(); return;
+}; })

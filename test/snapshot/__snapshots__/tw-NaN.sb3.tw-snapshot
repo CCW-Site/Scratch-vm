@@ -1,0 +1,71 @@
+// TW Snapshot
+// Input SHA-256: 2c124b6184d3cbeb3d692ba7a04266d8bf141c650a9cc43b28faf59ac394ee16
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 20",}, b0, false, false, "v", null);
+if ((("" + (0 * Infinity)).toLowerCase() === "NaN".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "6", null);
+}
+if (compareEqual((((0 * Infinity) || 0) * 1), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "#", null);
+}
+if ((("" + ((Math.acos(1.01) * 180) / Math.PI)).toLowerCase() === "NaN".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "9", null);
+}
+if (compareEqual(((((Math.acos(1.01) * 180) / Math.PI) || 0) * 1), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "(", null);
+}
+if ((("" + ((Math.asin(1.01) * 180) / Math.PI)).toLowerCase() === "NaN".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "*", null);
+}
+if (compareEqual(((((Math.asin(1.01) * 180) / Math.PI) || 0) * 1), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, ",", null);
+}
+if ((("" + (0 / 0)).toLowerCase() === "NaN".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, ".", null);
+}
+if (compareEqual((((0 / 0) || 0) * 1), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, ":", null);
+}
+if ((("" + Math.sqrt(-1)).toLowerCase() === "NaN".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "?", null);
+}
+if (compareEqual(((Math.sqrt(-1) || 0) * 1), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "@", null);
+}
+if ((("" + mod(0, 0)).toLowerCase() === "NaN".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "]", null);
+}
+if (compareEqual(((mod(0, 0) || 0) * 1), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "_", null);
+}
+if ((("" + Math.log(-1)).toLowerCase() === "NaN".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "{", null);
+}
+if (compareEqual(((Math.log(-1) || 0) * 1), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "}", null);
+}
+if ((("" + (Math.log(-1) / Math.LN10)).toLowerCase() === "NaN".toLowerCase())) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "aa", null);
+}
+if (compareEqual((((Math.log(-1) / Math.LN10) || 0) * 1), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "ac", null);
+}
+if (compareEqual((((Math.round(Math.sin((Math.PI * ((1 / 0) || 0)) / 180) * 1e10) / 1e10) || 0) * 1), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "ae", null);
+}
+if (compareEqual((((Math.round(Math.cos((Math.PI * ((1 / 0) || 0)) / 180) * 1e10) / 1e10) || 0) * 1), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "ag", null);
+}
+if (compareEqual(((tan(((1 / 0) || 0)) || 0) * 1), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "ai", null);
+}
+if (compareEqual(((runtime.ext_scratch3_operators._random((-1 / 0), (1 / 0)) || 0) * 1), 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "ak", null);
+}
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "7", null);
+retire(); return;
+}; })

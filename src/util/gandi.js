@@ -167,7 +167,7 @@ class Gandi {
                 item.name = gandiAsset.name;
                 item.md5ext = gandiAsset.md5;
                 item.dataFormat = gandiAsset.dataFormat.toLowerCase();
-                if (item.dataFormat === 'py' || item.dataFormat === 'json') {
+                if (item.dataFormat === 'py') {
                     // py and json file need GandiPython extension to run
                     extensions.add('GandiPython');
                 }

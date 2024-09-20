@@ -1,24 +1,8 @@
-/**
- * Copyright (C) 2021 Thomas Weber
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
- * as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- */
-
 const log = require('../util/log');
 const Cast = require('../util/cast');
+const BlockType = require('../extension-support/block-type');
 const VariablePool = require('./variable-pool');
 const jsexecute = require('./jsexecute');
-const {disableToString} = require('./util');
 const environment = require('./environment');
 
 // Imported for JSDoc types, not to actually use
@@ -72,9 +56,11 @@ const generatorNameVariablePool = new VariablePool('gen');
  * @property {() => string} asNumberOrNaN
  * @property {() => string} asString
  * @property {() => string} asBoolean
+ * @property {() => string} asColor
  * @property {() => string} asUnknown
  * @property {() => string} asSafe
  * @property {() => boolean} isAlwaysNumber
+ * @property {() => boolean} isAlwaysNumberOrNaN
  * @property {() => boolean} isNeverNumber
  */
 
@@ -117,6 +103,10 @@ class TypedInput {
         return `toBoolean(${this.source})`;
     }
 
+    asColor () {
+        return this.asUnknown();
+    }
+
     asUnknown () {
         return this.source;
     }
@@ -131,6 +121,10 @@ class TypedInput {
 
     isAlwaysNumber () {
         return this.type === TYPE_NUMBER;
+    }
+
+    isAlwaysNumberOrNaN () {
+        return this.type === TYPE_NUMBER || this.type === TYPE_NUMBER_NAN;
     }
 
     isNeverNumber () {
@@ -155,6 +149,10 @@ class ConstantInput {
             // Using the constant value allows numbers such as "010" to be interpreted as 8 (or SyntaxError in strict mode) instead of 10.
             return numberValue.toString();
         }
+        // numberValue is one of 0, -0, or NaN
+        if (Object.is(numberValue, -0)) {
+            return '-0';
+        }
         return '0';
     }
 
@@ -169,6 +167,15 @@ class ConstantInput {
     asBoolean () {
         // Compute at compilation time
         return Cast.toBoolean(this.constantValue).toString();
+    }
+
+    asColor () {
+        // Attempt to parse hex code at compilation time
+        if (/^#[0-9a-f]{6,8}$/i.test(this.constantValue)) {
+            const hex = this.constantValue.substr(1);
+            return Number.parseInt(hex, 16).toString();
+        }
+        return this.asUnknown();
     }
 
     asUnknown () {
@@ -201,6 +208,10 @@ class ConstantInput {
             return this.constantValue.toString().trim() !== '';
         }
         return true;
+    }
+
+    isAlwaysNumberOrNaN () {
+        return this.isAlwaysNumber();
     }
 
     isNeverNumber () {
@@ -267,6 +278,10 @@ class VariableInput {
         return `toBoolean(${this.source})`;
     }
 
+    asColor () {
+        return this.asUnknown();
+    }
+
     asUnknown () {
         return this.source;
     }
@@ -282,6 +297,13 @@ class VariableInput {
         return false;
     }
 
+    isAlwaysNumberOrNaN () {
+        if (this._value) {
+            return this._value.isAlwaysNumberOrNaN();
+        }
+        return false;
+    }
+
     isNeverNumber () {
         if (this._value) {
             return this._value.isNeverNumber();
@@ -289,20 +311,6 @@ class VariableInput {
         return false;
     }
 }
-
-// Running toString() on any of these methods is a mistake.
-disableToString(ConstantInput.prototype);
-disableToString(ConstantInput.prototype.asNumber);
-disableToString(ConstantInput.prototype.asString);
-disableToString(ConstantInput.prototype.asBoolean);
-disableToString(ConstantInput.prototype.asUnknown);
-disableToString(ConstantInput.prototype.asSafe);
-disableToString(TypedInput.prototype);
-disableToString(TypedInput.prototype.asNumber);
-disableToString(TypedInput.prototype.asString);
-disableToString(TypedInput.prototype.asBoolean);
-disableToString(TypedInput.prototype.asUnknown);
-disableToString(TypedInput.prototype.asSafe);
 
 const getNamesOfCostumesAndSounds = runtime => {
     const result = new Set();
@@ -390,6 +398,7 @@ class JSGenerator {
         this._setupVariables = {};
 
         this.descendedIntoModulo = false;
+        this.isInHat = false;
 
         this.debug = this.target.runtime.debug;
     }
@@ -439,8 +448,12 @@ class JSGenerator {
         case 'args.ccw_hat_parameter':
             return new TypedInput(`(thread.hatParam ? thread.hatParam['${node.index}']: null)`, TYPE_UNKNOWN);
 
+        case 'addons.call':
+            return new TypedInput(`(${this.descendAddonCall(node)})`, TYPE_UNKNOWN);
+
         case 'args.boolean':
             return new TypedInput(`toBoolean(p${node.index})`, TYPE_BOOLEAN);
+
         case 'args.stringNumber':
             return new TypedInput(`p${node.index}`, TYPE_UNKNOWN);
 
@@ -450,6 +463,9 @@ class JSGenerator {
 
         case 'constant':
             return this.safeConstantInput(node.value);
+
+        case 'counter.get':
+            return new TypedInput('runtime.ext_scratch3_control._counter', TYPE_NUMBER);
 
         case 'keyboard.pressed':
             return new TypedInput(`runtime.ioDevices.keyboard.getKeyIsDown(${this.descendInput(node.key).asSafe()})`, TYPE_BOOLEAN);
@@ -461,7 +477,7 @@ class JSGenerator {
         case 'list.get': {
             const index = this.descendInput(node.index);
             if (environment.supportsNullishCoalescing) {
-                if (index.isAlwaysNumber()) {
+                if (index.isAlwaysNumberOrNaN()) {
                     return new TypedInput(`(${this.referenceVariable(node.list)}.value[(${index.asNumber()} | 0) - 1] ?? "")`, TYPE_UNKNOWN);
                 }
                 if (index instanceof ConstantInput && index.constantValue === 'last') {
@@ -489,9 +505,9 @@ class JSGenerator {
         case 'motion.direction':
             return new TypedInput('target.direction', TYPE_NUMBER);
         case 'motion.x':
-            return new TypedInput('target.x', TYPE_NUMBER);
+            return new TypedInput('limitPrecision(target.x)', TYPE_NUMBER);
         case 'motion.y':
-            return new TypedInput('target.y', TYPE_NUMBER);
+            return new TypedInput('limitPrecision(target.y)', TYPE_NUMBER);
 
         case 'mouse.down':
             return new TypedInput('runtime.ioDevices.mouse.getIsDown()', TYPE_BOOLEAN);
@@ -500,13 +516,17 @@ class JSGenerator {
         case 'mouse.y':
             return new TypedInput('runtime.ioDevices.mouse.getScratchY()', TYPE_NUMBER);
 
+        case 'noop':
+            return new TypedInput('""', TYPE_STRING);
+
         case 'op.abs':
             return new TypedInput(`Math.abs(${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER);
         case 'op.acos':
             // Needs to be marked as NaN because Math.acos(1.0001) === NaN
             return new TypedInput(`((Math.acos(${this.descendInput(node.value).asNumber()}) * 180) / Math.PI)`, TYPE_NUMBER_NAN);
         case 'op.add':
-            return new TypedInput(`(${this.descendInput(node.left).asNumber()} + ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER);
+            // Needs to be marked as NaN because Infinity + -Infinity === NaN
+            return new TypedInput(`(${this.descendInput(node.left).asNumber()} + ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER_NAN);
         case 'op.and':
             return new TypedInput(`(${this.descendInput(node.left).asBoolean()} && ${this.descendInput(node.right).asBoolean()})`, TYPE_BOOLEAN);
         case 'op.asin':
@@ -519,7 +539,7 @@ class JSGenerator {
         case 'op.contains':
             return new TypedInput(`(${this.descendInput(node.string).asString()}.toLowerCase().indexOf(${this.descendInput(node.contains).asString()}.toLowerCase()) !== -1)`, TYPE_BOOLEAN);
         case 'op.cos':
-            return new TypedInput(`(Math.round(Math.cos((Math.PI * ${this.descendInput(node.value).asNumber()}) / 180) * 1e10) / 1e10)`, TYPE_NUMBER);
+            return new TypedInput(`(Math.round(Math.cos((Math.PI * ${this.descendInput(node.value).asNumber()}) / 180) * 1e10) / 1e10)`, TYPE_NUMBER_NAN);
         case 'op.divide':
             // Needs to be marked as NaN because 0 / 0 === NaN
             return new TypedInput(`(${this.descendInput(node.left).asNumber()} / ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER_NAN);
@@ -553,13 +573,17 @@ class JSGenerator {
         case 'op.greater': {
             const left = this.descendInput(node.left);
             const right = this.descendInput(node.right);
-            // When both operands are known to never be numbers, only use string comparison to avoid all number parsing.
+            // When the left operand is a number and the right operand is a number or NaN, we can use >
+            if (left.isAlwaysNumber() && right.isAlwaysNumberOrNaN()) {
+                return new TypedInput(`(${left.asNumber()} > ${right.asNumberOrNaN()})`, TYPE_BOOLEAN);
+            }
+            // When the left operand is a number or NaN and the right operand is a number, we can negate <=
+            if (left.isAlwaysNumberOrNaN() && right.isAlwaysNumber()) {
+                return new TypedInput(`!(${left.asNumberOrNaN()} <= ${right.asNumber()})`, TYPE_BOOLEAN);
+            }
+            // When either operand is known to never be a number, avoid all number parsing.
             if (left.isNeverNumber() || right.isNeverNumber()) {
                 return new TypedInput(`(${left.asString()}.toLowerCase() > ${right.asString()}.toLowerCase())`, TYPE_BOOLEAN);
-            }
-            // When both operands are known to be numbers, we can use >
-            if (left.isAlwaysNumber() && right.isAlwaysNumber()) {
-                return new TypedInput(`(${left.asNumber()} > ${right.asNumber()})`, TYPE_BOOLEAN);
             }
             // No compile-time optimizations possible - use fallback method.
             return new TypedInput(`compareGreaterThan(${left.asUnknown()}, ${right.asUnknown()})`, TYPE_BOOLEAN);
@@ -571,13 +595,17 @@ class JSGenerator {
         case 'op.less': {
             const left = this.descendInput(node.left);
             const right = this.descendInput(node.right);
-            // When both operands are known to never be numbers, only use string comparison to avoid all number parsing.
+            // When the left operand is a number or NaN and the right operand is a number, we can use <
+            if (left.isAlwaysNumberOrNaN() && right.isAlwaysNumber()) {
+                return new TypedInput(`(${left.asNumberOrNaN()} < ${right.asNumber()})`, TYPE_BOOLEAN);
+            }
+            // When the left operand is a number and the right operand is a number or NaN, we can negate >=
+            if (left.isAlwaysNumber() && right.isAlwaysNumberOrNaN()) {
+                return new TypedInput(`!(${left.asNumber()} >= ${right.asNumberOrNaN()})`, TYPE_BOOLEAN);
+            }
+            // When either operand is known to never be a number, avoid all number parsing.
             if (left.isNeverNumber() || right.isNeverNumber()) {
                 return new TypedInput(`(${left.asString()}.toLowerCase() < ${right.asString()}.toLowerCase())`, TYPE_BOOLEAN);
-            }
-            // When both operands are known to be numbers, we can use >
-            if (left.isAlwaysNumber() && right.isAlwaysNumber()) {
-                return new TypedInput(`(${left.asNumber()} < ${right.asNumber()})`, TYPE_BOOLEAN);
             }
             // No compile-time optimizations possible - use fallback method.
             return new TypedInput(`compareLessThan(${left.asUnknown()}, ${right.asUnknown()})`, TYPE_BOOLEAN);
@@ -603,30 +631,73 @@ class JSGenerator {
             return new TypedInput(`(${this.descendInput(node.left).asBoolean()} || ${this.descendInput(node.right).asBoolean()})`, TYPE_BOOLEAN);
         case 'op.random':
             if (node.useInts) {
+                // Both inputs are ints, so we know neither are NaN
                 return new TypedInput(`randomInt(${this.descendInput(node.low).asNumber()}, ${this.descendInput(node.high).asNumber()})`, TYPE_NUMBER);
             }
             if (node.useFloats) {
-                return new TypedInput(`randomFloat(${this.descendInput(node.low).asNumber()}, ${this.descendInput(node.high).asNumber()})`, TYPE_NUMBER);
+                return new TypedInput(`randomFloat(${this.descendInput(node.low).asNumber()}, ${this.descendInput(node.high).asNumber()})`, TYPE_NUMBER_NAN);
             }
-            return new TypedInput(`runtime.ext_scratch3_operators._random(${this.descendInput(node.low).asUnknown()}, ${this.descendInput(node.high).asUnknown()})`, TYPE_NUMBER);
+            return new TypedInput(`runtime.ext_scratch3_operators._random(${this.descendInput(node.low).asUnknown()}, ${this.descendInput(node.high).asUnknown()})`, TYPE_NUMBER_NAN);
         case 'op.round':
             return new TypedInput(`Math.round(${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER);
         case 'op.sin':
-            return new TypedInput(`(Math.round(Math.sin((Math.PI * ${this.descendInput(node.value).asNumber()}) / 180) * 1e10) / 1e10)`, TYPE_NUMBER);
+            return new TypedInput(`(Math.round(Math.sin((Math.PI * ${this.descendInput(node.value).asNumber()}) / 180) * 1e10) / 1e10)`, TYPE_NUMBER_NAN);
         case 'op.sqrt':
             // Needs to be marked as NaN because Math.sqrt(-1) === NaN
             return new TypedInput(`Math.sqrt(${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER_NAN);
         case 'op.subtract':
-            return new TypedInput(`(${this.descendInput(node.left).asNumber()} - ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER);
+            // Needs to be marked as NaN because Infinity - Infinity === NaN
+            return new TypedInput(`(${this.descendInput(node.left).asNumber()} - ${this.descendInput(node.right).asNumber()})`, TYPE_NUMBER_NAN);
         case 'op.tan':
-            return new TypedInput(`Math.tan(${this.descendInput(node.value).asNumber()} * Math.PI / 180)`, TYPE_NUMBER);
+            return new TypedInput(`tan(${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER_NAN);
         case 'op.10^':
             return new TypedInput(`(10 ** ${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER);
+
+        //TODO - don't compatiable with tw procedures.call reporter
+        // we use procedures.callWithReturn instead
+        // should be compatible with tw procedures.call reporter in future
+        case 'procedures.call': {
+            const procedureCode = node.code;
+            const procedureVariant = node.variant;
+            const procedureData = this.ir.procedures[procedureVariant];
+            if (procedureData.stack === null) {
+                // TODO still need to evaluate arguments for side effects
+                return new TypedInput('""', TYPE_STRING);
+            }
+
+            // Recursion makes this complicated because:
+            //  - We need to yield *between* each call in the same command block
+            //  - We need to evaluate arguments *before* that yield happens
+
+            const procedureReference = `thread.procedures["${sanitize(procedureVariant)}"]`;
+            const args = [];
+            for (const input of node.arguments) {
+                args.push(this.descendInput(input).asSafe());
+            }
+            const joinedArgs = args.join(',');
+
+            const yieldForRecursion = !this.isWarp && procedureCode === this.script.procedureCode;
+            const yieldForHat = this.isInHat;
+            if (yieldForRecursion || yieldForHat) {
+                const runtimeFunction = procedureData.yields ? 'yieldThenCallGenerator' : 'yieldThenCall';
+                return new TypedInput(`(yield* ${runtimeFunction}(${procedureReference}, ${joinedArgs}))`, TYPE_UNKNOWN);
+            }
+            if (procedureData.yields) {
+                return new TypedInput(`(yield* ${procedureReference}(${joinedArgs}))`, TYPE_UNKNOWN);
+            }
+            return new TypedInput(`${procedureReference}(${joinedArgs})`, TYPE_UNKNOWN);
+        }
+
+        case 'procedures.callWithReturn': {
+            const source = this.descendProcedure(node);
+            // if (!source) break;
+            return new TypedInput(source, TYPE_PROCEDURE_RETURN);
+        }
 
         case 'sensing.answer':
             return new TypedInput(`runtime.ext_scratch3_sensing._answer`, TYPE_STRING);
         case 'sensing.colorTouchingColor':
-            return new TypedInput(`target.colorIsTouchingColor(colorToList(${this.descendInput(node.target).asUnknown()}), colorToList(${this.descendInput(node.mask).asUnknown()}))`, TYPE_BOOLEAN);
+            return new TypedInput(`target.colorIsTouchingColor(colorToList(${this.descendInput(node.target).asColor()}), colorToList(${this.descendInput(node.mask).asColor()}))`, TYPE_BOOLEAN);
         case 'sensing.date':
             return new TypedInput(`(new Date().getDate())`, TYPE_NUMBER);
         case 'sensing.dayofweek':
@@ -642,14 +713,52 @@ class JSGenerator {
             return new TypedInput(`(new Date().getMinutes())`, TYPE_NUMBER);
         case 'sensing.month':
             return new TypedInput(`(new Date().getMonth() + 1)`, TYPE_NUMBER);
-        case 'sensing.of':
-            return new TypedInput(`runtime.ext_scratch3_sensing.getAttributeOf({OBJECT: ${this.descendInput(node.object).asString()}, PROPERTY: "${sanitize(node.property)}" })`, TYPE_UNKNOWN);
+        case 'sensing.of': {
+            const object = this.descendInput(node.object).asString();
+            const property = node.property;
+            if (node.object.kind === 'constant') {
+                const isStage = node.object.value === '_stage_';
+                // Note that if target isn't a stage, we can't assume it exists
+                const objectReference = isStage ? 'stage' : this.evaluateOnce(`runtime.getSpriteTargetByName(${object})`);
+                if (property === 'volume') {
+                    return new TypedInput(`(${objectReference} ? ${objectReference}.volume : 0)`, TYPE_NUMBER);
+                }
+                if (isStage) {
+                    switch (property) {
+                    case 'background #':
+                        // fallthrough for scratch 1.0 compatibility
+                    case 'backdrop #':
+                        return new TypedInput(`(${objectReference}.currentCostume + 1)`, TYPE_NUMBER);
+                    case 'backdrop name':
+                        return new TypedInput(`${objectReference}.getCostumes()[${objectReference}.currentCostume].name`, TYPE_STRING);
+                    }
+                } else {
+                    switch (property) {
+                    case 'x position':
+                        return new TypedInput(`(${objectReference} ? ${objectReference}.x : 0)`, TYPE_NUMBER);
+                    case 'y position':
+                        return new TypedInput(`(${objectReference} ? ${objectReference}.y : 0)`, TYPE_NUMBER);
+                    case 'direction':
+                        return new TypedInput(`(${objectReference} ? ${objectReference}.direction : 0)`, TYPE_NUMBER);
+                    case 'costume #':
+                        return new TypedInput(`(${objectReference} ? ${objectReference}.currentCostume + 1 : 0)`, TYPE_NUMBER);
+                    case 'costume name':
+                        return new TypedInput(`(${objectReference} ? ${objectReference}.getCostumes()[${objectReference}.currentCostume].name : 0)`, TYPE_UNKNOWN);
+                    case 'size':
+                        return new TypedInput(`(${objectReference} ? ${objectReference}.size : 0)`, TYPE_NUMBER);
+                    }
+                }
+                const variableReference = this.evaluateOnce(`${objectReference} && ${objectReference}.lookupVariableByNameAndType("${sanitize(property)}", "", true)`);
+                return new TypedInput(`(${variableReference} ? ${variableReference}.value : 0)`, TYPE_UNKNOWN);
+            }
+            return new TypedInput(`runtime.ext_scratch3_sensing.getAttributeOf({OBJECT: ${object}, PROPERTY: "${sanitize(property)}" })`, TYPE_UNKNOWN);
+        }
         case 'sensing.second':
             return new TypedInput(`(new Date().getSeconds())`, TYPE_NUMBER);
         case 'sensing.touching':
             return new TypedInput(`target.isTouchingObject(${this.descendInput(node.object).asUnknown()})`, TYPE_BOOLEAN);
         case 'sensing.touchingColor':
-            return new TypedInput(`target.isTouchingColor(colorToList(${this.descendInput(node.color).asUnknown()}))`, TYPE_BOOLEAN);
+            return new TypedInput(`target.isTouchingColor(colorToList(${this.descendInput(node.color).asColor()}))`, TYPE_BOOLEAN);
         case 'sensing.username':
             return new TypedInput('runtime.ioDevices.userData.getUsername()', TYPE_STRING);
         case 'sensing.year':
@@ -664,11 +773,6 @@ class JSGenerator {
         case 'var.get':
             return this.descendVariable(node.variable);
 
-        case 'procedures.callWithReturn': {
-            const source = this.descendProcedure(node);
-            // if (!source) break;
-            return new TypedInput(source, TYPE_PROCEDURE_RETURN);
-        }
         case 'noop': {
             return new TypedInput('""', TYPE_STRING);
         }
@@ -684,20 +788,36 @@ class JSGenerator {
     descendStackedBlock (node) {
         switch (node.kind) {
         case 'addons.call':
-            this.source += `yield* callAddonBlock("${sanitize(node.code)}","${sanitize(node.blockId)}",{`;
-            this.yielded();
-            for (const argumentName of Object.keys(node.arguments)) {
-                const argumentValue = node.arguments[argumentName];
-                this.source += `"${sanitize(argumentName)}":${this.descendInput(argumentValue).asSafe()},`;
-            }
-            this.source += '});\n';
+            this.source += `${this.descendAddonCall(node)};\n`;
             break;
 
         case 'compat': {
             // If the last command in a loop returns a promise, immediately continue to the next iteration.
             // If you don't do this, the loop effectively yields twice per iteration and will run at half-speed.
             const isLastInLoop = this.isLastBlockInLoop();
-            this.source += `${this.generateCompatibilityLayerCall(node, isLastInLoop)};\n`;
+
+            const blockType = node.blockType;
+            if (blockType === BlockType.COMMAND || blockType === BlockType.HAT) {
+                this.source += `${this.generateCompatibilityLayerCall(node, isLastInLoop)};\n`;
+            } else if (blockType === BlockType.CONDITIONAL || blockType === BlockType.LOOP) {
+                const branchVariable = this.localVariables.next();
+                this.source += `const ${branchVariable} = createBranchInfo(${blockType === BlockType.LOOP});\n`;
+                this.source += `while (${branchVariable}.branch = +(${this.generateCompatibilityLayerCall(node, false, branchVariable)})) {\n`;
+                this.source += `switch (${branchVariable}.branch) {\n`;
+                for (const index in node.substacks) {
+                    this.source += `case ${+index}: {\n`;
+                    this.descendStack(node.substacks[index], new Frame(false));
+                    this.source += `break;\n`;
+                    this.source += `}\n`; // close case
+                }
+                this.source += '}\n'; // close switch
+                this.source += `if (!${branchVariable}.isLoop) break;\n`;
+                this.yieldLoop();
+                this.source += '}\n'; // close while
+            } else {
+                throw new Error(`Unknown block type: ${blockType}`);
+            }
+
             if (isLastInLoop) {
                 this.source += 'if (hasResumedFromPromise) {hasResumedFromPromise = false;continue;}\n';
             }
@@ -763,7 +883,7 @@ class JSGenerator {
             // always yield at least once, even on 0 second durations
             this.yieldNotWarp();
             this.source += `while (thread.timer.timeElapsed() < ${duration}) {\n`;
-            this.yieldNotWarpOrStuck();
+            this.yieldStuckOrNotWarp();
             this.source += '}\n';
             this.source += 'thread.timer = null;\n';
             break;
@@ -771,7 +891,7 @@ class JSGenerator {
         case 'control.waitUntil': {
             this.resetVariableInputs();
             this.source += `while (!${this.descendInput(node.condition).asBoolean()}) {\n`;
-            this.yieldNotWarpOrStuck();
+            this.yieldStuckOrNotWarp();
             this.source += `}\n`;
             break;
         }
@@ -779,8 +899,45 @@ class JSGenerator {
             this.resetVariableInputs();
             this.source += `while (${this.descendInput(node.condition).asBoolean()}) {\n`;
             this.descendStack(node.do, new Frame(true));
-            this.yieldLoop();
+            if (node.warpTimer) {
+                this.yieldStuckOrNotWarp();
+            } else {
+                this.yieldLoop();
+            }
             this.source += `}\n`;
+            break;
+
+        case 'counter.clear':
+            this.source += 'runtime.ext_scratch3_control._counter = 0;\n';
+            break;
+        case 'counter.increment':
+            this.source += 'runtime.ext_scratch3_control._counter++;\n';
+            break;
+
+        case 'hat.edge':
+            this.isInHat = true;
+            this.source += '{\n';
+            // For exact Scratch parity, evaluate the input before checking old edge state.
+            // Can matter if the input is not instantly evaluated.
+            this.source += `const resolvedValue = ${this.descendInput(node.condition).asBoolean()};\n`;
+            this.source += `const id = "${sanitize(node.id)}";\n`;
+            this.source += 'const hasOldEdgeValue = target.hasEdgeActivatedValue(id);\n';
+            this.source += `const oldEdgeValue = target.updateEdgeActivatedValue(id, resolvedValue);\n`;
+            this.source += `const edgeWasActivated = hasOldEdgeValue ? (!oldEdgeValue && resolvedValue) : resolvedValue;\n`;
+            this.source += `if (!edgeWasActivated) {\n`;
+            this.retire();
+            this.source += '}\n';
+            this.source += 'yield;\n';
+            this.source += '}\n';
+            this.isInHat = false;
+            break;
+        case 'hat.predicate':
+            this.isInHat = true;
+            this.source += `if (!${this.descendInput(node.condition).asBoolean()}) {\n`;
+            this.retire();
+            this.source += '}\n';
+            this.source += 'yield;\n';
+            this.isInHat = false;
             break;
 
         case 'event.broadcast':
@@ -876,13 +1033,15 @@ class JSGenerator {
             break;
 
         case 'looks.backwardLayers':
-            this.source += `target.goBackwardLayers(${this.descendInput(node.layers).asNumber()});\n`;
+            if (!this.target.isStage) {
+                this.source += `target.goBackwardLayers(${this.descendInput(node.layers).asNumber()});\n`;
+            }
             break;
         case 'looks.clearEffects':
             this.source += 'target.clearEffects();\n';
             break;
         case 'looks.changeEffect':
-            if (this.target.effects.hasOwnProperty(node.effect)) {
+            if (Object.prototype.hasOwnProperty.call(this.target.effects, node.effect)) {
                 this.source += `target.setEffect("${sanitize(node.effect)}", runtime.ext_scratch3_looks.clampEffect("${sanitize(node.effect)}", ${this.descendInput(node.value).asNumber()} + target.effects["${sanitize(node.effect)}"]));\n`;
             }
             break;
@@ -890,13 +1049,19 @@ class JSGenerator {
             this.source += `target.setSize(target.size + ${this.descendInput(node.size).asNumber()});\n`;
             break;
         case 'looks.forwardLayers':
-            this.source += `target.goForwardLayers(${this.descendInput(node.layers).asNumber()});\n`;
+            if (!this.target.isStage) {
+                this.source += `target.goForwardLayers(${this.descendInput(node.layers).asNumber()});\n`;
+            }
             break;
         case 'looks.goToBack':
-            this.source += 'target.goToBack();\n';
+            if (!this.target.isStage) {
+                this.source += 'target.goToBack();\n';
+            }
             break;
         case 'looks.goToFront':
-            this.source += 'target.goToFront();\n';
+            if (!this.target.isStage) {
+                this.source += 'target.goToFront();\n';
+            }
             break;
         case 'looks.hide':
             this.source += 'target.setVisible(false);\n';
@@ -909,7 +1074,7 @@ class JSGenerator {
             this.source += 'target.setCostume(target.currentCostume + 1);\n';
             break;
         case 'looks.setEffect':
-            if (this.target.effects.hasOwnProperty(node.effect)) {
+            if (Object.prototype.hasOwnProperty.call(this.target.effects, node.effect)) {
                 this.source += `target.setEffect("${sanitize(node.effect)}", runtime.ext_scratch3_looks.clampEffect("${sanitize(node.effect)}", ${this.descendInput(node.value).asNumber()}));\n`;
             }
             break;
@@ -927,6 +1092,12 @@ class JSGenerator {
             this.source += `runtime.ext_scratch3_looks._setCostume(target, ${this.descendInput(node.costume).asSafe()});\n`;
             break;
 
+        case 'motion.changeX':
+            this.source += `target.setXY(target.x + ${this.descendInput(node.dx).asNumber()}, target.y);\n`;
+            break;
+        case 'motion.changeY':
+            this.source += `target.setXY(target.x, target.y + ${this.descendInput(node.dy).asNumber()});\n`;
+            break;
         case 'motion.ifOnEdgeBounce':
             this.source += `runtime.ext_scratch3_motion._ifOnEdgeBounce(target);\n`;
             break;
@@ -936,18 +1107,25 @@ class JSGenerator {
         case 'motion.setRotationStyle':
             this.source += `target.setRotationStyle("${sanitize(node.style)}");\n`;
             break;
-        case 'motion.setXY':
+        case 'motion.setX': // fallthrough
+        case 'motion.setY': // fallthrough
+        case 'motion.setXY': {
             this.descendedIntoModulo = false;
-            this.source += `target.setXY(${this.descendInput(node.x).asNumber()}, ${this.descendInput(node.y).asNumber()});\n`;
+            const x = 'x' in node ? this.descendInput(node.x).asNumber() : 'target.x';
+            const y = 'y' in node ? this.descendInput(node.y).asNumber() : 'target.y';
+            this.source += `target.setXY(${x}, ${y});\n`;
             if (this.descendedIntoModulo) {
                 this.source += `if (target.interpolationData) target.interpolationData = null;\n`;
             }
             break;
+        }
         case 'motion.step':
             this.source += `runtime.ext_scratch3_motion._moveSteps(${this.descendInput(node.steps).asNumber()}, target);\n`;
             break;
         case 'motion.movegrid':
             this.source += `runtime.ext_scratch3_motion._moveSteps(${this.descendInput(node.grids).asNumber() * 40}, target);\n`;
+
+        case 'noop':
             break;
         case 'noop':
             return new TypedInput('""', TYPE_STRING);
@@ -977,7 +1155,7 @@ class JSGenerator {
             this.source += `${PEN_EXT}._setPenShadeToNumber(${this.descendInput(node.shade).asNumber()}, target);\n`;
             break;
         case 'pen.setColor':
-            this.source += `${PEN_EXT}._setPenColorToColor(${this.descendInput(node.color).asUnknown()}, target);\n`;
+            this.source += `${PEN_EXT}._setPenColorToColor(${this.descendInput(node.color).asColor()}, target);\n`;
             break;
         case 'pen.setParam':
             this.source += `${PEN_EXT}._setOrChangeColorParam(${this.descendInput(node.param).asString()}, ${this.descendInput(node.value).asNumber()}, ${PEN_STATE}, false);\n`;
@@ -1029,14 +1207,33 @@ class JSGenerator {
             this.source += `runtime.monitorBlocks.changeBlock({ id: "${sanitize(node.variable.id)}", element: "checkbox", value: true }, runtime);\n`;
             break;
 
-        case 'visualReport':
-            this.source += `runtime.visualReport("${sanitize(this.script.topBlockId)}", ${this.descendInput(node.input).asUnknown()});\n`;
+        case 'visualReport': {
+            const value = this.localVariables.next();
+            this.source += `const ${value} = ${this.descendInput(node.input).asUnknown()};`;
+            // blocks like legacy no-ops can return a literal `undefined`
+            this.source += `if (${value} !== undefined) runtime.visualReport("${sanitize(this.script.topBlockId)}", ${value});\n`;
             break;
+        }
 
         default:
             log.warn(`JS: Unknown stacked block: ${node.kind}`, node);
             throw new Error(`JS: Unknown stacked block: ${node.kind}`);
         }
+    }
+
+    /**
+     * Compile a Record of input objects into a safe JS string.
+     * @param {Record<string, unknown>} inputs
+     * @returns {string}
+     */
+    descendInputRecord (inputs) {
+        let result = '{';
+        for (const name of Object.keys(inputs)) {
+            const node = inputs[name];
+            result += `"${sanitize(name)}":${this.descendInput(node).asSafe()},`;
+        }
+        result += '}';
+        return result;
     }
 
     resetVariableInputs () {
@@ -1061,7 +1258,7 @@ class JSGenerator {
     }
 
     descendVariable (variable) {
-        if (this.variableInputs.hasOwnProperty(variable.id)) {
+        if (Object.prototype.hasOwnProperty.call(this.variableInputs, variable.id)) {
             return this.variableInputs[variable.id];
         }
         const input = new VariableInput(`${this.referenceVariable(variable)}.value`);
@@ -1089,19 +1286,23 @@ class JSGenerator {
         const procedureReference = `thread.procedures["${sanitize(procedureVariant)}"]`;
         const yieldForRecursion = !this.isWarp && procedureCode === this.script.procedureCode;
         let source = '';
+
+        // for stack
         if (node.kind === 'procedures.call') {
             if (yieldForRecursion) {
-                source += 'yield;\n';
-                this.yielded();
+                this.yieldNotWarp();
             }
             if (procedureData.yields) {
                 source += 'yield* ';
             }
-            source += `${procedureReference}(${joinedArgs})`;
+            source += `${procedureReference}(${joinedArgs});`;
             return source;
         }
+
+        // for input
         if (node.kind === 'procedures.callWithReturn'){
-            if (yieldForRecursion) {
+            const yieldForHat = this.isInHat;
+            if (yieldForRecursion || yieldForHat) {
                 const runtimeFunction = procedureData.yields ? 'yieldThenCallGenerator' : 'yieldThenCall';
                 return `yield* ${runtimeFunction}(${procedureReference}, ${joinedArgs})`;
             }
@@ -1119,8 +1320,15 @@ class JSGenerator {
         return this.evaluateOnce(`stage.variables["${sanitize(variable.id)}"]`);
     }
 
+    descendAddonCall (node) {
+        const inputs = this.descendInputRecord(node.arguments);
+        const blockFunction = `runtime.getAddonBlock("${sanitize(node.code)}").callback`;
+        const blockId = `"${sanitize(node.blockId)}"`;
+        return `yield* executeInCompatibilityLayer(${inputs}, ${blockFunction}, ${this.isWarp}, false, ${blockId})`;
+    }
+
     evaluateOnce (source) {
-        if (this._setupVariables.hasOwnProperty(source)) {
+        if (Object.prototype.hasOwnProperty.call(this._setupVariables, source)) {
             return this._setupVariables[source];
         }
         const variable = this._setupVariablesPool.next();
@@ -1133,11 +1341,28 @@ class JSGenerator {
         // When in a procedure, return will only send us back to the previous procedure, so instead we yield back to the sequencer.
         // Outside of a procedure, return will correctly bring us back to the sequencer.
         if (this.isProcedure) {
-            this.source += 'retire();\n';
-            this.source += 'yield;\n';
+            this.source += 'retire(); yield;\n';
         } else {
-            this.source += 'retire();\n';
-            this.source += 'return;\n';
+            this.source += 'retire(); return;\n';
+        }
+    }
+
+    stopScript () {
+        if (this.isProcedure) {
+            this.source += 'return "";\n';
+        } else {
+            this.retire();
+        }
+    }
+
+    /**
+     * @param {string} valueJS JS code of value to return.
+     */
+    stopScriptAndReturn (valueJS) {
+        if (this.isProcedure) {
+            this.source += `return ${valueJS};\n`;
+        } else {
+            this.retire();
         }
     }
 
@@ -1162,7 +1387,7 @@ class JSGenerator {
 
     yieldLoop () {
         if (this.warpTimer) {
-            this.yieldNotWarpOrStuck();
+            this.yieldStuckOrNotWarp();
         } else {
             this.yieldNotWarp();
         }
@@ -1181,7 +1406,7 @@ class JSGenerator {
     /**
      * Write JS to yield the current thread if warp mode is disabled or if the script seems to be stuck.
      */
-    yieldNotWarpOrStuck () {
+    yieldStuckOrNotWarp () {
         if (this.isWarp) {
             this.source += 'if (isStuck()) yield;\n';
         } else {
@@ -1214,9 +1439,10 @@ class JSGenerator {
      * Generate a call into the compatibility layer.
      * @param {*} node The "compat" kind node to generate from.
      * @param {boolean} setFlags Whether flags should be set describing how this function was processed.
+     * @param {string|null} [frameName] Name of the stack frame variable, if any
      * @returns {string} The JS of the call.
      */
-    generateCompatibilityLayerCall (node, setFlags) {
+    generateCompatibilityLayerCall (node, setFlags, frameName = null) {
         const opcode = node.opcode;
 
         let result = 'yield* executeInCompatibilityLayer({';
@@ -1231,7 +1457,7 @@ class JSGenerator {
             result += `"${sanitize(fieldName)}":"${sanitize(field)}",`;
         }
         const opcodeFunction = this.evaluateOnce(`runtime.getOpcodeFunction("${sanitize(opcode)}")`);
-        result += `}, ${opcodeFunction}, ${this.isWarp}, ${setFlags})`;
+        result += `}, ${opcodeFunction}, ${this.isWarp}, ${setFlags}, "${sanitize(node.id)}", ${frameName})`;
 
         return result;
     }
@@ -1310,8 +1536,35 @@ class JSGenerator {
             log.info(`JS: ${this.target.getName()}: compiled ${this.script.procedureCode || 'script'}`, factory);
         }
 
+        if (JSGenerator.testingApparatus) {
+            JSGenerator.testingApparatus.report(this, factory);
+        }
+
         return fn;
     }
 }
+
+// For extensions.
+JSGenerator.unstable_exports = {
+    TYPE_NUMBER,
+    TYPE_STRING,
+    TYPE_BOOLEAN,
+    TYPE_UNKNOWN,
+    TYPE_NUMBER_NAN,
+    factoryNameVariablePool,
+    functionNameVariablePool,
+    generatorNameVariablePool,
+    VariablePool,
+    PEN_EXT,
+    PEN_STATE,
+    TypedInput,
+    ConstantInput,
+    VariableInput,
+    Frame,
+    sanitize
+};
+
+// Test hook used by automated snapshot testing.
+JSGenerator.testingApparatus = null;
 
 module.exports = JSGenerator;

@@ -1,0 +1,32 @@
+// TW Snapshot
+// Input SHA-256: 725e0683c8cd39c78a143727bf26f8827d1e9fd627eef68a772d8a3a06806c65
+
+// Sprite1 script
+(function factoryXYZ(thread) { const target = thread.target; const runtime = target.runtime; const stage = runtime.getTargetForStage();
+const b0 = runtime.getOpcodeFunction("looks_say");
+const b1 = stage.variables["`jEk@4|i[#Fk?(8x)AV.-my variable"];
+return function* genXYZ () {
+yield* executeInCompatibilityLayer({"MESSAGE":"plan 6",}, b0, false, false, "j", null);
+b1.value = runtime.ext_scratch3_operators._random(("an invalid number" + "."), 1);
+if (!(b1.value <= 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "m", null);
+}
+if (compareLessThan(b1.value, 1)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "r", null);
+}
+if ((("" + b1.value).toLowerCase().indexOf(".".toLowerCase()) !== -1)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "s", null);
+}
+b1.value = runtime.ext_scratch3_operators._random(1, ("an invalid number" + "."));
+if (!(b1.value <= 0)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "v", null);
+}
+if (compareLessThan(b1.value, 1)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "x", null);
+}
+if ((("" + b1.value).toLowerCase().indexOf(".".toLowerCase()) !== -1)) {
+yield* executeInCompatibilityLayer({"MESSAGE":"pass",}, b0, false, false, "A", null);
+}
+yield* executeInCompatibilityLayer({"MESSAGE":"end",}, b0, false, false, "y", null);
+retire(); return;
+}; })
