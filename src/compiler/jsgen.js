@@ -446,7 +446,7 @@ class JSGenerator {
             return new TypedInput(`${JSON.stringify(node.value)}`, TYPE_UNKNOWN);
 
         case 'args.ccw_hat_parameter':
-            return new TypedInput(`(thread.hatParam ? thread.hatParam['${node.index}']: null)`, TYPE_UNKNOWN);
+            return new TypedInput(`(thread.hatParam ? thread.hatParam["${sanitize(node.index)}"]: null)`, TYPE_UNKNOWN);
 
         case 'addons.call':
             return new TypedInput(`(${this.descendAddonCall(node)})`, TYPE_UNKNOWN);
