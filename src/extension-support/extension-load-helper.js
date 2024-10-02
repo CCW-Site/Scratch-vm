@@ -1,69 +1,118 @@
 // output a Scratch Object contains APIs all extension needed
-const BlockType = require('./block-type');
-const ArgumentType = require('./argument-type');
-const TargetType = require('./target-type');
-const Cast = require('../util/cast');
-const Color = require('../util/color');
-const createTranslate = require('./tw-l10n');
-const log = require('../util/log');
+const BlockType = require("./block-type");
+const ArgumentType = require("./argument-type");
+const TargetType = require("./target-type");
+const Cast = require("../util/cast");
+const Color = require("../util/color");
+const createTranslate = require("./tw-l10n");
+const log = require("../util/log");
+
+/**
+ * @typedef {{ info: unknown, Extension?: Function, extensionInstance?: unknown }} RegisteredExtension
+ */
+
+/**
+ * @typedef {{ result: RegisteredExtension[], source: 'iife' | 'tempExt' | 'ExtensionLib' | 'scratchExtensions'}} RegisterResult
+ */
 
 let openVM = null;
-let translate = null;
-let needSetup = true;
-const pending = new Set();
+/** @type {{ resolve: (res: RegisterResult | undefined) => void, reject: (reason: unknown) => void, promise: Promise<RegisterResult | undefined>}=} */
+let loadingPromise;
+let globalScratch;
 
-const clearScratchAPI = id => {
-    pending.delete(id);
-    if (global.IIFEExtensionInfoList && id) {
-        global.IIFEExtensionInfoList = global.IIFEExtensionInfoList.filter(({extensionObject}) => extensionObject.info.extensionId !== id);
-    }
-    if (global.Scratch && pending.size === 0) {
-        global.Scratch.extensions = {
-            register: extensionInstance => {
-                const info = extensionInstance.getInfo();
-                throw new Error(`ScratchAPI: ${info.id} call extensions.register too late`);
-            }
-        };
-        global.Scratch.vm = null;
-        global.Scratch.runtime = null;
-        global.Scratch.renderer = null;
-        needSetup = true;
+function initalizePromise() {
+    const pm = {};
+    pm.promise = new Promise((resolve, reject) => {
+        [pm.resolve, pm.reject] = [resolve, reject];
+    });
+    return pm;
+}
+
+const clearScratchAPI = () => {
+    if (globalScratch) {
+        delete global.tempExt;
+        delete global.ExtensionLib;
+        delete global.scratchExt;
+        if (global.Scratch) {
+            global.Scratch = globalScratch;
+            globalScratch = undefined;
+        }
+        if (loadingPromise) loadingPromise.resolve();
     }
 };
 
-const setupScratchAPI = (vm, id) => {
-    pending.add(id);
-    if (!needSetup) {
-        return;
-    }
-    const registerExt = extensionInstance => {
+const setupScratchAPI = async (vm) => {
+    if (loadingPromise) await loadingPromise.promise;
+    loadingPromise = initalizePromise();
+
+    const registerExt = (extensionInstance, optMetadata) => {
         const info = extensionInstance.getInfo();
         const extensionId = info.id;
         const extensionObject = {
-            info: {
-                name: info.name,
-                extensionId
-            },
-            Extension: () => extensionInstance.constructor
+            info: Object.assign(
+                {
+                    name: info.name,
+                    extensionId,
+                },
+                optMetadata
+            ),
+            Extension: () => new Proxy(extensionInstance.constructor, {
+                construct() {
+                    return extensionInstance
+                }
+            }),
+            extensionInstance: extensionInstance,
         };
-        global.IIFEExtensionInfoList = global.IIFEExtensionInfoList || [];
-        global.IIFEExtensionInfoList.push({extensionObject, extensionInstance});
-        return;
+        loadingPromise.resolve({ source: "iife", result: [extensionObject] });
+        clearScratchAPI();
     };
+    Object.defineProperty(global, "tempExt", {
+        get() {},
+        set(v) {
+            loadingPromise.resolve(v);
+            clearScratchAPI();
+        },
+        configurable: true,
+    });
+    Object.defineProperty(global, "ExtensionLib", {
+        get() {},
+        set(v) {
+            v.then((lib) => {
+                loadingPromise.resolve({
+                    source: "ExtensionLib",
+                    result: Object.values(lib),
+                });
+                clearScratchAPI();
+            });
+        },
+    });
+    Object.defineProperty(global, "scratchExtensions", {
+        get() {},
+        set(v) {
+            const added = [];
+            v.default().then(({ default: lib }) => {
+                Object.entries(lib).forEach(([key, obj]) => {
+                    if (!(obj.info && obj.info.extensionId)) {
+                        // compatible with some legacy gandi extension service
+                        obj.info = obj.info || {};
+                        obj.info.extensionId = key;
+                    }
+                    if (obj.info) added.push(obj);
+                });
+                loadingPromise.resolve({
+                    source: "scratchExtensions",
+                    result: added,
+                });
+                clearScratchAPI();
+            });
+        },
+    });
 
     if (!openVM) {
-        const {runtime} = vm;
+        const { runtime } = vm;
         if (runtime.ccwAPI && runtime.ccwAPI.getOpenVM) {
             openVM = runtime.ccwAPI.getOpenVM();
-        }
-        openVM = {
-            runtime: vm.runtime,
-            exports: vm.exports,
-            ...openVM
-        };
-    }
-    if (!translate) {
-        translate = createTranslate(vm);
+        } else openVM = vm;
     }
 
     const scratch = {
@@ -72,74 +121,85 @@ const setupScratchAPI = (vm, id) => {
         TargetType,
         Cast,
         Color,
-        translate,
+        translate: createTranslate(vm),
         extensions: {
-            register: registerExt
+            register: registerExt,
         },
         vm: openVM,
         runtime: openVM.runtime,
-        renderer: openVM.runtime.renderer
+        renderer: openVM.runtime.renderer,
     };
-    global.Scratch = Object.assign(global.Scratch || {}, scratch);
-    needSetup = false;
+    globalScratch = global.Scratch;
+    global.Scratch = scratch;
 };
 
-const createdScriptLoader = ({url, onSuccess, onError}) => {
+/**
+ *
+ * @param {*} vm
+ * @param {*} url
+ * @returns {Promise<RegisterResult>}
+ */
+const loadExtension = async (vm, url) => {
     if (!url) {
-        return onError('remote extension url is null');
+        return onError("remote extension url is null");
     }
-    const exist = document.getElementById(url);
-    if (exist) {
-        log.warn(`${url} remote extension script already loaded before`);
-        exist.successCallBack.push(onSuccess);
-        exist.failedCallBack.push(onError);
-        return exist;
+    await setupScratchAPI(vm);
+    const pm = loadingPromise;
+
+    if (!url) {
+        return onError("remote extension url is null");
     }
 
-    const script = document.createElement('script');
-    script.src = `${url + (url.includes('?') ? '&' : '?')}t=${Date.now()}`;
+    const script = document.createElement("script");
+    const parsedURL = new URL(url);
+    script.src =
+        parsedURL.protocol === "data:"
+            ? url
+            : `${url + (url.includes("?") ? "&" : "?")}t=${Date.now()}`;
     script.id = url;
     script.defer = true;
-    script.type = 'module';
-
-    script.successCallBack = [onSuccess];
-    script.failedCallBack = [onError];
+    script.type = "module";
 
     let scriptError = null;
-    const logError = e => {
+    const logError = (e) => {
         scriptError = e;
     };
-    global.addEventListener('error', logError);
+
+    global.addEventListener("error", logError);
 
     const removeScript = () => {
-        global.removeEventListener('error', logError);
+        global.removeEventListener("error", logError);
         document.body.removeChild(script);
     };
 
-    script.onload = () => {
-        if (scriptError) {
-            script.failedCallBack.forEach(cb => cb?.(scriptError, url));
-            script.failedCallBack = [];
-        } else {
-            script.successCallBack.forEach(cb => cb(url));
-            script.successCallBack = [];
-        }
-        removeScript();
-    };
-
-    script.onerror = e => {
-        script.failedCallBack.forEach(cb => cb?.(e, url));
-        script.failedCallBack = [];
-        removeScript();
-    };
+    script.addEventListener("error", (e) => {
+        pm.reject(e);
+        loadingPromise = undefined;
+    });
 
     try {
-        document.body.append(script);
+        document.body.appendChild(script);
     } catch (error) {
-        removeScript();
-        log.error('load custom extension error:', error);
+        pm.reject(e);
+        loadingPromise = undefined;
+        log.error("load custom extension error:", error);
     }
-    return script;
+
+    return pm.promise
+        .then((v) => {
+            if (scriptError) {
+                loadingPromise = undefined;
+                throw scriptError;
+            }
+            return v;
+        })
+        .finally(() => {
+            removeScript();
+        });
 };
 
-module.exports = {setupScratchAPI, clearScratchAPI, createdScriptLoader};
+module.exports = {
+    setupScratchAPI,
+    clearScratchAPI,
+    loadExtension,
+};

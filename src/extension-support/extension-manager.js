@@ -3,7 +3,7 @@ const log = require('../util/log');
 const maybeFormatMessage = require('../util/maybe-format-message');
 const formatMessage = require('format-message');
 const BlockType = require('./block-type');
-const {setupScratchAPI, clearScratchAPI, createdScriptLoader} = require('./extension-load-helper');
+const {setupScratchAPI, clearScratchAPI, loadExtension} = require('./extension-load-helper');
 const SecurityManager = require('./tw-security-manager');
 
 // These extensions are currently built into the VM repository but should not be loaded at startup.
@@ -99,17 +99,18 @@ const createExtensionService = extensionManager => {
 
 // check if func is a class
 const isConstructor = value => {
-    try {
-        // eslint-disable-next-line no-new
-        new new Proxy(value, {
-            construct () {
-                return {};
-            }
-        })();
-        return true;
-    } catch (err) {
-        return false;
-    }
+    // try {
+    //     // eslint-disable-next-line no-new
+    //     new new Proxy(value, {
+    //         construct () {
+    //             return {};
+    //         }
+    //     })();
+    //     return true;
+    // } catch (err) {
+    //     return false;
+    // }
+    return !!value.prototype;
 };
 
 class ExtensionManager {
@@ -884,16 +885,16 @@ class ExtensionManager {
         }
     }
 
-    loadExternalExtensionById (extensionId, shouldReplace = false) {
+    async loadExternalExtensionById (extensionId, shouldReplace = false) {
         if (this.isExtensionLoaded(extensionId) && !shouldReplace) {
             // avoid init extension twice if it already loaded
             return;
         }
-        setupScratchAPI(this.vm, extensionId);
-        return this.getExternalExtensionConstructor(extensionId)
+        return setupScratchAPI(this.vm)
+            .then(() => this.getExternalExtensionConstructor(extensionId))
             .then(extension => this.registerExtension(extensionId, extension, shouldReplace))
             .finally(() => {
-                clearScratchAPI(extensionId);
+                clearScratchAPI();
             });
     }
 
@@ -1014,74 +1015,25 @@ class ExtensionManager {
         const onlyAdded = [];
         const addedAndLoaded = []; // exts use Scratch.extensions.register
         const rewritten = await this.securityManager.rewriteExtensionURL(url);
-        return new Promise((resolve, reject) => {
-            setupScratchAPI(this.vm, rewritten);
-            createdScriptLoader({
-                url: rewritten,
-                onSuccess: async () => {
-                    try {
-                        if (global.IIFEExtensionInfoList) {
-                        // for those extension which registered by scratch.extensions.register in IIFE
-                            global.IIFEExtensionInfoList.forEach(({extensionObject, extensionInstance}) => {
-                                this.addCustomExtensionInfo(extensionObject, url);
-                                if (disallowIIFERegister) {
-                                    onlyAdded.push(extensionObject.info.extensionId);
-                                } else {
-                                    this.registerExtension(extensionObject.info.extensionId, extensionInstance, shouldReplace);
-                                    addedAndLoaded.push(extensionObject.info.extensionId);
-                                }
-                            });
-                        }
-                        if (global.ExtensionLib) {
-                        // for those extension which developed by user using ccw-customExt-tool
-                            const lib = await global.ExtensionLib;
-                            Object.keys(lib).forEach(key => {
-                                const obj = lib[key];
-                                this.addCustomExtensionInfo(obj, url);
-                                onlyAdded.push(obj.info.extensionId);
-                            });
-                            delete global.ExtensionLib;
-                        }
-                        if (global.tempExt) {
-                        // for user developing custom extension
-                            const obj = global.tempExt;
-                            this.addCustomExtensionInfo(obj, url);
-                            onlyAdded.push(obj.info.extensionId);
-                            delete global.tempExt;
-                        }
-                        if (global.scratchExtensions) {
-                        // for Gandi extension service
-                            const {default: lib} =
-                            await global.scratchExtensions.default();
-                            Object.entries(lib).forEach(([key, obj]) => {
-                                if (!(obj.info && obj.info.extensionId)) {
-                                // compatible with some legacy gandi extension service
-                                    obj.info = obj.info || {};
-                                    obj.info.extensionId = key;
-                                }
-                                this.addOfficialExtensionInfo(obj);
-                                onlyAdded.push(obj.info && obj.info.extensionId);
-                            });
-                        }
-                        resolve({onlyAdded, addedAndLoaded});
-                    } catch (error) {
-                        reject(error);
-                    }
-                },
-                onError: reject
-            });
-        })
-            // .catch(e => log.error('LoadRemoteExtensionError: ', e))
-            .finally(() => {
-                clearScratchAPI(url);
-                if (onlyAdded.length > 0 || addedAndLoaded.length > 0) {
-                    this.runtime.emit('EXTENSION_LIBRARY_UPDATED');
+        try {
+            await setupScratchAPI(this.vm);
+            const result = await loadExtension(this.vm, rewritten);
+            for (const extensionObject of result.result) {
+                if (result.source === 'scratchExtensions') this.addOfficialExtensionInfo(extensionObject);
+                else this.addCustomExtensionInfo(extensionObject, url);
+                if (result.source !== 'iife' || disallowIIFERegister) {
+                    onlyAdded.push(extensionObject.info.extensionId);
+                } else {
+                    this.registerExtension(extensionObject.info.extensionId, extensionObject.extensionInstance, shouldReplace);
+                    addedAndLoaded.push(extensionObject.info.extensionId);
                 }
-                delete global.scratchExtensions;
-                delete global.tempExt;
-                delete global.ExtensionLib;
-                delete global.IIFEExtensionInfoList;
-            });
+            }
+            return {onlyAdded, addedAndLoaded};
+        } finally {
+            if (onlyAdded.length > 0 || addedAndLoaded.length > 0) {
+                this.runtime.emit('EXTENSION_LIBRARY_UPDATED');
+            }
+        }
     }
 
 
