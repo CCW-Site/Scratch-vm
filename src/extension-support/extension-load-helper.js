@@ -38,6 +38,7 @@ const clearScratchAPI = () => {
             globalScratch = undefined;
         }
         if (loadingPromise) loadingPromise.resolve();
+        loadingPromise = undefined;
     }
 };
 
@@ -188,12 +189,12 @@ const loadExtension = async (vm, url) => {
     return pm.promise
         .then((v) => {
             if (scriptError) {
-                loadingPromise = undefined;
                 throw scriptError;
             }
             return v;
         })
         .finally(() => {
+            loadingPromise = undefined;
             removeScript();
         });
 };
