@@ -1931,9 +1931,10 @@ class Runtime extends EventEmitter {
         };
     }
 
-    handleExtensionButtonPress (buttonData) {
-        const callback = this.extensionButtons.get(buttonData);
-        callback();
+    handleExtensionButtonPress (button) {
+        const id = button.callbackData_ ?? button;
+        const callback = this.extensionButtons.get(id);
+        callback(button);
     }
 
     /**
