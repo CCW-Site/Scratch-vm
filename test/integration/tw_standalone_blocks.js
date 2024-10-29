@@ -14,10 +14,10 @@ test('Serializes standalone blocks', t => {
     vm.extensionManager._loadedExtensions.set('test2', 'test.1.0');
 
     // we save extension url in info
-    vm.runtime.gandi.addWildExtension({url:'https://example.com/test1.js', id:'test1'});
-    vm.runtime.gandi.addWildExtension({url:'https://example.com/test2.js', id:'test2'});
-    vm.extensionManager._customExtensionInfo['test1'] = {url:'https://example.com/test1.js', id:'test1'};
-    vm.extensionManager._customExtensionInfo['test2'] = {url:'https://example.com/test2.js', id:'test2'}
+    vm.runtime.gandi.addWildExtension({url: 'https://example.com/test1.js', id: 'test1'});
+    vm.runtime.gandi.addWildExtension({url: 'https://example.com/test2.js', id: 'test2'});
+    vm.extensionManager._customExtensionInfo.test1 = {url: 'https://example.com/test1.js', id: 'test1'};
+    vm.extensionManager._customExtensionInfo.test2 = {url: 'https://example.com/test2.js', id: 'test2'};
 
 
     const primitiveBlock = {
@@ -74,7 +74,7 @@ test('Deserializes vanilla standalone blocks', t => {
 });
 
 return;
-//TODO - don't support extensionURLs yet
+// TODO - don't support extensionURLs yet
 skip('Deserializes standalone blocks with extensions', t => {
     t.plan(3);
 

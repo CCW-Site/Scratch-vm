@@ -16,8 +16,8 @@ test('Serializes custom extensions', t => {
     vm.extensionManager._loadedExtensions.set('test2', 'test.1.0');
 
     // we save extension url in info
-    vm.runtime.gandi.addWildExtension({url:'https://example.com/test1.js', id:'test1'});
-    vm.runtime.gandi.addWildExtension({url:'https://example.com/test2.js', id:'test2'});
+    vm.runtime.gandi.addWildExtension({url: 'https://example.com/test1.js', id: 'test1'});
+    vm.runtime.gandi.addWildExtension({url: 'https://example.com/test2.js', id: 'test2'});
 
 
     const targetUsingBlock = new RenderedTarget(new Sprite(null, vm.runtime), vm.runtime);
@@ -41,7 +41,7 @@ test('Serializes custom extensions', t => {
 
     t.same(serializedProject.gandi.wildExtensions, {
         test1: {
-            id:'test1',url:'https://example.com/test1.js'
+            id: 'test1', url: 'https://example.com/test1.js'
         }
     }, 'save extension URLs for project');
 
@@ -54,7 +54,7 @@ test('Serializes custom extensions', t => {
 
     t.same(serializedTargetWithBlock.gandi.wildExtensions, {
         test1: {
-            id:'test1',
+            id: 'test1',
             url: 'https://example.com/test1.js'
         }
     }, 'save extension URLs for sprite');

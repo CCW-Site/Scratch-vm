@@ -11,7 +11,7 @@ const blockIconURI = 'data:image/svg+xml,%3Csvg id="rotate-counter-clockwise" xm
  */
 class Scratch3CoreExample {
 
-    constructor(runtime) {
+    constructor (runtime) {
         /**
          * The runtime instantiating this block package.
          * @type {Runtime}
@@ -174,7 +174,7 @@ class Scratch3CoreExample {
                 // makeVarBtn,
                 // exampleOpcode,
                 // exampleWithInlineImage,
-                dynamicBlock,
+                dynamicBlock
                 // staticBlock,
                 // menuBlock
             ],

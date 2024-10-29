@@ -11,6 +11,6 @@ const getXGAccessCode = () => {
         }
     }
     return accessCode;
-}
+};
 
 module.exports = getXGAccessCode;

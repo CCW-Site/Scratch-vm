@@ -27,9 +27,9 @@ const visibleTempoMonitorProject = readFileToBuffer(visibleTempoMonitorProjectUr
 
 const buildTestVM = () => {
     const vm = new VirtualMachine();
-    vm.extensionManager.builtinExtensions['music'] = () => require('../../src/extensions/scratch3_music');
+    vm.extensionManager.builtinExtensions.music = () => require('../../src/extensions/scratch3_music');
     return vm;
-}
+};
 
 test('loading sb2 project with invisible video monitor should not load monitor or extension', t => {
     const vm = buildTestVM();

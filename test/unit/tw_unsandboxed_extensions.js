@@ -23,7 +23,7 @@ const append = element => {
             }
         }, 50);
     }
-}
+};
 global.document = {
     createElement: tagName => {
         if (tagName.toLowerCase() !== 'script') {
@@ -40,7 +40,7 @@ global.document = {
     body: {
         appendChild: append,
         append,
-        removeChild: () => {},
+        removeChild: () => {}
     }
 };
 

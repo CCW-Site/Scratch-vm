@@ -1243,7 +1243,7 @@ class ScriptTreeGenerator {
             // variable.id maybe null in some error sb3
             const currVar = this.target.lookupVariableByNameAndType(variable.value, type);
             if (currVar) {
-                id = currVar.id
+                id = currVar.id;
             } else {
                 throw new Error('descendVariable fail, id not found');
             }

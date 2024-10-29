@@ -238,7 +238,7 @@ test('XML escaped in Blocks.toXML()', async t => {
         vm.runtime.dispose();
         vm.editingTarget = null;
         vm.emitTargetsUpdate(false /* Don't emit project change */);
-    }
+    };
 
     vm.extensionManager._loadedExtensions.set(baseExtensionInfo.id, serviceName);
 

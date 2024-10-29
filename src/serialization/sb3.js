@@ -376,7 +376,7 @@ const serializeBlocks = function (blocks, saveVarId) {
     const obj = Object.create(null);
     const extensionIDs = new Set();
     for (const blockID in blocks) {
-    if (!Object.prototype.hasOwnProperty.call(blocks, blockID)) continue;
+        if (!Object.prototype.hasOwnProperty.call(blocks, blockID)) continue;
         obj[blockID] = serializeBlock(blocks[blockID], saveVarId);
         const extensionID = getExtensionIdForOpcode(blocks[blockID].opcode);
         if (extensionID) {
@@ -1137,8 +1137,8 @@ const deserializeBlocks = function (blocks) {
         // testing purposes for now
         // TODO: compatibility with whole tw return procedures
         if (block.opcode === 'procedures_return' && Object.hasOwnProperty.call(block.inputs, 'VALUE')) {
-            block.inputs['RETURN'] = block.inputs['VALUE'];
-            delete block.inputs['VALUE'];
+            block.inputs.RETURN = block.inputs.VALUE;
+            delete block.inputs.VALUE;
         }
         if (block.opcode === 'procedures_call' && block.mutation.return) {
             block.opcode = 'procedures_call_with_return';
@@ -1493,7 +1493,7 @@ const deserializeMonitor = function (monitorData, runtime, targets, extensions) 
         const target = monitorData.targetId ?
             targets.find(t => t.id === monitorData.targetId) :
             targets.find(t => t.isStage);
-        const saveId =  StringUtil.replaceUnsafeChars(monitorData.id);
+        const saveId = StringUtil.replaceUnsafeChars(monitorData.id);
         if (!Object.hasOwnProperty.call(target.variables, saveId)) {
             log.warn(`Tried to deserialize sprite specific monitor ${monitorData.opcode} but could not find variable ${monitorData.id}.`);
             return;

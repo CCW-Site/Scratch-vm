@@ -1682,7 +1682,7 @@ class Runtime extends EventEmitter {
             colourSecondary: blockInfo.color2 ?? categoryInfo.color2,
             colourTertiary: blockInfo.color3 ?? categoryInfo.color3,
             tooltip: blockInfo.tooltip,
-            extensions: [],
+            extensions: []
         };
         const context = {
             // TODO: store this somewhere so that we can map args appropriately after translation.
@@ -2581,7 +2581,7 @@ class Runtime extends EventEmitter {
      */
     startHats (requestedHatOpcode,
         optMatchFields, optTarget, hatParam) {
-            if (!Object.prototype.hasOwnProperty.call(this._hats, requestedHatOpcode)) {
+        if (!Object.prototype.hasOwnProperty.call(this._hats, requestedHatOpcode)) {
             // No known hat with this opcode.
             return;
         }
@@ -2593,8 +2593,9 @@ class Runtime extends EventEmitter {
 
         for (const opts in optMatchFields) {
             if (!Object.prototype.hasOwnProperty.call(optMatchFields, opts) ||
-                    typeof optMatchFields[opts] !== 'string')
+                    typeof optMatchFields[opts] !== 'string') {
                 continue;
+            }
             // The value of the field might be non-string data types
             optMatchFields[opts] = optMatchFields[opts].toUpperCase();
         }

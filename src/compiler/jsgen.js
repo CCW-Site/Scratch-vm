@@ -653,7 +653,7 @@ class JSGenerator {
         case 'op.10^':
             return new TypedInput(`(10 ** ${this.descendInput(node.value).asNumber()})`, TYPE_NUMBER);
 
-        //TODO - don't compatiable with tw procedures.call reporter
+        // TODO - don't compatiable with tw procedures.call reporter
         // we use procedures.callWithReturn instead
         // should be compatible with tw procedures.call reporter in future
         case 'procedures.call': {

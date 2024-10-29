@@ -1,4 +1,4 @@
-//TODO: unsupported exposed stack frame yet
+// TODO: unsupported exposed stack frame yet
 const test = require('tap').skip;
 const fs = require('fs');
 const path = require('path');

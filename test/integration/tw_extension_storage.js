@@ -120,7 +120,7 @@ test('deserialize project with data', t => {
             return {
                 id: 'test1',
                 blocks: []
-            }
+            };
         }
     }
 
@@ -129,7 +129,7 @@ test('deserialize project with data', t => {
             return {
                 id: 'test2',
                 blocks: []
-            }
+            };
         }
     }
 
@@ -138,7 +138,7 @@ test('deserialize project with data', t => {
             return {
                 id: 'test3',
                 blocks: []
-            }
+            };
         }
     }
 

@@ -476,7 +476,7 @@ test('shareSoundToTarget', t => {
 test('reorderTarget', t => {
     const vm = new VirtualMachine();
     vm.emitTargetsUpdate = () => {};
-    const makeTarget = (t) => ({t, isOriginal: true, id: t});
+    const makeTarget = t => ({t, isOriginal: true, id: t});
 
     vm.runtime.targets = ['a', 'b', 'c', 'd'].map(makeTarget);
 
@@ -506,10 +506,10 @@ test('emitWorkspaceUpdate', t => {
         }
         return blockString;
     };
-    const makeBlocks = ()=> ({
+    const makeBlocks = () => ({
         toXML: blocksToXML,
         getGlobalProceduresXML: () => []
-    })
+    });
     vm.runtime.targets = [
         {
             isStage: true,
@@ -955,7 +955,7 @@ test('shareBlocksToTarget loads extensions that have not yet been loaded', t => 
 
     const fakeBlocks = [
         {opcode: 'pen_something', fields: {}},
-        {opcode: 'translate_something', fields: {}},
+        {opcode: 'translate_something', fields: {}}
     ];
 
     // Stub the extension manager
@@ -971,7 +971,7 @@ test('shareBlocksToTarget loads extensions that have not yet been loaded', t => 
         loadExtensionURL: id => new Promise(resolve => {
             loadedIds.push(id);
             resolve();
-        }),
+        })
     };
 
     vm.shareBlocksToTarget(fakeBlocks, stage.id).then(() => {

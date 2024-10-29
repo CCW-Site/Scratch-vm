@@ -13,16 +13,16 @@ const BITWISE_EXTENSION = 'https://extensions.turbowarp.org/bitwise.js';
 /* eslint-disable no-script-url */
 /* eslint-disable require-await */
 
-const buildLoadExtensionURLTest = (vm)=> {
+const buildLoadExtensionURLTest = vm => {
     const _loadExtensionURL = vm.extensionManager.loadExtensionURL;
-    vm.extensionManager.loadExtensionURL = async (url) => {
+    vm.extensionManager.loadExtensionURL = async url => {
         if (await vm.securityManager.canLoadExtensionFromProject(url)) {
-            _loadExtensionURL(url)
+            _loadExtensionURL(url);
         } else {
             throw new Error(`Permission to load extension denied: ${extensionID}`);
         }
     };
-}
+};
 
 test('Deny both extensions', async t => {
     const vm = new VirtualMachine();

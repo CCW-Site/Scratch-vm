@@ -71,7 +71,7 @@ const parseSnapshotSHA256 = snapshot => snapshot.match(/^\/\/ Input SHA-256: ([0
 const generateActualSnapshot = async testCase => {
     const vm = new VM();
     // add music extension for test
-    vm.extensionManager.builtinExtensions['music'] = () => require('../../src/extensions/scratch3_music');
+    vm.extensionManager.builtinExtensions.music = () => require('../../src/extensions/scratch3_music');
     vm.setCompilerOptions(testCase.compilerOptions);
     const projectData = getProjectData(testCase);
     const inputSHA256 = computeSHA256(projectData);

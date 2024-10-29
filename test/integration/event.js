@@ -24,7 +24,7 @@ test('event', t => {
         vm.start();
         vm.clear();
         vm.setCompatibilityMode(false);
-        vm.setCompilerOptions({enabled: false})
+        vm.setCompilerOptions({enabled: false});
         vm.setTurboMode(false);
         vm.loadProject(project).then(() => {
             vm.greenFlag();

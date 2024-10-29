@@ -509,7 +509,7 @@ class Thread {
             // Cached block objects in op, not just id
             // it cached when execute(),make sure we can get the block in any thread context
             // because global procedure may not in the this.target.blocks
-            let block = this.stackFrames[i].op
+            let block = this.stackFrames[i].op;
             if (block && block.id && !block.opcode) {
                 // compatible with not cached op, such as unit test
                 // only found block id, get block object

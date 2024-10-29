@@ -1,4 +1,4 @@
-//TODO - support 'from_extension' 'default_extension_colors'
+// TODO - support 'from_extension' 'default_extension_colors'
 const test = require('tap').skip;
 const VirtualMachine = require('../../src/virtual-machine');
 const BlockType = require('../../src/extension-support/block-type');

@@ -7,7 +7,7 @@ const VirtualMachine = require('../../src/virtual-machine');
 
 const emptyProjectFixture = path.join(__dirname, '..', 'fixtures', 'tw-empty-project.sb3');
 
-//TODO - don't support custom fonts yet, skip this test
+// TODO - don't support custom fonts yet, skip this test
 return;
 const makeTestStorage = () => {
     const storage = _makeTestStorage();

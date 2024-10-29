@@ -7,6 +7,6 @@ const makeTestVM = function () {
     const AssetType = storage.AssetType;
     vm.runtime.gandi.supportedAssetTypes = [AssetType.Python, AssetType.Json, AssetType.GLSL, AssetType.Extension];
     return vm;
-}
+};
 
 module.exports = makeTestVM;

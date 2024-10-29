@@ -32,14 +32,16 @@ test('loadExtensionURL, getExtensionURLs, deduplication', async t => {
     global.document = {
         createElement: () => {
             loadedExtensions++;
-            const element = {};
+            const element = {
+                addEventListener () {},
+                removeEventListener () {}
+            };
             setTimeout(() => {
                 global.Scratch.extensions.register({
                     getInfo: () => ({
                         id: `extension${loadedExtensions}`
                     })
                 });
-                element.successCallBack[0]();
             });
             return element;
         },

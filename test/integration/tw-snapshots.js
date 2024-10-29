@@ -1,17 +1,17 @@
 const {test} = require('tap');
 const Snapshots = require('../snapshot/lib');
 
-global.prompt == "function" || (function(window) {
-    window.prompt = function prompt(title) {
-      // title element
-      // create input with default text
-      // overlay
-      // dialog
-      // OK white on blue
-      // Cancel black on white
-      // return value of OK (value of input) or Cancel (null)
-    }
-  })(global);
+global.prompt == 'function' || (function (window) {
+    window.prompt = function prompt (title) {
+        // title element
+        // create input with default text
+        // overlay
+        // dialog
+        // OK white on blue
+        // Cancel black on white
+        // return value of OK (value of input) or Cancel (null)
+    };
+}(global));
 
 for (const testCase of Snapshots.tests) {
     // if (!testCase.id.endsWith('tw-procedure-prototype-exists-but-not-definition-549160843.sb3')) {

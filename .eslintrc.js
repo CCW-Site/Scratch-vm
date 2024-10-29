@@ -4,6 +4,6 @@ module.exports = {
         process: true
     },
     rules: {
-        'max-len': ["error", { "code": 200 }]
-      }
+        'max-len': ['error', {code: 200}]
+    }
 };

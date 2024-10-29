@@ -710,7 +710,7 @@ class VirtualMachine extends EventEmitter {
                         json,
                         zip,
                         _projectProcessingUniqueId,
-                        options,
+                        options
                     );
                 })
                 .then(() => this.runtime.handleProjectLoaded())
@@ -1083,7 +1083,7 @@ class VirtualMachine extends EventEmitter {
                 true,
                 _projectProcessingUniqueId,
                 false,
-                options,
+                options
             );
         });
     }
@@ -1105,7 +1105,7 @@ class VirtualMachine extends EventEmitter {
         wholeProject,
         _projectProcessingUniqueId,
         isRemoteOperation,
-        options,
+        options
     ) {
         await this.extensionManager.allAsyncExtensionsLoaded();
         const addedGandiObject = this.runtime.gandi.merge(gandiObject);
@@ -1114,7 +1114,7 @@ class VirtualMachine extends EventEmitter {
             if (!this.extensionManager.isExtensionLoaded(extensionID)) {
                 let extensionURL = extensionID;
                 if (!this.extensionManager.isBuiltinExtension(extensionID) && extensions.extensionURLs.get(extensionID)) {
-                    extensionURL = extensions.extensionURLs.get(extensionID)
+                    extensionURL = extensions.extensionURLs.get(extensionID);
                 }
                 extensionPromises.push(
                     this.extensionManager.loadExtensionURL(extensionURL)
@@ -1751,7 +1751,7 @@ class VirtualMachine extends EventEmitter {
             loadCostume(
                 newCostume.md5,
                 newCostume,
-                this.runtime,
+                this.runtime
             ).then(() => {
                 const index = target.getCostumeIndexById(id);
                 if (index !== -1) {

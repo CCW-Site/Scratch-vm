@@ -65,7 +65,7 @@ fs.readdirSync(executeDir)
     .forEach(uri => {
         const run = (t, enableCompiler) => {
             const vm = new VirtualMachine();
-            vm.extensionManager.builtinExtensions['music'] = () => require('../../src/extensions/scratch3_music');
+            vm.extensionManager.builtinExtensions.music = () => require('../../src/extensions/scratch3_music');
             // Map string messages to tap reporting methods. This will be used
             // with events from scratch's runtime emitted on block instructions.
             let didPlan;

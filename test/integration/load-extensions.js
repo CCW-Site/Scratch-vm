@@ -15,7 +15,7 @@ const stopVideoLoop = vm => {
     dispatch.call(serviceName, '_stopLoop');
 };
 
-const music = require('../../src/extensions/scratch3_music')
+const music = require('../../src/extensions/scratch3_music');
 test('Load external extensions', async t => {
     const vm = new VirtualMachine();
     vm.extensionManager.addBuiltinExtension('music', music);

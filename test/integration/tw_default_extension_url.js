@@ -7,10 +7,10 @@ test('Loading project uses default extension URLs', t => {
     const vm = new VirtualMachine();
     const events = [];
     // we don't use securityManager for now
-    vm.securityManager.canLoadExtensionFromProject = url => {
+    vm.securityManager.canLoadExtensionFromProject = url =>
         // events.push(`canLoadExtensionFromProject ${url}`);
-        return true;
-    };
+        true
+    ;
     vm.extensionManager.loadExtensionURL = url => {
         events.push(`loadExtensionURL ${url}`);
         return Promise.resolve();
@@ -89,7 +89,7 @@ test('Loading project uses default extension URLs', t => {
         },
         gandi: {
             wildExtension: {
-                griffpatch: {id:'griffpatch', url: 'https://example.com/box2d.js'}
+                griffpatch: {id: 'griffpatch', url: 'https://example.com/box2d.js'}
             }
         },
         meta: {

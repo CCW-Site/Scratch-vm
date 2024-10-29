@@ -29,7 +29,7 @@ const staticFetch = url => {
         }
     } catch (e) {
         // not robust enough yet to care about these errors
-            }
+    }
     return null;
 };
 

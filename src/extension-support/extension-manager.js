@@ -98,7 +98,7 @@ const createExtensionService = extensionManager => {
 };
 
 // check if func is a class
-const isConstructor = value => {
+const isConstructor = value =>
     // try {
     //     // eslint-disable-next-line no-new
     //     new new Proxy(value, {
@@ -110,8 +110,8 @@ const isConstructor = value => {
     // } catch (err) {
     //     return false;
     // }
-    return !!value.prototype;
-};
+    !!value.prototype
+;
 
 class ExtensionManager {
     constructor (vm) {
@@ -1016,7 +1016,6 @@ class ExtensionManager {
         const addedAndLoaded = []; // exts use Scratch.extensions.register
         const rewritten = await this.securityManager.rewriteExtensionURL(url);
         try {
-            await setupScratchAPI(this.vm);
             const result = await loadExtension(this.vm, rewritten);
             for (const extensionObject of result.result) {
                 if (result.source === 'scratchExtensions') this.addOfficialExtensionInfo(extensionObject);
@@ -1060,7 +1059,7 @@ class ExtensionManager {
             if (ext && ext.url) {
                 loadURLs[extId] = ext.url;
             }
-        })
+        });
         return loadURLs;
     }
 
@@ -1164,7 +1163,7 @@ class ExtensionManager {
     }
 
     isExtensionURLLoaded (extensionURL) {
-        const all = this.getLoadedExtensionURLs()
+        const all = this.getLoadedExtensionURLs();
         return Object.values(all).includes(extensionURL);
     }
     getExtensionURLs () {

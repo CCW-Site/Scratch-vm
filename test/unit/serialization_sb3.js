@@ -366,29 +366,29 @@ test('loading asset progress', t => {
     const vm = new VirtualMachine();
 
     vm.runtime.emit(Runtime.LOAD_ASSETS_PROGRESS, {total: null});
-    t.same(vm._assetsLoadProgress, {total:0, loaded: 0});
+    t.same(vm._assetsLoadProgress, {total: 0, loaded: 0});
 
     loadedCount = 0;
     const loadedFunc = () => {
         loadedCount++;
         vm.runtime.emit(Runtime.LOAD_ASSETS_PROGRESS);
-    }
+    };
 
     const handleProjectAssetsProgress = params => {
         t.equal(params.total, 10);
         t.equal(params.loaded, loadedCount);
-    }
+    };
     vm.on(Runtime.LOAD_ASSETS_PROGRESS, handleProjectAssetsProgress);
-    const total = 10
+    const total = 10;
     vm.runtime.emit(Runtime.LOAD_ASSETS_PROGRESS, {total});
     t.same(vm._assetsLoadProgress, {total, loaded: 0});
     for (let i = 0; i < total; i++) {
         loadedFunc();
     }
     const outOfBoundsFunc = params => {
-        t.notOk(params)
-    }
+        t.notOk(params);
+    };
     vm.on(Runtime.LOAD_ASSETS_PROGRESS, outOfBoundsFunc);
     loadedFunc();
     t.end();
-})
+});

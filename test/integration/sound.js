@@ -15,7 +15,7 @@ dispatch.workerClass = Worker;
 test('sound', t => {
     const vm = new VirtualMachine();
     vm.attachStorage(makeTestStorage());
-    vm.extensionManager.builtinExtensions['music'] = () => require('../../src/extensions/scratch3_music');
+    vm.extensionManager.builtinExtensions.music = () => require('../../src/extensions/scratch3_music');
     // Evaluate playground data and exit
     vm.on('playgroundData', e => {
         const threads = JSON.parse(e.threads);
