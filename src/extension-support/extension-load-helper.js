@@ -19,6 +19,7 @@ const clearScratchAPI = id => {
     }
     if (global.Scratch && pending.size === 0) {
         global.Scratch.extensions = {
+            unsandboxed: true,
             register: extensionInstance => {
                 const info = extensionInstance.getInfo();
                 throw new Error(`ScratchAPI: ${info.id} call extensions.register too late`);
@@ -74,6 +75,7 @@ const setupScratchAPI = (vm, id) => {
         Color,
         translate,
         extensions: {
+            unsandboxed: true,
             register: registerExt
         },
         vm: openVM,
